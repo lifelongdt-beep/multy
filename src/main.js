@@ -164,14 +164,12 @@
 
     for (const g of sim.gems) { ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.arc(g.x, g.y, 3.2, 0, 7); ctx.fill(); }
 
-    // 에코 (반투명 시안 유령 + 체력 바)
+    // 에코 (반투명 시안 유령)
     for (const ec of sim.echoes) {
       if (!ec.alive) continue;
-      ctx.globalAlpha = ec.inv > 0 && Math.floor(ec.inv / 4) % 2 ? 0.07 : 0.16;
+      ctx.globalAlpha = 0.16;
       ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 11, 0, 7); ctx.fill();
       ctx.globalAlpha = 0.45; emoji('👻', ec.x, ec.y + 1, 17);
-      ctx.globalAlpha = 0.5; ctx.fillStyle = '#0008'; ctx.fillRect(ec.x - 9, ec.y + 12, 18, 3);
-      ctx.fillStyle = '#6fe8ff'; ctx.fillRect(ec.x - 9, ec.y + 12, 18 * Math.max(0, ec.hp / 30), 3);
       ctx.globalAlpha = 1;
     }
 

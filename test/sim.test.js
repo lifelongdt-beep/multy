@@ -99,17 +99,22 @@ test('에코가 많을수록 적 체력이 늘어난다 (난이도 연동)', () 
   assert.ok(b.enemies[0].maxhp > a.enemies[0].maxhp);
 });
 
-test('에코는 적에게 맞으면 체력이 깎이고 0이면 사라진다', () => {
-  const s = new Sim({ seed: 3, echoes: [{ path: new Array(2000).fill(180), ups: [] }] });
+test('에코는 적에게 맞아도 사라지지 않고, 기록이 끝나는 시점에만 사라진다', () => {
+  const N = 300;
+  const s = new Sim({ seed: 3, echoes: [{ path: new Array(N * 2).fill(180), ups: [] }] });
   s.player.hp = 1e9;
   s.step({ dx: 0, dy: 0 });
   const ec = s.echoes[0];
-  for (let i = 0; i < 20 && ec.alive; i++) {
-    s._make('alarm', ec.x, ec.y);
-    ec.inv = 0;
+  for (let i = 0; i < 100; i++) {
+    s._make('alarm', ec.x, ec.y);          // 에코 위에 적을 계속 소환
+    s._ebullet(ec.x, ec.y, 0, 0.1, 50);    // 적 탄환도 에코 위에서 발사
+    s.player.hp = 1e9;
+    if (s.choices) s.choose(s.choices[0].id);
     s.step({ dx: 0, dy: 0 });
   }
-  assert.strictEqual(ec.alive, false);
+  assert.strictEqual(ec.alive, true, '맞아도 에코는 살아 있어야 함');
+  for (let i = 0; i < N; i++) { s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 }); }
+  assert.strictEqual(ec.alive, false, '기록이 끝나면 사라져야 함');
 });
 
 test('레벨업 선택지는 3개, 중복 없음, 만렙 항목은 제외된다', () => {

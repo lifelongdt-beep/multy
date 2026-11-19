@@ -21,12 +21,10 @@
 
   /* ---- 밸런스 튜닝 값 (여기만 만지면 됨) ---- */
   const TUNING = {
-    echoHp: 30,              // 에코 체력
-    echoBasePower: 1.0,      // 에코 기본 공격력 배율
+    echoBasePower: 1.0,      // 에코 기본 공격력 배율 (에코는 맞아도 사라지지 않고, 기록이 끝나는 시점에만 사라짐)
     echoAgeDecay: 0.05,      // 한 세대 오래될수록 공격력 -5%
     echoMinPower: 0.6,       // 최저 배율
-    echoDamageTaken: 0.5,    // 에코가 받는 피해 배율(본체 대비)
-    echoHpScale: 0.10,       // 에코 1명당 일반 적 체력 +10% (에코 화력 증가를 따라가도록, 10명이면 +100%)
+    echoHpScale: 0.12,       // 에코 1명당 일반 적 체력 +12% (에코 화력 증가를 따라가도록, 10명이면 +120%)
     bossLevelScale: 0.06,    // 플레이어 레벨 1당 보스 체력 +6% (강하게 클수록 보스도 단단해짐)
     echoBossScale: 0.25,     // 에코 1명당 보스 체력 +25% (에코 화력 증가를 따라가도록, 10명이면 +250%)
     hpGrowth: 1.6,           // 진행도에 따른 적 체력 증가
@@ -184,7 +182,6 @@
         path: e.path, ups: e.ups || [],
         x: e.path[0] || 0, y: e.path[1] || 0,
         cd: (i * 5) % 20, stats: newStats(), upIdx: 0, alive: true, id: i,
-        hp: TUNING.echoHp, inv: 0,
         // 오래된 에코일수록 약해진다 (가장 최근 에코 = 풀 파워)
         power: TUNING.echoBasePower * Math.max(TUNING.echoMinPower, 1 - TUNING.echoAgeDecay * (list.length - 1 - i)),
       }));
@@ -329,15 +326,6 @@
       this._ev({ k: 'hurt' });
     }
 
-    _hurtEcho(ec, dmg) {
-      ec.hp -= dmg * TUNING.echoDamageTaken; ec.inv = 30;
-      if (ec.hp <= 0 && ec.alive) {
-        ec.alive = false;
-        this.fx.push({ x: ec.x, y: ec.y, t: 20, kind: 'vanish' });
-        this._ev({ k: 'echoDown' });
-      }
-    }
-
     /** 충격파·형광펜 (플레이어/에코 공용) */
     _skills(a, d, pm, t, owner) {
       if (d.novaInt) {
@@ -447,7 +435,6 @@
         if (!ec.alive) continue;
         if (t * 2 + 1 >= ec.path.length) { ec.alive = false; this.fx.push({ x: ec.x, y: ec.y, t: 20, kind: 'vanish' }); continue; }
         ec.x = ec.path[t * 2]; ec.y = ec.path[t * 2 + 1];
-        if (ec.inv > 0) ec.inv -= 1;
         while (ec.upIdx < ec.ups.length && ec.ups[ec.upIdx].t <= t) {
           const id = ec.ups[ec.upIdx].id;
           if (id in ec.stats && id !== 'heal' && id !== 'echo') ec.stats[id] += 1;
@@ -489,13 +476,6 @@
         if (!dead && p.inv === 0) {
           const rr = p.r + b.r;
           if ((p.x - b.x) * (p.x - b.x) + (p.y - b.y) * (p.y - b.y) < rr * rr) { this._hurtPlayer(b.dmg); dead = true; }
-        }
-        if (!dead) {
-          for (const ec of this.echoes) {
-            if (!ec.alive || ec.inv > 0) continue;
-            const rr = 8 + b.r;
-            if ((ec.x - b.x) * (ec.x - b.x) + (ec.y - b.y) * (ec.y - b.y) < rr * rr) { this._hurtEcho(ec, b.dmg); dead = true; break; }
-          }
         }
         if (dead) { this.ebullets[i] = this.ebullets[this.ebullets.length - 1]; this.ebullets.pop(); }
       }
@@ -548,11 +528,6 @@
 
         e.x += mvx; e.y += mvy;
         if (p.inv === 0 && dist < e.r + p.r) this._hurtPlayer(e.dmg);
-        for (const ec of this.echoes) {
-          if (!ec.alive || ec.inv > 0) continue;
-          const ex = ec.x - e.x, ey = ec.y - e.y;
-          if (ex * ex + ey * ey < (e.r + 8) * (e.r + 8)) this._hurtEcho(ec, e.dmg);
-        }
       }
 
       // 구슬 흡수
