@@ -191,18 +191,13 @@ test('반복 플레이하면 살아남은 에코의 최장 지원 시간이 줄�
   }
 });
 
-test('구슬은 플레이어가 갈 수 없는 조작 영역(하단)에 남지 않는다', () => {
+test('캐릭터는 화면 어디든(아래쪽 포함) 이동할 수 있고 아래쪽 구슬도 먹을 수 있다', () => {
   const s = new Sim({ seed: 12, events: false });
   s.player.hp = 1e9;
-  // 화면 맨 아래에서 죽는 적 → 구슬이 플레이 영역 안에 떨어져야 함
-  for (let i = 0; i < 10; i++) { s._make('hw', 100 + i * 10, E.H - 5); s.enemies[s.enemies.length - 1].hp = 0; }
+  for (let i = 0; i < 600; i++) s.step({ dx: 0, dy: 1 });
+  assert.ok(s.player.y > E.H - 20, `y=${s.player.y}`);
+  s.gems.push({ x: s.player.x, y: s.player.y, v: 1 });
+  const xp0 = s.player.xp;
   s.step({ dx: 0, dy: 0 });
-  assert.ok(s.gems.length >= 10);
-  for (const g of s.gems) assert.ok(g.y <= E.PLAY_BOTTOM - 10 + 1e-9, `gem y=${g.y}`);
-  // 이미 아래에 있던 구슬도 위로 올라온다
-  s.gems.push({ x: 300, y: E.H - 20, v: 1 });
-  for (let i = 0; i < 60; i++) s.step({ dx: 0, dy: 0 });
-  for (const g of s.gems) assert.ok(g.y <= E.PLAY_BOTTOM - 10 + 1e-9);
-  // 플레이어가 도달 가능한 가장 아래(PLAY_BOTTOM - r)에서 흡수 가능한 거리
-  assert.ok(E.PLAY_BOTTOM - 10 - (E.PLAY_BOTTOM - s.player.r) < s.player.r + 5);
+  assert.ok(s.player.xp > xp0 || s.player.level > 1);
 });

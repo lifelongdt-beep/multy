@@ -10,7 +10,7 @@
 
   const W = 360, H = 640;
   const TICK = 60;
-  const PLAY_BOTTOM = H - 140;   // 이 아래는 손가락 조작 영역: 플레이어는 내려가지 못함 (손가락이 캐릭터를 가리지 않게)
+  const PLAY_BOTTOM = H - 140;   // UI 전용: 이 아래를 '추천 조작 영역'으로 표시 (캐릭터 이동은 제한하지 않음)
   const RUN_TICKS = 120 * TICK;
   const ELITE_TICK = 45 * TICK;
   const BOSS_TICK = 90 * TICK;
@@ -382,8 +382,7 @@
       this.kills += 1;
       const big = e.type === 'boss' ? 12 : e.type === 'teacher' ? 6 : 1;
       const v = e.type === 'boss' ? 3 : e.type === 'teacher' ? Math.ceil(e.xp / 6) : e.xp;
-      // 조작 영역(PLAY_BOTTOM 아래)에는 플레이어가 못 가므로 구슬은 그 위쪽에 떨어뜨린다
-      for (let g = 0; g < big; g++) this.gems.push({ x: e.x + (this.rng() - 0.5) * 14, y: Math.min(PLAY_BOTTOM - 10, e.y + (this.rng() - 0.5) * 14), v });
+      for (let g = 0; g < big; g++) this.gems.push({ x: e.x + (this.rng() - 0.5) * 14, y: e.y + (this.rng() - 0.5) * 14, v });
       this.fx.push({ x: e.x, y: e.y, t: 14, kind: 'pop' });
       this._ev({ k: 'kill' });
       if (e.type === 'boss') this.bossDead = true;
@@ -413,7 +412,7 @@
       const len = Math.hypot(dx, dy);
       if (len > 1) { dx /= len; dy /= len; }
       p.x = Math.min(W - p.r, Math.max(p.r, p.x + dx * d.speed));
-      p.y = Math.min(PLAY_BOTTOM - p.r, Math.max(p.r, p.y + dy * d.speed));
+      p.y = Math.min(H - p.r, Math.max(p.r, p.y + dy * d.speed));
       this.rec.path.push(p.x, p.y);
 
       this._spawnLogic(t);
@@ -541,7 +540,6 @@
       // 구슬 흡수
       for (let i = this.gems.length - 1; i >= 0; i--) {
         const g = this.gems[i];
-        if (g.y > PLAY_BOTTOM - 10) g.y = Math.max(PLAY_BOTTOM - 10, g.y - 3);
         const ax = p.x - g.x, ay = p.y - g.y;
         const dist = Math.hypot(ax, ay);
         if (dist < d.magnet) { g.x += (ax / (dist || 1)) * 4; g.y += (ay / (dist || 1)) * 4; }

@@ -239,14 +239,14 @@
     const alive = sim.echoes.filter((e) => e.alive).length;
     ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
 
-    // 하단 조작 영역 (플레이어는 이 위에서만 움직임 → 손가락이 캐릭터를 가리지 않음)
+    // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림)
     ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fillRect(0, PLAY_BOTTOM, W, H - PLAY_BOTTOM);
     ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1; ctx.setLineDash([6, 5]);
     ctx.beginPath(); ctx.moveTo(0, PLAY_BOTTOM); ctx.lineTo(W, PLAY_BOTTOM); ctx.stroke(); ctx.setLineDash([]);
     if (!drag) {
       ctx.globalAlpha = 0.35 + 0.2 * Math.sin(performance.now() / 350);
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
-      ctx.fillText('👆 여기서 드래그해서 이동', W / 2, PLAY_BOTTOM + 76);
+      ctx.fillText('👆 여기서 드래그하면 캐릭터가 안 가려져요', W / 2, PLAY_BOTTOM + 76);
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, PLAY_BOTTOM + 76, 38, 0, 7); ctx.globalAlpha *= 0.5; ctx.stroke();
       ctx.globalAlpha = 1;
     }
