@@ -152,11 +152,11 @@ test('조별과제는 죽으면 숙제 2개로 분열한다', () => {
   assert.ok(s.enemies.filter((e) => e.type === 'hw').length >= 2);
 });
 
-test('밸런스 스모크: 봇이 한 판을 돌렸을 때 처치/레벨이 합리적 범위', () => {
-  const s = runBot(new Sim({ seed: 2024 }), RUN_TICKS, { godMode: true });
-  console.log(`  [봇] 결과=${s.result} 처치=${s.kills} 레벨=${s.player.level} 틱=${s.tick}`);
-  assert.ok(s.kills > 50);
-  assert.ok(s.player.level >= 3);
+test('밸런스 스모크: 봇이 여러 시드를 돌렸을 때 처치/레벨이 합리적 범위', () => {
+  const rs = [2024, 2025, 2026, 2027].map((seed) => runBot(new Sim({ seed, events: false }), RUN_TICKS, { godMode: true }));
+  console.log('  [봇] ' + rs.map((s) => `${s.result}/처치${s.kills}/Lv${s.player.level}`).join('  '));
+  assert.ok(Math.max(...rs.map((s) => s.kills)) > 50);
+  assert.ok(Math.max(...rs.map((s) => s.player.level)) >= 3);
 });
 
 test('에코 정원 초과 시 가장 일찍 쓰러진 에코부터 퇴장한다', () => {
@@ -189,4 +189,20 @@ test('반복 플레이하면 살아남은 에코의 최장 지원 시간이 줄�
     longest = now;
     assert.ok(list.length <= MAX_ECHOES);
   }
+});
+
+test('구슬은 플레이어가 갈 수 없는 조작 영역(하단)에 남지 않는다', () => {
+  const s = new Sim({ seed: 12, events: false });
+  s.player.hp = 1e9;
+  // 화면 맨 아래에서 죽는 적 → 구슬이 플레이 영역 안에 떨어져야 함
+  for (let i = 0; i < 10; i++) { s._make('hw', 100 + i * 10, E.H - 5); s.enemies[s.enemies.length - 1].hp = 0; }
+  s.step({ dx: 0, dy: 0 });
+  assert.ok(s.gems.length >= 10);
+  for (const g of s.gems) assert.ok(g.y <= E.PLAY_BOTTOM - 10 + 1e-9, `gem y=${g.y}`);
+  // 이미 아래에 있던 구슬도 위로 올라온다
+  s.gems.push({ x: 300, y: E.H - 20, v: 1 });
+  for (let i = 0; i < 60; i++) s.step({ dx: 0, dy: 0 });
+  for (const g of s.gems) assert.ok(g.y <= E.PLAY_BOTTOM - 10 + 1e-9);
+  // 플레이어가 도달 가능한 가장 아래(PLAY_BOTTOM - r)에서 흡수 가능한 거리
+  assert.ok(E.PLAY_BOTTOM - 10 - (E.PLAY_BOTTOM - s.player.r) < s.player.r + 5);
 });

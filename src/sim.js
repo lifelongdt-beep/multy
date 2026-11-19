@@ -382,7 +382,8 @@
       this.kills += 1;
       const big = e.type === 'boss' ? 12 : e.type === 'teacher' ? 6 : 1;
       const v = e.type === 'boss' ? 3 : e.type === 'teacher' ? Math.ceil(e.xp / 6) : e.xp;
-      for (let g = 0; g < big; g++) this.gems.push({ x: e.x + (this.rng() - 0.5) * 14, y: e.y + (this.rng() - 0.5) * 14, v });
+      // 조작 영역(PLAY_BOTTOM 아래)에는 플레이어가 못 가므로 구슬은 그 위쪽에 떨어뜨린다
+      for (let g = 0; g < big; g++) this.gems.push({ x: e.x + (this.rng() - 0.5) * 14, y: Math.min(PLAY_BOTTOM - 10, e.y + (this.rng() - 0.5) * 14), v });
       this.fx.push({ x: e.x, y: e.y, t: 14, kind: 'pop' });
       this._ev({ k: 'kill' });
       if (e.type === 'boss') this.bossDead = true;
@@ -540,6 +541,7 @@
       // 구슬 흡수
       for (let i = this.gems.length - 1; i >= 0; i--) {
         const g = this.gems[i];
+        if (g.y > PLAY_BOTTOM - 10) g.y = Math.max(PLAY_BOTTOM - 10, g.y - 3);
         const ax = p.x - g.x, ay = p.y - g.y;
         const dist = Math.hypot(ax, ay);
         if (dist < d.magnet) { g.x += (ax / (dist || 1)) * 4; g.y += (ay / (dist || 1)) * 4; }
