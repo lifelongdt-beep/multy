@@ -10,6 +10,7 @@
 
   const W = 360, H = 640;
   const TICK = 60;
+  const PLAY_BOTTOM = H - 140;   // 이 아래는 손가락 조작 영역: 플레이어는 내려가지 못함 (손가락이 캐릭터를 가리지 않게)
   const RUN_TICKS = 120 * TICK;
   const ELITE_TICK = 45 * TICK;
   const BOSS_TICK = 90 * TICK;
@@ -146,7 +147,7 @@
       this.events = [];
       this.tick = 0;
       this.player = {
-        x: W / 2, y: H * 0.65, hp: 100, maxhp: 100, r: 7, xp: 0, level: 1, need: 5,
+        x: W / 2, y: H * 0.45, hp: 100, maxhp: 100, r: 7, xp: 0, level: 1, need: 5,
         inv: 0, cd: 0, stats: newStats(), syn: {},
       };
       this.enemies = [];
@@ -411,7 +412,7 @@
       const len = Math.hypot(dx, dy);
       if (len > 1) { dx /= len; dy /= len; }
       p.x = Math.min(W - p.r, Math.max(p.r, p.x + dx * d.speed));
-      p.y = Math.min(H - p.r, Math.max(p.r, p.y + dy * d.speed));
+      p.y = Math.min(PLAY_BOTTOM - p.r, Math.max(p.r, p.y + dy * d.speed));
       this.rec.path.push(p.x, p.y);
 
       this._spawnLogic(t);
@@ -564,7 +565,7 @@
     exportEcho() { return { path: this.rec.path.slice(), ups: this.rec.ups.slice(), kills: this.kills, ticks: this.tick }; }
   }
 
-  const api = { Sim, addEcho, mulberry32, derive, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, TICK, RUN_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
+  const api = { Sim, addEcho, mulberry32, derive, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoSim = api;
 })(typeof window !== 'undefined' ? window : globalThis);

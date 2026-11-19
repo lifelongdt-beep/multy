@@ -1,7 +1,7 @@
 /* 퇴근 에코 — 입력 / 렌더 / 저장 / 연출 */
 (function () {
   'use strict';
-  const { Sim, addEcho, UPGRADES, SYNERGIES, ENEMY_TYPES, W, H, TICK, RUN_TICKS, MAX_ECHOES, MAX_LEVEL } = EchoSim;
+  const { Sim, addEcho, UPGRADES, SYNERGIES, ENEMY_TYPES, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, MAX_ECHOES, MAX_LEVEL } = EchoSim;
   const cv = document.getElementById('c');
   const ctx = cv.getContext('2d');
   const $ = (id) => document.getElementById(id);
@@ -40,9 +40,9 @@
     const r = cv.getBoundingClientRect();
     return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
   }
-  cv.addEventListener('pointerdown', (ev) => { cv.setPointerCapture(ev.pointerId); const p = toLogical(ev); drag = { ax: p.x, ay: p.y }; });
+  cv.addEventListener('pointerdown', (ev) => { cv.setPointerCapture(ev.pointerId); const p = toLogical(ev); drag = { ax: p.x, ay: p.y, px: p.x, py: p.y }; });
   cv.addEventListener('pointermove', (ev) => {
-    if (!drag) return; const p = toLogical(ev);
+    if (!drag) return; const p = toLogical(ev); drag.px = p.x; drag.py = p.y;
     let vx = p.x - drag.ax, vy = p.y - drag.ay; const len = Math.hypot(vx, vy);
     if (len > 46) { drag.ax += vx / len * (len - 46); drag.ay += vy / len * (len - 46); vx = p.x - drag.ax; vy = p.y - drag.ay; }
     input.dx = vx / 46; input.dy = vy / 46;
@@ -239,15 +239,32 @@
     const alive = sim.echoes.filter((e) => e.alive).length;
     ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
 
-    // 하단: 보유 업그레이드
-    ctx.fillStyle = '#000a'; ctx.fillRect(0, H - 22, W, 22);
+    // 하단 조작 영역 (플레이어는 이 위에서만 움직임 → 손가락이 캐릭터를 가리지 않음)
+    ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fillRect(0, PLAY_BOTTOM, W, H - PLAY_BOTTOM);
+    ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1; ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.moveTo(0, PLAY_BOTTOM); ctx.lineTo(W, PLAY_BOTTOM); ctx.stroke(); ctx.setLineDash([]);
+    if (!drag) {
+      ctx.globalAlpha = 0.35 + 0.2 * Math.sin(performance.now() / 350);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
+      ctx.fillText('👆 여기서 드래그해서 이동', W / 2, PLAY_BOTTOM + 76);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, PLAY_BOTTOM + 76, 38, 0, 7); ctx.globalAlpha *= 0.5; ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // 보유 업그레이드 (조작 영역 위쪽 가장자리)
     ctx.textAlign = 'left'; ctx.font = '12px sans-serif'; ctx.fillStyle = '#fff';
     let ux = 6;
     for (const u of UPGRADES) {
       const lv = p.stats[u.id];
       if (!lv || u.instant) continue;
       const s = `${u.icon}${lv}`;
-      ctx.fillText(s, ux, H - 10); ux += ctx.measureText(s).width + 8;
+      ctx.fillText(s, ux, PLAY_BOTTOM + 12); ux += ctx.measureText(s).width + 8;
+    }
+    // 조이스틱 표시 (드래그 중)
+    if (drag) {
+      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(drag.ax, drag.ay, 46, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(140,170,255,.85)';
+      ctx.beginPath(); ctx.arc(drag.px, drag.py, 18, 0, 7); ctx.fill();
     }
 
     // 배너 / 시너지 토스트
