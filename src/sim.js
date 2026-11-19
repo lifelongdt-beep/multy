@@ -27,8 +27,11 @@
     echoDamageTaken: 0.5,    // 에코가 받는 피해 배율(본체 대비)
     echoHpScale: 0.04,       // 에코 1명당 일반 적 체력 +4% (난이도 연동, 20명이면 +80%)
     echoBossScale: 0.07,     // 에코 1명당 보스 체력 +7% (20명이면 +140%)
-    hpGrowth: 2.0,           // 진행도에 따른 적 체력 증가
+    hpGrowth: 1.6,           // 진행도에 따른 적 체력 증가
     healAmount: 30,
+    damageTaken: 0.75,       // 플레이어가 받는 피해 배율 (낮출수록 쉬움)
+    hurtInvTicks: 50,        // 피격 후 무적 시간(틱)
+    enemySpeedGrowth: 0.15,  // 진행도에 따른 적 속도 증가
   };
 
   function mulberry32(a) {
@@ -76,17 +79,17 @@
 
   // 시간대별 웨이브 (초). interval은 틱 단위 스폰 간격, n은 한 번에 나오는 수, w는 종류별 가중치
   const WAVES = [
-    { from: 0,  to: 20,  interval: 44, n: 1, w: { hw: 6, test: 3 } },
-    { from: 20, to: 45,  interval: 34, n: 2, w: { hw: 5, test: 4, alarm: 1, late: 2 } },
-    { from: 45, to: 75,  interval: 26, n: 2, w: { hw: 4, test: 3, alarm: 2, late: 2, chalk: 2, group: 2 } },
-    { from: 75, to: 121, interval: 18, n: 3, w: { hw: 3, test: 3, alarm: 2, late: 2, chalk: 2, group: 2 } },
+    { from: 0,  to: 20,  interval: 52, n: 1, w: { hw: 6, test: 3 } },
+    { from: 20, to: 45,  interval: 40, n: 2, w: { hw: 5, test: 4, alarm: 1, late: 2 } },
+    { from: 45, to: 75,  interval: 30, n: 2, w: { hw: 4, test: 3, alarm: 2, late: 2, chalk: 2, group: 2 } },
+    { from: 75, to: 121, interval: 22, n: 3, w: { hw: 3, test: 3, alarm: 2, late: 2, chalk: 2, group: 2 } },
   ];
 
   // 포위 이벤트: 플레이어 주위를 원형으로 둘러싸고 몰려옴
   const SWARMS = [
-    { t: 30,  type: 'test', n: 14, text: '쪽지시험 포위!' },
-    { t: 62,  type: 'late', n: 10, text: '지각 러시!' },
-    { t: 100, type: 'hw',   n: 24, text: '숙제 폭탄!' },
+    { t: 30,  type: 'test', n: 10, text: '쪽지시험 포위!' },
+    { t: 62,  type: 'late', n: 8, text: '지각 러시!' },
+    { t: 100, type: 'hw',   n: 16, text: '숙제 폭탄!' },
   ];
 
   function derive(st) {
@@ -106,7 +109,7 @@
       shots: 1 + st.multi,
       dmg,
       speed: 2.1 * (1 + 0.12 * st.speed),
-      magnet: 38 + 22 * st.magnet,
+      magnet: 50 + 22 * st.magnet,
       pierce,
       crit: Math.min(0.9, crit),
       critMul: 2,
@@ -147,7 +150,7 @@
       this.events = [];
       this.tick = 0;
       this.player = {
-        x: W / 2, y: H * 0.45, hp: 100, maxhp: 100, r: 7, xp: 0, level: 1, need: 5,
+        x: W / 2, y: H * 0.45, hp: 130, maxhp: 130, r: 7, xp: 0, level: 1, need: 4,
         inv: 0, cd: 0, stats: newStats(), syn: {},
       };
       this.enemies = [];
@@ -197,7 +200,7 @@
 
     _levelUp() {
       const p = this.player;
-      p.level += 1; p.xp -= p.need; p.need = Math.round(5 + p.level * 3.2);
+      p.level += 1; p.xp -= p.need; p.need = Math.round(4 + p.level * 2.8);
       const pool = UPGRADES.filter((u) => {
         if (u.instant) return p.hp <= p.maxhp * 0.9;
         return p.stats[u.id] < MAX_LEVEL;
@@ -220,7 +223,7 @@
       const hp = type === 'boss' ? b.hp * (1 + TUNING.echoBossScale * this.echoes.length) : b.hp * this._hpScale();
       const cdBase = b.fireCd || b.dashCd || 150;
       this.enemies.push({
-        type, x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * 0.25), dmg: b.dmg, xp: b.xp,
+        type, x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * TUNING.enemySpeedGrowth), dmg: b.dmg, xp: b.xp,
         flash: 0, ocd: 0, cd: Math.round(cdBase * (0.4 + 0.6 * this.rng())), dashT: 0, dvx: 0, dvy: 0, warn: false,
         phase: 1, t: 0,
       });
@@ -306,7 +309,7 @@
 
     _hurtPlayer(dmg) {
       const p = this.player;
-      p.hp -= dmg; p.inv = 40;
+      p.hp -= dmg * TUNING.damageTaken; p.inv = TUNING.hurtInvTicks;
       this.fx.push({ x: p.x, y: p.y, t: 10, kind: 'hurt' });
       this._ev({ k: 'hurt' });
     }
