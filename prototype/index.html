@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>퇴근 에코 — 프로토타입 (학교 월드)</title>
+<style>
+  html,body{margin:0;height:100%;background:#0d0f1a;color:#fff;font-family:system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+  #wrap{position:relative;height:100%;display:flex;align-items:center;justify-content:center}
+  #stage{position:relative;width:360px;height:640px}
+  canvas{width:100%;height:100%;display:block;background:#161a2e;border-radius:6px}
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(8,10,20,.82);text-align:center;padding:24px;box-sizing:border-box}
+  .overlay.hidden{display:none}
+  h1{margin:0;font-size:28px} h2{margin:0;font-size:22px}
+  p{margin:0;opacity:.8;font-size:14px;line-height:1.5}
+  button{font:inherit;font-size:16px;font-weight:700;border:0;border-radius:12px;padding:14px 22px;background:#6c8cff;color:#fff;cursor:pointer;min-width:200px}
+  button.sub{background:#2a2f4a;font-size:13px;padding:8px 14px;min-width:0;font-weight:500}
+  .card{background:#222845;border:2px solid #3a4272;text-align:left;min-width:260px}
+  .card small{display:block;font-weight:400;opacity:.75;margin-top:2px}
+  #stats{font-size:15px;line-height:1.7}
+  .big{font-size:40px;font-weight:800;color:#8fe3ff}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <canvas id="c"></canvas>
+
+  <div id="start" class="overlay">
+    <h1>👻 퇴근 에코</h1>
+    <p>학교 월드 · 프로토타입</p>
+    <p>화면을 <b>드래그</b>해서 이동 (키보드: 방향키/WASD)<br>공격은 자동입니다.<br>
+       한 판이 끝나면 <b>이번 판의 내가 유령(에코)이 되어</b><br>다음 판에서 함께 싸웁니다.</p>
+    <button id="go">시작</button>
+    <button id="reset" class="sub">에코 기록 초기화</button>
+  </div>
+
+  <div id="levelup" class="overlay hidden">
+    <h2>레벨 업!</h2>
+    <div id="choices"></div>
+  </div>
+
+  <div id="end" class="overlay hidden">
+    <h2 id="endTitle"></h2>
+    <div class="big" id="endEchoes"></div>
+    <div id="stats"></div>
+    <button id="again">한 판만 더</button>
+  </div>
+</div></div>
+
+<script src="sim.js"></script>
+<script>
+(function () {
+  'use strict';
+  const { Sim, UPGRADES, ENEMY_TYPES, W, H, TICK, RUN_TICKS, BOSS_TICK, MAX_ECHOES } = EchoSim;
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const $ = (id) => document.getElementById(id);
+
+  /* ---------- 에코 저장 (localStorage, Int16 양자화) ---------- */
+  const KEY = 'echo-proto-v1';
+  function pack(e) {
+    const a = new Int16Array(e.path.length);
+    for (let i = 0; i < a.length; i++) a[i] = Math.round(e.path[i] * 10);
+    let bin = ''; const u = new Uint8Array(a.buffer);
+    for (let i = 0; i < u.length; i += 8192) bin += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
+    return { p: btoa(bin), u: e.ups, k: e.kills, t: e.ticks };
+  }
+  function unpack(o) {
+    const bin = atob(o.p); const u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const a = new Int16Array(u.buffer); const path = new Array(a.length);
+    for (let i = 0; i < a.length; i++) path[i] = a[i] / 10;
+    return { path, ups: o.u, kills: o.k, ticks: o.t };
+  }
+  let echoes = [];
+  let runCount = 0;
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (s) { echoes = s.echoes.map(unpack); runCount = s.runCount || 0; }
+  } catch (e) { echoes = []; }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ runCount, echoes: echoes.map(pack) })); } catch (e) { /* 용량 초과 무시 */ }
+  }
+
+  /* ---------- 입력: 상대 드래그 + 키보드 ---------- */
+  const input = { dx: 0, dy: 0 };
+  const keys = {};
+  let drag = null;
+  function toLogical(ev) {
+    const r = cv.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
+  }
+  cv.addEventListener('pointerdown', (ev) => { cv.setPointerCapture(ev.pointerId); const p = toLogical(ev); drag = { ax: p.x, ay: p.y }; });
+  cv.addEventListener('pointermove', (ev) => {
+    if (!drag) return; const p = toLogical(ev);
+    // 앵커를 손가락 쪽으로 천천히 끌어서 "조이스틱 느낌" 유지
+    let vx = p.x - drag.ax, vy = p.y - drag.ay; const len = Math.hypot(vx, vy);
+    if (len > 46) { drag.ax += vx / len * (len - 46); drag.ay += vy / len * (len - 46); vx = p.x - drag.ax; vy = p.y - drag.ay; }
+    input.dx = vx / 46; input.dy = vy / 46;
+  });
+  const endDrag = () => { drag = null; input.dx = 0; input.dy = 0; };
+  cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+  addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+  addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+  function currentInput() {
+    if (drag) return input;
+    const dx = (keys['arrowright'] || keys['d'] ? 1 : 0) - (keys['arrowleft'] || keys['a'] ? 1 : 0);
+    const dy = (keys['arrowdown'] || keys['s'] ? 1 : 0) - (keys['arrowup'] || keys['w'] ? 1 : 0);
+    return { dx, dy };
+  }
+
+  /* ---------- 게임 상태 ---------- */
+  let sim = null, state = 'menu';   // menu | play | levelup | end
+  let acc = 0, last = 0;
+
+  function resize() {
+    const st = $('stage'), k = Math.min(innerWidth / W, innerHeight / H);
+    st.style.width = Math.floor(W * k) + 'px'; st.style.height = Math.floor(H * k) + 'px';
+    const r = cv.getBoundingClientRect(); const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  }
+  addEventListener('resize', resize); resize();
+
+  function startRun() {
+    runCount += 1;
+    sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes });
+    state = 'play'; acc = 0; last = performance.now();
+    ['start', 'levelup', 'end'].forEach((id) => $(id).classList.add('hidden'));
+  }
+
+  function showLevelUp() {
+    state = 'levelup';
+    const box = $('choices'); box.innerHTML = '';
+    sim.choices.forEach((u) => {
+      const b = document.createElement('button'); b.className = 'card';
+      b.innerHTML = `${u.name}<small>${u.desc}</small>`;
+      b.onclick = () => { sim.choose(u.id); $('levelup').classList.add('hidden'); state = 'play'; last = performance.now(); acc = 0; };
+      box.appendChild(b); box.appendChild(document.createElement('div')).style.height = '8px';
+    });
+    $('levelup').classList.remove('hidden');
+  }
+
+  function showEnd() {
+    state = 'end';
+    const out = sim.exportEcho();
+    echoes = echoes.concat(out).slice(-MAX_ECHOES);
+    save();
+    const title = { dead: '쓰러졌다… 하지만!', clear: '기말고사 격파! 🎉', survive: '120초 생존!' }[sim.result];
+    $('endTitle').textContent = title;
+    $('endEchoes').textContent = `👻 에코 ${echoes.length}명 합류`;
+    $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 처치 ${sim.kills}<br>다음 판엔 이번 판의 내가 함께 싸웁니다`;
+    $('end').classList.remove('hidden');
+  }
+
+  $('go').onclick = startRun; $('again').onclick = startRun;
+  $('reset').onclick = () => { echoes = []; runCount = 0; save(); $('reset').textContent = '초기화됨'; };
+
+  /* ---------- 렌더 ---------- */
+  function emoji(ch, x, y, size) { ctx.font = `${size}px serif`; ctx.fillText(ch, x, y); }
+
+  function render() {
+    ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    // 교실 바닥 격자
+    ctx.fillStyle = '#161a2e'; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,.04)'; ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    if (!sim) return;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // 구슬
+    for (const g of sim.gems) { ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.arc(g.x, g.y, 3.2, 0, 7); ctx.fill(); }
+
+    // 에코 (반투명 시안 유령 + 잔상)
+    for (const ec of sim.echoes) {
+      if (!ec.alive) continue;
+      ctx.globalAlpha = 0.28; ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 11, 0, 7); ctx.fill();
+      ctx.globalAlpha = 0.75; emoji('👻', ec.x, ec.y + 1, 17); ctx.globalAlpha = 1;
+    }
+
+    // 적
+    for (const e of sim.enemies) {
+      const b = ENEMY_TYPES[e.type];
+      if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
+      emoji(b.emoji, e.x, e.y + 1, e.r * 2);
+      if (e.type === 'boss') {
+        ctx.fillStyle = '#000a'; ctx.fillRect(40, 54, W - 80, 7);
+        ctx.fillStyle = '#ff5d73'; ctx.fillRect(40, 54, (W - 80) * Math.max(0, e.hp / e.maxhp), 7);
+        ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText('기말고사', W / 2, 48);
+      }
+    }
+
+    // 탄환
+    for (const b of sim.bullets) {
+      ctx.fillStyle = b.owner === 'echo' ? '#8fe3ff' : '#ffe27a';
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.owner === 'echo' ? 2.6 : 3.2, 0, 7); ctx.fill();
+    }
+
+    // 플레이어
+    const p = sim.player;
+    if (p.inv > 0 && Math.floor(p.inv / 4) % 2) ctx.globalAlpha = 0.4;
+    emoji('🧑‍🎓', p.x, p.y + 1, 22); ctx.globalAlpha = 1;
+
+    // 이펙트
+    for (const f of sim.fx) {
+      ctx.globalAlpha = Math.min(1, f.t / 12);
+      if (f.kind === 'pop') { ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(f.x, f.y, 14 - f.t, 0, 7); ctx.stroke(); }
+      else if (f.kind === 'hurt') { ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.arc(f.x, f.y, 16 - f.t, 0, 7); ctx.fill(); }
+      else if (f.kind === 'vanish') { ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(f.x, f.y, 24 - f.t, 0, 7); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    }
+
+    // HUD
+    ctx.textAlign = 'left'; ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, 34);
+    ctx.fillStyle = '#ff5d73'; ctx.fillRect(8, 8, 100 * Math.max(0, p.hp / p.maxhp), 8);
+    ctx.strokeStyle = '#fff6'; ctx.strokeRect(8, 8, 100, 8);
+    ctx.fillStyle = '#7dffb2'; ctx.fillRect(8, 20, 100 * Math.min(1, p.xp / p.need), 5);
+    ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif';
+    ctx.fillText(`Lv ${p.level}`, 116, 14);
+    ctx.textAlign = 'center';
+    const left = Math.max(0, Math.ceil((RUN_TICKS - sim.tick) / TICK));
+    ctx.font = 'bold 16px sans-serif'; ctx.fillText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`, W / 2, 16);
+    ctx.textAlign = 'right'; ctx.font = '12px sans-serif';
+    const alive = sim.echoes.filter((e) => e.alive).length;
+    ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
+    if (sim.tick > BOSS_TICK - 180 && sim.tick < BOSS_TICK && !sim.bossSpawned) {
+      ctx.textAlign = 'center'; ctx.fillStyle = '#ff5d73'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('⚠ 기말고사 접근 중 ⚠', W / 2, 90);
+    }
+  }
+
+  /* ---------- 메인 루프 (고정 60Hz) ---------- */
+  function frame(now) {
+    if (state === 'play') {
+      acc += Math.min(100, now - last); last = now;
+      const dt = 1000 / TICK;
+      while (acc >= dt && state === 'play') {
+        acc -= dt; sim.step(currentInput());
+        if (sim.choices) { showLevelUp(); break; }
+        if (sim.over) { showEnd(); break; }
+      }
+    }
+    render();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // 테스트/디버그용 훅
+  window.__echo = { get sim() { return sim; }, get state() { return state; }, get echoes() { return echoes; } };
+})();
+</script>
+</body>
+</html>
