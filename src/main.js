@@ -167,10 +167,10 @@
     // 에코 (반투명 시안 유령 + 체력 바)
     for (const ec of sim.echoes) {
       if (!ec.alive) continue;
-      ctx.globalAlpha = ec.inv > 0 && Math.floor(ec.inv / 4) % 2 ? 0.12 : 0.28;
+      ctx.globalAlpha = ec.inv > 0 && Math.floor(ec.inv / 4) % 2 ? 0.07 : 0.16;
       ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 11, 0, 7); ctx.fill();
-      ctx.globalAlpha = 0.75; emoji('👻', ec.x, ec.y + 1, 17);
-      ctx.globalAlpha = 0.8; ctx.fillStyle = '#0008'; ctx.fillRect(ec.x - 9, ec.y + 12, 18, 3);
+      ctx.globalAlpha = 0.45; emoji('👻', ec.x, ec.y + 1, 17);
+      ctx.globalAlpha = 0.5; ctx.fillStyle = '#0008'; ctx.fillRect(ec.x - 9, ec.y + 12, 18, 3);
       ctx.fillStyle = '#6fe8ff'; ctx.fillRect(ec.x - 9, ec.y + 12, 18 * Math.max(0, ec.hp / 30), 3);
       ctx.globalAlpha = 1;
     }
@@ -194,10 +194,12 @@
 
     // 탄환 / 형광펜 / 적 탄환
     for (const b of sim.bullets) {
+      ctx.globalAlpha = b.owner === 'echo' ? 0.4 : 1;
       ctx.fillStyle = b.crit ? '#ffd34d' : b.owner === 'echo' ? '#8fe3ff' : '#ffe27a';
       ctx.beginPath(); ctx.arc(b.x, b.y, (b.owner === 'echo' ? 2.6 : 3.2) + (b.crit ? 1.2 : 0), 0, 7); ctx.fill();
     }
-    for (const o of sim.orbs) { ctx.fillStyle = o.owner === 'echo' ? '#8fe3ff' : '#e6ff6b'; ctx.beginPath(); ctx.arc(o.x, o.y, 5, 0, 7); ctx.fill(); }
+    for (const o of sim.orbs) { ctx.globalAlpha = o.owner === 'echo' ? 0.4 : 1; ctx.fillStyle = o.owner === 'echo' ? '#8fe3ff' : '#e6ff6b'; ctx.beginPath(); ctx.arc(o.x, o.y, 5, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
     for (const b of sim.ebullets) { ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff8'; ctx.lineWidth = 1; ctx.stroke(); }
 
     // 플레이어
@@ -240,14 +242,10 @@
     ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
 
     // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림)
-    ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fillRect(0, PLAY_BOTTOM, W, H - PLAY_BOTTOM);
-    ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1; ctx.setLineDash([6, 5]);
-    ctx.beginPath(); ctx.moveTo(0, PLAY_BOTTOM); ctx.lineTo(W, PLAY_BOTTOM); ctx.stroke(); ctx.setLineDash([]);
     if (!drag) {
       ctx.globalAlpha = 0.35 + 0.2 * Math.sin(performance.now() / 350);
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
       ctx.fillText('👆 여기서 드래그하면 캐릭터가 안 가려져요', W / 2, PLAY_BOTTOM + 76);
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, PLAY_BOTTOM + 76, 38, 0, 7); ctx.globalAlpha *= 0.5; ctx.stroke();
       ctx.globalAlpha = 1;
     }
     // 보유 업그레이드 (조작 영역 위쪽 가장자리)
