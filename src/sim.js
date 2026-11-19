@@ -27,6 +27,7 @@
     echoMinPower: 0.6,       // 최저 배율
     echoDamageTaken: 0.5,    // 에코가 받는 피해 배율(본체 대비)
     echoHpScale: 0.04,       // 에코 1명당 일반 적 체력 +4% (난이도 연동, 10명이면 +40%)
+    bossLevelScale: 0.06,    // 플레이어 레벨 1당 보스 체력 +6% (강하게 클수록 보스도 단단해짐)
     echoBossScale: 0.07,     // 에코 1명당 보스 체력 +7% (10명이면 +70%)
     hpGrowth: 1.6,           // 진행도에 따른 적 체력 증가
     healAmount: 50,
@@ -84,7 +85,7 @@
     chalk:   { name: '분필',     emoji: '🖍️', hp: 5,   speed: 0.6,  r: 8,  dmg: 4,  xp: 2,  ai: 'shoot', fireCd: 110 },
     group:   { name: '조별과제', emoji: '👥', hp: 10,  speed: 0.55, r: 12, dmg: 8,  xp: 3,  ai: 'chase' },
     teacher: { name: '담임',     emoji: '👨‍🏫', hp: 120, speed: 0.5,  r: 20, dmg: 14, xp: 14, ai: 'elite', fireCd: 150 },
-    boss:    { name: '기말고사', emoji: '📚', hp: 520, speed: 0.4,  r: 30, dmg: 12, xp: 30, ai: 'boss' },
+    boss:    { name: '기말고사', emoji: '📚', hp: 750, speed: 0.4,  r: 30, dmg: 12, xp: 30, ai: 'boss' },
   };
 
   // 시간대별 웨이브 (초). interval은 틱 단위 스폰 간격, n은 한 번에 나오는 수, w는 종류별 가중치
@@ -231,7 +232,9 @@
     _make(type, x, y) {
       const b = ENEMY_TYPES[type];
       const progress = this.tick / RUN_TICKS;
-      const hp = type === 'boss' ? b.hp * (1 + TUNING.echoBossScale * this.echoes.length) : b.hp * this._hpScale();
+      const hp = type === 'boss'
+        ? b.hp * (1 + TUNING.echoBossScale * this.echoes.length) * (1 + TUNING.bossLevelScale * (this.player.level - 1))
+        : b.hp * this._hpScale();
       const cdBase = b.fireCd || b.dashCd || 150;
       this.enemies.push({
         type, x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * TUNING.enemySpeedGrowth), dmg: b.dmg, xp: b.xp,
