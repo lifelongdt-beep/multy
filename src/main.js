@@ -204,6 +204,17 @@
 
     // 플레이어
     const p = sim.player;
+    // 내 위치 표시: 몸 아래 초록 링(숨쉬듯 깜빡임) + 머리 위 ▼ (에코의 시안색과 구분)
+    {
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260);
+      ctx.fillStyle = `rgba(125,255,178,${0.10 + 0.08 * pulse})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y + 1, 17, 0, 7); ctx.fill();
+      ctx.strokeStyle = `rgba(125,255,178,${0.55 + 0.35 * pulse})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(p.x, p.y + 1, 15 + 2 * pulse, 0, 7); ctx.stroke();
+      const ay = p.y - 24 - 2 * pulse;
+      ctx.fillStyle = '#7dffb2';
+      ctx.beginPath(); ctx.moveTo(p.x - 5, ay - 5); ctx.lineTo(p.x + 5, ay - 5); ctx.lineTo(p.x, ay + 2); ctx.closePath(); ctx.fill();
+    }
     if (p.inv > 0 && Math.floor(p.inv / 4) % 2) ctx.globalAlpha = 0.4;
     emoji('🧑‍🎓', p.x, p.y + 1, 22); ctx.globalAlpha = 1;
 
