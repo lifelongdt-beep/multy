@@ -14,7 +14,7 @@
   const RUN_TICKS = 120 * TICK;
   const ELITE_TICK = 45 * TICK;
   const BOSS_TICK = 90 * TICK;
-  const MAX_ECHOES = 5;   // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
+  const MAX_ECHOES = 20;  // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
   const MAX_ENEMIES = 260;
   const MAX_LEVEL = 5;
 
@@ -25,8 +25,8 @@
     echoAgeDecay: 0.05,      // 한 세대 오래될수록 공격력 -5%
     echoMinPower: 0.6,       // 최저 배율
     echoDamageTaken: 0.5,    // 에코가 받는 피해 배율(본체 대비)
-    echoHpScale: 0.07,       // 에코 1명당 일반 적 체력 +7% (난이도 연동)
-    echoBossScale: 0.12,     // 에코 1명당 보스 체력 +12%
+    echoHpScale: 0.04,       // 에코 1명당 일반 적 체력 +4% (난이도 연동, 20명이면 +80%)
+    echoBossScale: 0.07,     // 에코 1명당 보스 체력 +7% (20명이면 +140%)
     hpGrowth: 2.0,           // 진행도에 따른 적 체력 증가
     healAmount: 30,
   };
