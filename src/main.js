@@ -246,6 +246,7 @@
       ctx.globalAlpha = 0.35 + 0.2 * Math.sin(performance.now() / 350);
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
       ctx.fillText('👆 여기서 드래그하면 캐릭터가 안 가려져요', W / 2, PLAY_BOTTOM + 76);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, PLAY_BOTTOM + 76, 38, 0, 7); ctx.globalAlpha *= 0.5; ctx.stroke();
       ctx.globalAlpha = 1;
     }
     // 보유 업그레이드 (조작 영역 위쪽 가장자리)
