@@ -247,7 +247,9 @@
     ctx.fillText(`Lv ${p.level}`, 116, 14);
     ctx.textAlign = 'center';
     const left = Math.max(0, Math.ceil((RUN_TICKS - sim.tick) / TICK));
-    ctx.font = 'bold 16px sans-serif'; ctx.fillText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`, W / 2, 16);
+    ctx.font = 'bold 16px sans-serif';
+    if (sim.tick >= RUN_TICKS) { ctx.fillStyle = '#ff9aa8'; ctx.fillText('연장전', W / 2, 16); ctx.fillStyle = '#fff'; }
+    else ctx.fillText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`, W / 2, 16);
     ctx.textAlign = 'right'; ctx.font = '12px sans-serif';
     const alive = sim.echoes.filter((e) => e.alive).length;
     ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);

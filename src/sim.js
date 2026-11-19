@@ -16,6 +16,7 @@
   const BOSS_TICK = 90 * TICK;
   const MAX_ECHOES = 20;  // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
   const MAX_ENEMIES = 260;
+  const OVERTIME_TICKS = 60 * TICK;   // 120초가 지나도 보스가 살아 있으면 최대 60초 연장 (보스를 잡을 시간)
   const MAX_LEVEL = 5;
 
   /* ---- 밸런스 튜닝 값 (여기만 만지면 됨) ---- */
@@ -74,7 +75,7 @@
     chalk:   { name: '분필',     emoji: '🖍️', hp: 5,   speed: 0.6,  r: 8,  dmg: 4,  xp: 2,  ai: 'shoot', fireCd: 110 },
     group:   { name: '조별과제', emoji: '👥', hp: 10,  speed: 0.55, r: 12, dmg: 8,  xp: 3,  ai: 'chase' },
     teacher: { name: '담임',     emoji: '👨‍🏫', hp: 120, speed: 0.5,  r: 20, dmg: 14, xp: 14, ai: 'elite', fireCd: 150 },
-    boss:    { name: '기말고사', emoji: '📚', hp: 700, speed: 0.45, r: 30, dmg: 18, xp: 30, ai: 'boss' },
+    boss:    { name: '기말고사', emoji: '📚', hp: 520, speed: 0.4,  r: 30, dmg: 12, xp: 30, ai: 'boss' },
   };
 
   // 시간대별 웨이브 (초). interval은 틱 단위 스폰 간격, n은 한 번에 나오는 수, w는 종류별 가중치
@@ -262,7 +263,8 @@
     _spawnLogic(t) {
       const sec = t / TICK;
       const wave = WAVES.find((w) => sec >= w.from && sec < w.to) || WAVES[WAVES.length - 1];
-      if (t % wave.interval === 0) for (let i = 0; i < wave.n; i++) this._spawn(wave);
+      const interval = t >= BOSS_TICK ? wave.interval * 2 : wave.interval;   // 보스전 중에는 졸개 스폰을 절반으로
+      if (t % interval === 0) for (let i = 0; i < wave.n; i++) this._spawn(wave);
       while (this.swarmIdx < SWARMS.length && t >= SWARMS[this.swarmIdx].t * TICK) this._ring(SWARMS[this.swarmIdx++]);
       if (t === ELITE_TICK) { this._make('teacher', W / 2, -30); this._ev({ k: 'banner', text: '⚠ 담임 선생님 등장' }); }
       if (t === BOSS_TICK - 180) this._ev({ k: 'banner', text: '⚠ 기말고사 접근 중 ⚠' });
@@ -360,23 +362,23 @@
       }
       e.t += 1;
       const p = this.player;
-      if (e.t % 150 === 0) {
-        const n = phase === 1 ? 8 : 12;
-        const off = (e.t / 150) * 0.3;
-        for (let i = 0; i < n; i++) this._ebullet(e.x, e.y, off + (i / n) * Math.PI * 2, 1.8, 7);
+      if (e.t % 200 === 0) {
+        const n = phase === 1 ? 6 : 9;
+        const off = (e.t / 200) * 0.3;
+        for (let i = 0; i < n; i++) this._ebullet(e.x, e.y, off + (i / n) * Math.PI * 2, 1.6, 5);
       }
-      if (phase >= 2 && e.t % 300 === 0) {
-        for (let i = 0; i < 5; i++) {
+      if (phase >= 2 && e.t % 420 === 0) {
+        for (let i = 0; i < 4; i++) {
           if (this.enemies.length >= MAX_ENEMIES) break;
-          const a = (i / 5) * Math.PI * 2;
+          const a = (i / 4) * Math.PI * 2;
           this._make('hw', e.x + Math.cos(a) * 40, e.y + Math.sin(a) * 40);
         }
       }
-      if (phase === 3 && e.t % 70 === 0) {
+      if (phase === 3 && e.t % 110 === 0) {
         const base = Math.atan2(p.y - e.y, p.x - e.x);
-        for (let i = -1; i <= 1; i++) this._ebullet(e.x, e.y, base + i * 0.2, 2.6, 7);
+        for (let i = -1; i <= 1; i++) this._ebullet(e.x, e.y, base + i * 0.2, 2.3, 5);
       }
-      const sp = e.speed * (phase === 3 ? 1.7 : 1);
+      const sp = e.speed * (phase === 3 ? 1.4 : 1);
       return { x: ux * sp, y: uy * sp };
     }
 
@@ -561,14 +563,14 @@
 
       if (p.hp <= 0) { this.over = true; this.result = 'dead'; }
       else if (this.bossDead) { this.over = true; this.result = 'clear'; }
-      else if (this.tick >= RUN_TICKS) { this.over = true; this.result = 'survive'; }
+      else if (this.tick >= RUN_TICKS && (!this.bossSpawned || this.tick >= RUN_TICKS + OVERTIME_TICKS)) { this.over = true; this.result = 'survive'; }
     }
 
     /** 이번 판을 다음 판의 에코로 내보낸다. */
     exportEcho() { return { path: this.rec.path.slice(), ups: this.rec.ups.slice(), kills: this.kills, ticks: this.tick }; }
   }
 
-  const api = { Sim, addEcho, mulberry32, derive, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
+  const api = { Sim, addEcho, mulberry32, derive, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoSim = api;
 })(typeof window !== 'undefined' ? window : globalThis);

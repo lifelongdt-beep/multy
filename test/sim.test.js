@@ -201,3 +201,32 @@ test('캐릭터는 화면 어디든(아래쪽 포함) 이동할 수 있고 아�
   s.step({ dx: 0, dy: 0 });
   assert.ok(s.player.xp > xp0 || s.player.level > 1);
 });
+
+test('120초가 지나도 보스가 살아 있으면 연장전, 보스를 잡으면 클리어', () => {
+  const s = new Sim({ seed: 21, events: false });
+  s.player.hp = 1e9;
+  while (!s.over && s.tick < RUN_TICKS + 5) {
+    if (s.choices) s.choose(s.choices[0].id);
+    s.player.hp = 1e9;
+    const b = s.enemies.find((e) => e.type === 'boss'); if (b) b.hp = b.maxhp; // 보스를 못 잡은 상황
+    s.step({ dx: 0, dy: 0 });
+  }
+  assert.ok(s.bossSpawned && !s.bossDead);
+  assert.strictEqual(s.over, false, '보스가 살아 있으면 120초에 끝나면 안 됨');
+  const boss = s.enemies.find((e) => e.type === 'boss');
+  boss.hp = 0;
+  for (let i = 0; i < 5 && !s.over; i++) { s.player.hp = 1e9; s.step({ dx: 0, dy: 0 }); }
+  assert.strictEqual(s.result, 'clear');
+});
+
+test('연장전은 최대 60초에서 끝난다', () => {
+  const s = new Sim({ seed: 22, events: false });
+  while (!s.over && s.tick < RUN_TICKS + E.OVERTIME_TICKS + 10) {
+    s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id);
+    const b = s.enemies.find((e) => e.type === 'boss'); if (b) b.hp = b.maxhp; // 보스를 못 잡는 상황
+    s.step({ dx: 0, dy: 0 });
+  }
+  assert.strictEqual(s.over, true);
+  assert.strictEqual(s.result, 'survive');
+  assert.ok(s.tick <= RUN_TICKS + E.OVERTIME_TICKS + 1);
+});
