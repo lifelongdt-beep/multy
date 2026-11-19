@@ -14,7 +14,7 @@
   const RUN_TICKS = 120 * TICK;
   const ELITE_TICK = 45 * TICK;
   const BOSS_TICK = 90 * TICK;
-  const MAX_ECHOES = 20;  // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
+  const MAX_ECHOES = 10;  // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
   const MAX_ENEMIES = 260;
   const OVERTIME_TICKS = 60 * TICK;   // 120초가 지나도 보스가 살아 있으면 최대 60초 연장 (보스를 잡을 시간)
   const MAX_LEVEL = 5;
@@ -22,14 +22,23 @@
   /* ---- 밸런스 튜닝 값 (여기만 만지면 됨) ---- */
   const TUNING = {
     echoHp: 30,              // 에코 체력
-    echoBasePower: 0.9,      // 에코 기본 공격력 배율
+    echoBasePower: 1.0,      // 에코 기본 공격력 배율
     echoAgeDecay: 0.05,      // 한 세대 오래될수록 공격력 -5%
     echoMinPower: 0.6,       // 최저 배율
     echoDamageTaken: 0.5,    // 에코가 받는 피해 배율(본체 대비)
-    echoHpScale: 0.04,       // 에코 1명당 일반 적 체력 +4% (난이도 연동, 20명이면 +80%)
-    echoBossScale: 0.07,     // 에코 1명당 보스 체력 +7% (20명이면 +140%)
+    echoHpScale: 0.04,       // 에코 1명당 일반 적 체력 +4% (난이도 연동, 10명이면 +40%)
+    echoBossScale: 0.07,     // 에코 1명당 보스 체력 +7% (10명이면 +70%)
     hpGrowth: 1.6,           // 진행도에 따른 적 체력 증가
-    healAmount: 30,
+    healAmount: 50,
+    // ---- 아이템(업그레이드) 1레벨당 효과 ----
+    rateMul: 0.80,           // 발사 간격 x0.80 (이전 0.85)
+    dmgPer: 0.5,             // 공격력 +50% (이전 35%)
+    speedPer: 0.15,          // 이동속도 +15% (이전 12%)
+    magnetPer: 30,           // 구슬 흡수 범위 +30 (이전 22)
+    critPer: 0.14,           // 치명타 확률 +14% (이전 10%)
+    critMul: 2.5,            // 치명타 피해 x2.5 (이전 x2)
+    regenPer: 1.5,           // 체력 재생 +1.5/초 (이전 0.8)
+    echoBoostPer: 0.25,      // 에코 응원 +25% (이전 15%)
     damageTaken: 0.75,       // 플레이어가 받는 피해 배율 (낮출수록 쉬움)
     hurtInvTicks: 50,        // 피격 후 무적 시간(틱)
     enemySpeedGrowth: 0.15,  // 진행도에 따른 적 속도 증가
@@ -45,22 +54,22 @@
   }
 
   const UPGRADES = [
-    { id: 'rate',   icon: '✏️', name: '샤프 속도↑',  desc: '발사 간격 -15%' },
+    { id: 'rate',   icon: '✏️', name: '샤프 속도↑',  desc: '발사 간격 -20%' },
     { id: 'multi',  icon: '🧽', name: '지우개 +1',    desc: '동시 발사 수 +1' },
-    { id: 'dmg',    icon: '📝', name: '필기 강화',    desc: '공격력 +35%' },
-    { id: 'speed',  icon: '👟', name: '운동화',        desc: '이동속도 +12%' },
+    { id: 'dmg',    icon: '📝', name: '필기 강화',    desc: '공격력 +50%' },
+    { id: 'speed',  icon: '👟', name: '운동화',        desc: '이동속도 +15%' },
     { id: 'magnet', icon: '🧲', name: '자석 필통',     desc: '구슬 흡수 범위 +' },
     { id: 'pierce', icon: '📍', name: '관통 샤프심',   desc: '관통 +1' },
-    { id: 'crit',   icon: '💯', name: '시험 만점',     desc: '치명타 확률 +10% (피해 x2)' },
+    { id: 'crit',   icon: '💯', name: '시험 만점',     desc: '치명타 확률 +14% (피해 x2.5)' },
     { id: 'nova',   icon: '🔔', name: '종소리',        desc: '주기적으로 주변에 충격파' },
     { id: 'orbit',  icon: '🖍️', name: '형광펜',        desc: '몸 주위를 도는 형광펜 +1' },
-    { id: 'regen',  icon: '🍱', name: '급식 시간',     desc: '체력 재생 +0.8/초' },
-    { id: 'echo',   icon: '👻', name: '에코 응원',     desc: '모든 에코의 공격력·속도 +15%' },
-    { id: 'heal',   icon: '🩹', name: '보건실',        desc: '체력 30 즉시 회복', instant: true },
+    { id: 'regen',  icon: '🍱', name: '급식 시간',     desc: '체력 재생 +1.5/초' },
+    { id: 'echo',   icon: '👻', name: '에코 응원',     desc: '모든 에코의 공격력·속도 +25%' },
+    { id: 'heal',   icon: '🩹', name: '보건실',        desc: '체력 50 즉시 회복', instant: true },
   ];
 
   const SYNERGIES = {
-    focus:    { name: '집중 필기',   desc: '샤프 속도 2+ & 필기 강화 2+ → 공격력 +20%' },
+    focus:    { name: '집중 필기',   desc: '샤프 속도 2+ & 필기 강화 2+ → 공격력 +30%' },
     shotgun:  { name: '관통 샷건',   desc: '지우개 2+ & 관통 1+ → 관통 +1' },
     exam:     { name: '만점 러시',   desc: '시험 만점 2+ & 샤프 속도 2+ → 치명타 +10%' },
     bellring: { name: '타종식',      desc: '형광펜 2+ & 종소리 1+ → 충격파 범위 +30%' },
@@ -94,32 +103,33 @@
   ];
 
   function derive(st) {
-    let cooldown = 22 * Math.pow(0.85, st.rate);
-    let dmg = 1 + 0.35 * st.dmg;
+    const T = TUNING;
+    const cooldown = 22 * Math.pow(T.rateMul, st.rate);
+    const base = 1 + T.dmgPer * st.dmg;
+    let dmg = base;
     let pierce = st.pierce;
-    let crit = 0.1 * st.crit;
+    let crit = T.critPer * st.crit;
     const syn = [];
-    if (st.rate >= 2 && st.dmg >= 2) { dmg *= 1.2; syn.push('focus'); }
+    if (st.rate >= 2 && st.dmg >= 2) { dmg *= 1.3; syn.push('focus'); }
     if (st.multi >= 2 && st.pierce >= 1) { pierce += 1; syn.push('shotgun'); }
     if (st.crit >= 2 && st.rate >= 2) { crit += 0.1; syn.push('exam'); }
-    let novaR = 60 + 12 * st.nova;
+    let novaR = 70 + 14 * st.nova;
     if (st.orbit >= 2 && st.nova >= 1) { novaR *= 1.3; syn.push('bellring'); }
-    const base = 1 + 0.35 * st.dmg;
     return {
-      cooldown: Math.max(6, Math.round(cooldown)),
+      cooldown: Math.max(5, Math.round(cooldown)),
       shots: 1 + st.multi,
       dmg,
-      speed: 2.1 * (1 + 0.12 * st.speed),
-      magnet: 50 + 22 * st.magnet,
+      speed: 2.1 * (1 + T.speedPer * st.speed),
+      magnet: 50 + T.magnetPer * st.magnet,
       pierce,
       crit: Math.min(0.9, crit),
-      critMul: 2,
-      novaInt: st.nova > 0 ? Math.max(100, 300 - 40 * st.nova) : 0,
+      critMul: T.critMul,
+      novaInt: st.nova > 0 ? Math.max(90, 280 - 45 * st.nova) : 0,
       novaR,
-      novaDmg: (4 + 3 * st.nova) * base,
+      novaDmg: (6 + 5 * st.nova) * base,
       orbN: st.orbit,
-      orbDmg: 1.5 * base,
-      regen: 0.8 * st.regen / TICK,
+      orbDmg: 2.5 * base,
+      regen: T.regenPer * st.regen / TICK,
       syn,
     };
   }
@@ -429,7 +439,7 @@
       if (d.regen && p.hp < p.maxhp) p.hp = Math.min(p.maxhp, p.hp + d.regen);
 
       // 에코 재생
-      const boost = 1 + 0.15 * p.stats.echo;
+      const boost = 1 + TUNING.echoBoostPer * p.stats.echo;
       for (const ec of this.echoes) {
         if (!ec.alive) continue;
         if (t * 2 + 1 >= ec.path.length) { ec.alive = false; this.fx.push({ x: ec.x, y: ec.y, t: 20, kind: 'vanish' }); continue; }
