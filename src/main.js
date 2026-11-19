@@ -62,6 +62,11 @@
 
   /* ---------- 연출 상태 ---------- */
   let shake = 0;
+  let hurtFlash = 0;   // 피격 시 화면 가장자리 붉은 번쩍임 (진동이 안 되는 기기에서도 피격을 알 수 있게)
+  // 내 에너지가 깎이면 진동: 피해량이 클수록 길게 (미지원 기기는 조용히 무시)
+  function vibrate(dmg) {
+    try { if (navigator.vibrate) navigator.vibrate(Math.min(220, Math.max(70, Math.round((dmg || 5) * 12)))); } catch (e) { /* 무시 */ }
+  }
   let floats = [];
   let banner = { text: '', t: 0 };
   let toast = { text: '', t: 0 };
@@ -76,7 +81,7 @@
         case 'kill': Sfx.play('kill'); break;
         case 'gem': Sfx.play('gem'); break;
         case 'levelup': Sfx.play('levelup'); break;
-        case 'hurt': shake = Math.max(shake, 7); Sfx.play('hurt'); if (navigator.vibrate) navigator.vibrate(40); break;
+        case 'hurt': shake = Math.max(shake, 7); hurtFlash = 1; Sfx.play('hurt'); vibrate(ev.dmg); break;
         case 'nova': shake = Math.max(shake, 3); Sfx.play('nova'); break;
         case 'echoDown': Sfx.play('echoDown'); break;
         case 'heal': Sfx.play('heal'); break;
@@ -106,7 +111,7 @@
     runCount += 1;
     sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes });
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; floats = []; banner.t = 0; toast.t = 0;
+    shake = 0; hurtFlash = 0; floats = []; banner.t = 0; toast.t = 0;
     ['start', 'levelup', 'end'].forEach((id) => $(id).classList.add('hidden'));
   }
 
@@ -196,7 +201,20 @@
       ctx.fillStyle = b.crit ? '#ffd34d' : b.owner === 'echo' ? '#8fe3ff' : '#ffe27a';
       ctx.beginPath(); ctx.arc(b.x, b.y, (b.owner === 'echo' ? 2.6 : 3.2) + (b.crit ? 1.2 : 0), 0, 7); ctx.fill();
     }
-    for (const o of sim.orbs) { ctx.globalAlpha = o.owner === 'echo' ? 0.4 : 1; ctx.fillStyle = o.owner === 'echo' ? '#8fe3ff' : '#e6ff6b'; ctx.beginPath(); ctx.arc(o.x, o.y, 5, 0, 7); ctx.fill(); }
+    // 형광펜: 점이 아니라 막대 모양(몸통 + 뚜껑)으로, 궤도 접선 방향으로 회전
+    for (const o of sim.orbs) {
+      const echo = o.owner === 'echo';
+      ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.ang + Math.PI / 2);
+      ctx.globalAlpha = echo ? 0.4 : 1;
+      ctx.fillStyle = echo ? '#8fe3ff' : '#d8ff3c';
+      ctx.fillRect(-3, -9, 6, 14);                       // 몸통
+      ctx.fillStyle = echo ? '#5fb8d8' : '#ff8a1f';
+      ctx.fillRect(-3, 5, 6, 4);                         // 뚜껑
+      ctx.fillStyle = echo ? '#bfefff' : '#fff';
+      ctx.beginPath(); ctx.moveTo(-3, -9); ctx.lineTo(3, -9); ctx.lineTo(1.2, -13); ctx.lineTo(-1.2, -13); ctx.closePath(); ctx.fill();   // 펜촉
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
     ctx.globalAlpha = 1;
     for (const b of sim.ebullets) { ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff8'; ctx.lineWidth = 1; ctx.stroke(); }
 
@@ -204,12 +222,13 @@
     const p = sim.player;
     // 내 위치 표시: 몸 아래 초록 링(숨쉬듯 깜빡임) + 머리 위 ▼ (에코의 시안색과 구분)
     {
-      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260);
-      ctx.fillStyle = `rgba(125,255,178,${0.10 + 0.08 * pulse})`;
-      ctx.beginPath(); ctx.arc(p.x, p.y + 1, 17, 0, 7); ctx.fill();
-      ctx.strokeStyle = `rgba(125,255,178,${0.55 + 0.35 * pulse})`; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(p.x, p.y + 1, 15 + 2 * pulse, 0, 7); ctx.stroke();
-      const ay = p.y - 24 - 2 * pulse;
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 200);
+      const pr = 13 + 11 * pulse;                  // 반지름 13 ↔ 24 로 눈에 띄게 커졌다 작아졌다
+      ctx.fillStyle = `rgba(125,255,178,${0.20 - 0.12 * pulse})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7); ctx.fill();
+      ctx.strokeStyle = `rgba(125,255,178,${0.95 - 0.45 * pulse})`; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7); ctx.stroke();
+      const ay = p.y - 30 - 2 * pulse;
       ctx.fillStyle = '#7dffb2';
       ctx.beginPath(); ctx.moveTo(p.x - 5, ay - 5); ctx.lineTo(p.x + 5, ay - 5); ctx.lineTo(p.x, ay + 2); ctx.closePath(); ctx.fill();
     }
@@ -288,6 +307,11 @@
       ctx.textAlign = 'center'; ctx.fillStyle = '#ffd34d'; ctx.font = 'bold 15px sans-serif'; ctx.fillText(toast.text, W / 2, 130);
       ctx.globalAlpha = 1;
     }
+    if (hurtFlash > 0) {
+      const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.62);
+      g.addColorStop(0, 'rgba(255,40,70,0)'); g.addColorStop(1, `rgba(255,40,70,${0.5 * hurtFlash})`);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
   }
 
   /* ---------- 메인 루프 (고정 60Hz) ---------- */
@@ -303,6 +327,7 @@
       }
     }
     if (shake > 0) shake = Math.max(0, shake - 0.4);
+    if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - 0.06);
     for (const f of floats) f.t -= 1;
     floats = floats.filter((f) => f.t > 0);
     if (banner.t > 0) banner.t -= 1;

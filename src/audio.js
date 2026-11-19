@@ -12,7 +12,7 @@
       const AC = root.AudioContext || root.webkitAudioContext;
       if (!AC) return null;
       try {
-        ctx = new AC();
+        try { ctx = new AC({ latencyHint: 'interactive' }); } catch (e) { ctx = new AC(); }
         master = ctx.createDynamicsCompressor();
         const g = ctx.createGain(); g.gain.value = 1.4;
         master.connect(g); g.connect(ctx.destination);
@@ -49,8 +49,8 @@
   const DEF = {
     shoot:    { gap: 110, fn: () => tone(700, 420, 0.05, 'square', 0.025) },
     hit:      { gap: 60,  fn: () => tone(220, 130, 0.04, 'sawtooth', 0.02) },
-    kill:     { gap: 30,  fn: () => { tone(320, 90, 0.13, 'square', 0.12); tone(700, 1050, 0.09, 'triangle', 0.1, 0.02); noise(0.07, 0.1); } },
-    gem:      { gap: 30,  fn: () => { tone(880, 1320, 0.07, 'sine', 0.16); tone(1320, 1760, 0.08, 'sine', 0.1, 0.05); } },
+    kill:     { gap: 30,  fn: () => { tone(320, 90, 0.13, 'square', 0.12); tone(700, 1050, 0.09, 'triangle', 0.1); noise(0.07, 0.1); } },
+    gem:      { gap: 20,  fn: () => { tone(1100, 1700, 0.08, 'sine', 0.18); tone(2200, 2200, 0.05, 'sine', 0.05); } },
     levelup:  { gap: 0,   fn: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.14, 'triangle', 0.07, i * 0.07)) },
     hurt:     { gap: 80,  fn: () => { tone(160, 60, 0.2, 'sawtooth', 0.1); noise(0.12, 0.06); } },
     nova:     { gap: 100, fn: () => { tone(300, 80, 0.3, 'sine', 0.1); noise(0.15, 0.04); } },

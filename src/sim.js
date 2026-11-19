@@ -323,7 +323,7 @@
       const p = this.player;
       p.hp -= dmg * TUNING.damageTaken; p.inv = TUNING.hurtInvTicks;
       this.fx.push({ x: p.x, y: p.y, t: 10, kind: 'hurt' });
-      this._ev({ k: 'hurt' });
+      this._ev({ k: 'hurt', dmg: dmg * TUNING.damageTaken });
     }
 
     /** 충격파·형광펜 (플레이어/에코 공용) */
@@ -343,7 +343,7 @@
       for (let k = 0; k < d.orbN; k++) {
         const ang = t * 0.07 + (k * Math.PI * 2) / d.orbN;
         const ox = a.x + Math.cos(ang) * 34, oy = a.y + Math.sin(ang) * 34;
-        this.orbs.push({ x: ox, y: oy, owner });
+        this.orbs.push({ x: ox, y: oy, owner, ang });
         for (const e of this.enemies) {
           if (e.ocd > 0 || e.hp <= 0) continue;
           const rr = e.r + 6;
