@@ -1,7 +1,7 @@
 /* 퇴근 에코 — 입력 / 렌더 / 저장 / 연출 */
 (function () {
   'use strict';
-  const { Sim, UPGRADES, SYNERGIES, ENEMY_TYPES, W, H, TICK, RUN_TICKS, MAX_ECHOES, MAX_LEVEL } = EchoSim;
+  const { Sim, addEcho, UPGRADES, SYNERGIES, ENEMY_TYPES, W, H, TICK, RUN_TICKS, MAX_ECHOES, MAX_LEVEL } = EchoSim;
   const cv = document.getElementById('c');
   const ctx = cv.getContext('2d');
   const $ = (id) => document.getElementById(id);
@@ -57,6 +57,8 @@
     const dy = (keys['arrowdown'] || keys['s'] ? 1 : 0) - (keys['arrowup'] || keys['w'] ? 1 : 0);
     return { dx, dy };
   }
+
+  ['pointerdown', 'keydown'].forEach((t) => addEventListener(t, () => Sfx.unlock()));
 
   /* ---------- 연출 상태 ---------- */
   let shake = 0;
@@ -125,16 +127,20 @@
   function showEnd() {
     state = 'end';
     const out = sim.exportEcho();
-    echoes = echoes.concat(out).slice(-MAX_ECHOES);
+    const res = addEcho(echoes, out, MAX_ECHOES);
+    echoes = res.list;
     save();
     const title = { dead: '쓰러졌다… 하지만!', clear: '기말고사 격파! 🎉', survive: '120초 생존!' }[sim.result];
     Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
     $('endTitle').textContent = title;
-    $('endEchoes').textContent = `👻 에코 ${echoes.length}명 합류`;
+    $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;
     const alive = sim.echoes.filter((e) => e.alive).length;
     $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 처치 ${sim.kills} · Lv ${sim.player.level}<br>` +
       (sim.echoes.length ? `이번 판 에코 ${alive}/${sim.echoes.length}명 생존<br>` : '') +
-      '다음 판엔 이번 판의 내가 함께 싸웁니다';
+      (res.removed.length
+        ? `가장 일찍 쓰러진 에코(${(res.removed[0].ticks / TICK).toFixed(0)}초)가 퇴장했습니다<br>`
+        : '') +
+      `가장 오래 버틴 에코 ${(Math.max(...echoes.map((e) => e.ticks)) / TICK).toFixed(0)}초까지 다음 판을 도와줍니다`;
     $('end').classList.remove('hidden');
   }
 

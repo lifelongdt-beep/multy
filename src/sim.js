@@ -13,7 +13,7 @@
   const RUN_TICKS = 120 * TICK;
   const ELITE_TICK = 45 * TICK;
   const BOSS_TICK = 90 * TICK;
-  const MAX_ECHOES = 10;
+  const MAX_ECHOES = 5;   // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
   const MAX_ENEMIES = 260;
   const MAX_LEVEL = 5;
 
@@ -117,6 +117,20 @@
       regen: 0.8 * st.regen / TICK,
       syn,
     };
+  }
+
+  /** 에코 목록에 새 에코를 추가하고, 정원이 넘치면 "가장 일찍 쓰러진(ticks가 가장 작은) 에코"부터 내보낸다.
+   *  동률이면 더 오래된 에코부터. 남은 에코는 시간순(오래된 것 → 최근)을 유지한다.
+   *  @returns {{list:Array, removed:Array}} */
+  function addEcho(list, echo, max) {
+    const all = list.concat([echo]);
+    const removed = [];
+    while (all.length > max) {
+      let worst = 0;
+      for (let i = 1; i < all.length; i++) if (all[i].ticks < all[worst].ticks) worst = i;
+      removed.push(all.splice(worst, 1)[0]);
+    }
+    return { list: all, removed };
   }
 
   function newStats() {
@@ -550,7 +564,7 @@
     exportEcho() { return { path: this.rec.path.slice(), ups: this.rec.ups.slice(), kills: this.kills, ticks: this.tick }; }
   }
 
-  const api = { Sim, mulberry32, derive, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, TICK, RUN_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
+  const api = { Sim, addEcho, mulberry32, derive, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, TICK, RUN_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoSim = api;
 })(typeof window !== 'undefined' ? window : globalThis);

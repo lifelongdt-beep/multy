@@ -158,3 +158,35 @@ test('밸런스 스모크: 봇이 한 판을 돌렸을 때 처치/레벨이 합�
   assert.ok(s.kills > 50);
   assert.ok(s.player.level >= 3);
 });
+
+test('에코 정원 초과 시 가장 일찍 쓰러진 에코부터 퇴장한다', () => {
+  const mk = (ticks) => ({ path: [], ups: [], ticks });
+  let list = [];
+  for (const t of [2000, 900, 3000, 1500, 2500]) list = E.addEcho(list, mk(t), 5).list;
+  assert.deepStrictEqual(list.map((e) => e.ticks), [2000, 900, 3000, 1500, 2500]);
+  // 6번째 추가: 900(가장 일찍 죽은 에코)이 빠지고 시간순 유지
+  let r = E.addEcho(list, mk(1800), 5);
+  assert.deepStrictEqual(r.list.map((e) => e.ticks), [2000, 3000, 1500, 2500, 1800]);
+  assert.deepStrictEqual(r.removed.map((e) => e.ticks), [900]);
+  // 새 에코가 가장 짧으면 그 에코가 바로 퇴장
+  r = E.addEcho(r.list, mk(300), 5);
+  assert.deepStrictEqual(r.removed.map((e) => e.ticks), [300]);
+  assert.strictEqual(r.list.length, 5);
+  // 동률이면 더 오래된 에코부터
+  r = E.addEcho([mk(500), mk(500)], mk(900), 2);
+  assert.strictEqual(r.removed.length, 1);
+  assert.strictEqual(r.list[0].ticks, 500); assert.strictEqual(r.list[1].ticks, 900);
+});
+
+test('반복 플레이하면 살아남은 에코의 최장 지원 시간이 줄어들지 않는다', () => {
+  let list = [];
+  let longest = 0;
+  for (let i = 0; i < 12; i++) {
+    const s = runBot(new Sim({ seed: 300 + i, echoes: list, events: false }), RUN_TICKS);
+    list = E.addEcho(list, s.exportEcho(), MAX_ECHOES).list;
+    const now = Math.max(...list.map((e) => e.ticks));
+    assert.ok(now >= longest, '최장 기록이 줄어들면 안 됨');
+    longest = now;
+    assert.ok(list.length <= MAX_ECHOES);
+  }
+});
