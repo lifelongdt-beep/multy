@@ -222,3 +222,80 @@ test('에코 단련: 에코 공격력 보너스가 에코 탄환 피해에 반�
   assert.ok(d0 !== null && d1 !== null);
   assert.ok(Math.abs(d1 / d0 - 1.25) < 1e-9);
 });
+
+/* ---------- 3단계: 월드 ---------- */
+
+test('월드 해금: 학교만 열려 있고, 앞 월드의 보스를 격파하면 다음 월드가 열린다', () => {
+  const s = M.defaultSave();
+  assert.deepStrictEqual(M.WORLD_ORDER.filter((w) => M.worldUnlocked(s, w)), ['school']);
+  assert.strictEqual(M.selectWorld(s, 'academy'), false);
+  const r = M.recordRun(s, run({ result: 'clear', world: 'school' }), '2026-11-20');
+  assert.strictEqual(r.newWorld, 'academy');
+  assert.strictEqual(M.worldUnlocked(s, 'academy'), true);
+  assert.strictEqual(M.worldUnlocked(s, 'office'), false, '건너뛰기 불가');
+  assert.strictEqual(M.selectWorld(s, 'academy'), true);
+  assert.strictEqual(s.worlds.selected, 'academy');
+  // 같은 월드를 또 깨도 새로 열리는 월드는 없음
+  assert.strictEqual(M.recordRun(s, run({ result: 'clear', world: 'school' }), '2026-11-20').newWorld, null);
+  assert.strictEqual(s.worlds.clears.school, 2);
+});
+
+test('월드 해금: 죽거나 시간만 버텨서는 열리지 않는다', () => {
+  const s = M.defaultSave();
+  M.recordRun(s, run({ result: 'dead', world: 'school' }), '2026-11-20');
+  M.recordRun(s, run({ result: 'survive', seconds: 120, world: 'school' }), '2026-11-20');
+  assert.strictEqual(M.worldUnlocked(s, 'academy'), false);
+});
+
+test('월드 보상 배율: 뒤 월드일수록 같은 성적에 학점을 더 준다', () => {
+  const earn = (world) => M.recordRun(M.defaultSave(), run({ world }), '2026-11-20').earned;
+  const e = M.WORLD_ORDER.map(earn);
+  for (let i = 1; i < e.length; i++) assert.ok(e[i] > e[i - 1], e.join());
+  const base = Math.floor(50 * 0.4 + 60 * 0.5 + 8 * 3);
+  assert.strictEqual(e[0], base);
+  assert.strictEqual(e[3], Math.round(base * M.WORLDS.subway.coinMul));
+});
+
+test('월드별 최장 기록과 격파 횟수가 따로 저장된다', () => {
+  const s = M.defaultSave();
+  M.recordRun(s, run({ seconds: 70, world: 'school' }), '2026-11-20');
+  M.recordRun(s, run({ seconds: 50, world: 'school' }), '2026-11-20');
+  M.recordRun(s, run({ seconds: 90, result: 'clear', world: 'academy' }), '2026-11-20');
+  assert.strictEqual(s.worlds.best.school, 70);
+  assert.strictEqual(s.worlds.best.academy, 90);
+  assert.strictEqual(s.worlds.clears.academy, 1);
+  assert.strictEqual(s.worlds.clears.school, undefined);
+});
+
+test('월드 도전 과제: 해당 월드 보스를 처음 격파하면 달성', () => {
+  const s = M.defaultSave();
+  const r = M.recordRun(s, run({ result: 'clear', world: 'academy' }), '2026-11-20');
+  assert.ok(r.newAch.some((a) => a.id === 'clear_academy'));
+  assert.ok(!r.newAch.some((a) => a.id === 'clear_office'));
+  assert.ok(!M.recordRun(s, run({ result: 'clear', world: 'academy' }), '2026-11-20').newAch.some((a) => a.id === 'clear_academy'), '한 번만');
+});
+
+test('이전 버전 저장(월드 정보 없음)도 문제없이 불러온다', () => {
+  const old = { v: 1, coins: 321, shop: { hp: 1 }, chars: { unlocked: ['student'], selected: 'student' }, stats: { runs: 4 }, ach: {}, daily: { date: '', missions: [] } };
+  const s = M.sanitize(old);
+  assert.strictEqual(s.coins, 321);
+  assert.deepStrictEqual(s.worlds, { selected: 'school', clears: {}, best: {} });
+  assert.deepStrictEqual(M.importCode(M.exportCode(old)).worlds.selected, 'school');
+});
+
+test('월드 저장 정리: 잠긴 월드 선택/이상한 값은 보정된다', () => {
+  const s = M.sanitize({ worlds: { selected: 'subway', clears: { school: 2, zzz: 9, academy: -1, office: 'x' }, best: { school: 55.5, academy: 'a' } } });
+  assert.strictEqual(s.worlds.selected, 'school', '잠긴 월드는 선택 불가');
+  assert.deepStrictEqual(s.worlds.clears, { school: 2 });
+  assert.deepStrictEqual(s.worlds.best, { school: 55.5 });
+  const t = M.sanitize({ worlds: { selected: 'academy', clears: { school: 1 } } });
+  assert.strictEqual(t.worlds.selected, 'academy', '열린 월드는 선택 유지');
+});
+
+test('백업 코드 왕복에 월드 진행이 포함된다', () => {
+  const s = M.defaultSave();
+  M.recordRun(s, run({ result: 'clear', world: 'school' }), '2026-11-20');
+  M.selectWorld(s, 'academy');
+  const back = M.importCode(M.exportCode(s));
+  assert.deepStrictEqual(back.worlds, s.worlds);
+});

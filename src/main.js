@@ -1,7 +1,7 @@
 /* 퇴근 에코 — 입력 / 렌더 / 저장 / 연출 */
 (function () {
   'use strict';
-  const { Sim, addEcho, UPGRADES, SYNERGIES, ENEMY_TYPES, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, MAX_ECHOES, MAX_LEVEL } = EchoSim;
+  const { Sim, addEcho, UPGRADES, SYNERGIES, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, MAX_ECHOES, MAX_LEVEL } = EchoSim;
   const cv = document.getElementById('c');
   const ctx = cv.getContext('2d');
   const $ = (id) => document.getElementById(id);
@@ -86,8 +86,9 @@
         case 'echoDown': Sfx.play('echoDown'); break;
         case 'heal': Sfx.play('heal'); break;
         case 'banner': banner = { text: ev.text, t: 150 }; break;
-        case 'boss': banner = { text: '📚 기말고사 시작!', t: 150 }; shake = 10; Sfx.play('boss'); break;
-        case 'phase': banner = { text: `기말고사 ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
+        case 'boss': banner = { text: ev.text || '보스 등장!', t: 150 }; shake = 10; Sfx.play('boss'); break;
+        case 'train': Sfx.play('train'); banner = { text: '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
+        case 'phase': banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
         case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
         default: break;
       }
@@ -110,10 +111,11 @@
   function startRun() {
     Sfx.unlock(); Sfx.play('click');
     runCount += 1;
-    sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus() });
+    sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId() });
     playerEmoji = GameUI.emoji();
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; floats = []; banner.t = 0; toast.t = 0;
+    shake = 0; hurtFlash = 0; floats = [];
+    banner = { text: `${sim.world.emoji} ${sim.world.name}`, t: 120 }; banner.t = 0; toast.t = 0;
     ['start', 'levelup', 'end'].forEach((id) => $(id).classList.add('hidden'));
   }
 
@@ -137,7 +139,7 @@
     const res = addEcho(echoes, out, MAX_ECHOES);
     echoes = res.list;
     save();
-    const title = { dead: '쓰러졌다… 하지만!', clear: '기말고사 격파! 🎉', survive: '120초 생존!' }[sim.result];
+    const title = { dead: '쓰러졌다… 하지만!', clear: `${sim.world.boss.name} 격파! 🎉`, survive: '120초 생존!' }[sim.result];
     Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
     $('endTitle').textContent = title;
     $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;
@@ -149,13 +151,14 @@
         : '') +
       `가장 오래 버틴 에코 ${(Math.max(...echoes.map((e) => e.ticks)) / TICK).toFixed(0)}초까지 다음 판을 도와줍니다`;
     // 학점 · 도전 과제 · 일일 미션
-    const sum = GameUI.recordRun({ kills: sim.kills, seconds: Math.floor(sim.tick / TICK), level: sim.player.level, result: sim.result, gems: sim.gemCount, echoes: sim.echoes.length });
+    const sum = GameUI.recordRun({ kills: sim.kills, seconds: Math.floor(sim.tick / TICK), level: sim.player.level, result: sim.result, gems: sim.gemCount, echoes: sim.echoes.length, world: sim.world.id });
     const lines = [`🎓 학점 +${sum.earned}`];
     for (const a of sum.newAch) lines.push(`🏆 과제 달성: ${a.name} (+${a.reward})`);
     for (const m of sum.missionsDone) lines.push(`🎯 미션 완료! (+${m.reward})`);
+    if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 새 월드 해금: ${w.emoji} ${w.name}!`); }
     $('reward').innerHTML = '';
     lines.forEach((t) => { const d = document.createElement('div'); d.textContent = t; $('reward').appendChild(d); });
-    if (sum.newAch.length || sum.missionsDone.length) Sfx.play('levelup');
+    if (sum.newAch.length || sum.missionsDone.length || sum.newWorld) Sfx.play('levelup');
     $('end').classList.remove('hidden');
   }
 
@@ -171,14 +174,54 @@
     const sc = cv.width / W;
     const sx = shake > 0 ? (Math.random() - 0.5) * shake : 0, sy = shake > 0 ? (Math.random() - 0.5) * shake : 0;
     ctx.setTransform(sc, 0, 0, cv.height / H, sx * sc, sy * sc);
-    ctx.fillStyle = '#161a2e'; ctx.fillRect(-20, -20, W + 40, H + 40);
-    ctx.strokeStyle = 'rgba(255,255,255,.04)'; ctx.lineWidth = 1;
-    for (let x = 0; x <= W; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y <= H; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    const th = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).theme;
+    ctx.fillStyle = th.bg; ctx.fillRect(-20, -20, W + 40, H + 40);
+    ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
+    if (th.deco === 'ruled') {            // 학원: 공책 줄무늬
+      for (let y = 20; y <= H; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(255,90,120,.18)'; ctx.beginPath(); ctx.moveTo(36, 0); ctx.lineTo(36, H); ctx.stroke();
+    } else if (th.deco === 'tiles') {     // 회사: 사무실 타일
+      for (let x = 0; x <= W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 0; y <= H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(255,255,255,.018)';
+      for (let x = 0; x < W; x += 80) for (let y = 0; y < H; y += 80) ctx.fillRect(x, y, 40, 40);
+      for (let x = 40; x < W; x += 80) for (let y = 40; y < H; y += 80) ctx.fillRect(x, y, 40, 40);
+    } else if (th.deco === 'rails') {     // 지하철: 레일 두 줄 + 침목
+      for (let y = 60; y <= H; y += 100) {
+        ctx.strokeStyle = 'rgba(190,200,210,.16)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, y - 6); ctx.lineTo(W, y - 6); ctx.moveTo(0, y + 6); ctx.lineTo(W, y + 6); ctx.stroke();
+        ctx.strokeStyle = 'rgba(150,120,90,.14)'; ctx.lineWidth = 4;
+        for (let x = 8; x < W; x += 22) { ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x, y + 10); ctx.stroke(); }
+      }
+    } else {                              // 학교: 격자
+      for (let x = 0; x <= W; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 0; y <= H; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    }
     if (!sim) return;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-    for (const g of sim.gems) { ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.arc(g.x, g.y, 3.2, 0, 7); ctx.fill(); }
+    for (const g of sim.gems) {
+      if (g.kind === 'coffee') { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji('☕', g.x, g.y, 15); continue; }
+      ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.arc(g.x, g.y, 3.2, 0, 7); ctx.fill();
+    }
+    // 열차 (경고 줄 → 질주)
+    for (const h of sim.hazards) {
+      if (h.state === 'warn') {
+        const k = h.t / h.warn, blink = 0.35 + 0.3 * Math.sin(h.t * 0.5);
+        ctx.fillStyle = `rgba(255,60,80,${blink * (0.5 + 0.5 * k)})`; ctx.fillRect(0, h.y - h.h / 2, W, h.h);
+        ctx.strokeStyle = 'rgba(255,200,200,.8)'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]);
+        ctx.beginPath(); ctx.moveTo(0, h.y - h.h / 2); ctx.lineTo(W, h.y - h.h / 2); ctx.moveTo(0, h.y + h.h / 2); ctx.lineTo(W, h.y + h.h / 2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(h.dir > 0 ? '▶ ▶ ▶' : '◀ ◀ ◀', W / 2, h.y);
+      } else {
+        const hx = h.x, hy = h.y;
+        ctx.fillStyle = '#c9d3dc'; ctx.fillRect(hx - 70, hy - 20, 140, 40);
+        ctx.fillStyle = '#2a3340'; for (let k = -2; k <= 2; k++) ctx.fillRect(hx + k * 26 - 8, hy - 12, 16, 12);
+        ctx.fillStyle = '#e53950'; ctx.fillRect(hx - 70, hy + 10, 140, 6);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji('🚆', hx + h.dir * 62, hy, 30);
+      }
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
     // 에코 (반투명 시안 유령)
     for (const ec of sim.echoes) {
@@ -191,10 +234,9 @@
 
     // 적
     for (const e of sim.enemies) {
-      const b = ENEMY_TYPES[e.type];
       if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
       if (e.warn) { ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, 7); ctx.stroke(); }
-      emoji(b.emoji, e.x, e.y + 1, e.r * 2);
+      emoji(e.emoji, e.x, e.y + 1, e.r * 2);
       if (e.type === 'teacher') {
         ctx.fillStyle = '#000a'; ctx.fillRect(e.x - 18, e.y - e.r - 8, 36, 4);
         ctx.fillStyle = '#ffb454'; ctx.fillRect(e.x - 18, e.y - e.r - 8, 36 * Math.max(0, e.hp / e.maxhp), 4);
@@ -202,7 +244,7 @@
       if (e.type === 'boss') {
         ctx.fillStyle = '#000a'; ctx.fillRect(40, 54, W - 80, 7);
         ctx.fillStyle = '#ff5d73'; ctx.fillRect(40, 54, (W - 80) * Math.max(0, e.hp / e.maxhp), 7);
-        ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText(`기말고사 · ${e.phase}/3`, W / 2, 48);
+        ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText(`${e.name} · ${e.phase}/3`, W / 2, 48);
       }
     }
 

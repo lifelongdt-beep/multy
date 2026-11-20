@@ -14,7 +14,11 @@
     if (save.daily.date !== t) save.daily = { date: t, missions: M.dailyMissions(t) };
   }
   function commit() { M.persist(window.localStorage, save); refresh(); }
-  function refresh() { $('coins').textContent = save.coins; $('pcoins').textContent = save.coins; }
+  function refresh() {
+      $('coins').textContent = save.coins; $('pcoins').textContent = save.coins;
+      const w = M.WORLDS[save.worlds.selected] || M.WORLDS.school;
+      $('bWorld').textContent = `🗺️ 월드: ${w.emoji} ${w.name}`;
+    }
 
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
   function item(icon, title, desc, opts) {
@@ -37,6 +41,28 @@
   }
   function rerender() { const top = $('panel').scrollTop; if (currentRender) currentRender(); refresh(); $('panel').scrollTop = top; }
   function closePanel() { $('panel').classList.add('hidden'); $('start').classList.remove('hidden'); currentRender = null; refresh(); }
+
+  /* ---------- 월드 선택 ---------- */
+  function renderWorlds() {
+    const body = $('pbody'); body.innerHTML = '';
+    for (const id of M.WORLD_ORDER) {
+      const w = M.WORLDS[id];
+      const open = M.worldUnlocked(save, id);
+      const sel = save.worlds.selected === id;
+      const clears = save.worlds.clears[id] || 0, best = Math.floor(save.worlds.best[id] || 0);
+      const prev = w.unlock ? M.WORLDS[w.unlock.world] : null;
+      const desc = open
+        ? `${w.desc}\n✨ ${w.ruleText}\n🎓 학점 x${w.coinMul} · 보스 격파 ${clears}회 · 최장 ${best}초`
+        : `🔒 ${prev.emoji} ${prev.name}의 보스 "${prev.boss.name}"를 격파하면 열립니다`;
+      const row = item(open ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
+      row.querySelector('small').style.whiteSpace = 'pre-line';
+      const b = el('button', '', sel ? '선택됨' : open ? '선택' : '잠김');
+      b.disabled = sel || !open;
+      b.onclick = () => { if (M.selectWorld(save, id)) { Sfx.play('click'); commit(); rerender(); } };
+      row.appendChild(b); body.appendChild(row);
+    }
+    body.appendChild(el('div', 'msg', '※ 에코는 월드를 넘어 이어집니다. 학교에서 쌓은 에코가 학원에서도 함께 싸워요.'));
+  }
 
   /* ---------- 상점 ---------- */
   function renderShop() {
@@ -125,6 +151,7 @@
   }
 
   /* ---------- 연결 ---------- */
+  $('bWorld').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🗺️ 월드 선택', renderWorlds); };
   $('bShop').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏪 상점', renderShop); };
   $('bChar').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🧑 캐릭터', renderChars); };
   $('bQuest').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏆 과제 · 미션', renderQuests); };
@@ -134,6 +161,7 @@
 
   window.GameUI = {
     bonus() { return M.bonusFor(save); },
+    worldId() { return save.worlds.selected; },
     emoji() { return (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji; },
     /** 한 판 결과를 저장하고 요약({earned,total,newAch,missionsDone})을 돌려준다 */
     recordRun(run) { ensureDaily(); const r = M.recordRun(save, run, today()); commit(); return r; },

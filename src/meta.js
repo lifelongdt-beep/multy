@@ -4,6 +4,9 @@
 (function (root) {
   'use strict';
 
+  const Worlds = (typeof module !== 'undefined' && module.exports) ? require('./worlds.js') : root.EchoWorlds;
+  const WORLDS = Worlds.WORLDS, WORLD_ORDER = Worlds.ORDER;
+
   const SAVE_KEY = 'echo-meta-v1';
   const SAVE_VERSION = 1;
 
@@ -47,6 +50,9 @@
     { id: 'level_20',   icon: '🏅', name: '수석',          desc: '한 판에서 Lv 20 달성',        reward: 120, test: (s) => s.bestLevel >= 20 },
     { id: 'clear_1',    icon: '📚', name: '기말고사 격파', desc: '보스 "기말고사" 처치',        reward: 200, test: (s) => s.clears >= 1 },
     { id: 'clear_5',    icon: '🎖️', name: '졸업 준비',     desc: '보스를 5번 처치',             reward: 400, test: (s) => s.clears >= 5 },
+    { id: 'clear_academy', icon: '📖', name: '수능 만점',     desc: '학원 월드의 보스 "수능" 처치',       reward: 300, test: (s, run, sv) => !!sv && (sv.worlds.clears.academy || 0) >= 1 },
+    { id: 'clear_office',  icon: '🏢', name: '승진',          desc: '회사 월드의 보스 "인사평가" 처치',   reward: 500, test: (s, run, sv) => !!sv && (sv.worlds.clears.office || 0) >= 1 },
+    { id: 'clear_subway',  icon: '🚇', name: '퇴근 성공!',    desc: '지하철 월드의 보스 "급행열차" 처치', reward: 800, test: (s, run, sv) => !!sv && (sv.worlds.clears.subway || 0) >= 1 },
     { id: 'echo_5',     icon: '👻', name: '유령 친구들',   desc: '에코 5명과 함께 플레이',      reward: 80,  test: (s, run) => !!run && run.echoes >= 5 },
     { id: 'echo_10',    icon: '👥', name: '유령 반 편성',  desc: '에코 10명과 함께 플레이',     reward: 200, test: (s, run) => !!run && run.echoes >= 10 },
   ];
@@ -89,6 +95,7 @@
       stats: { runs: 0, kills: 0, gems: 0, clears: 0, bestTime: 0, bestLevel: 0, totalCoins: 0 },
       ach: {},                                    // id -> true
       daily: { date: '', missions: [] },
+      worlds: { selected: 'school', clears: {}, best: {} },   // 월드별 보스 격파 횟수 / 최장 생존(초)
     };
   }
 
@@ -120,7 +127,27 @@
         .slice(0, 3)
         .map((m) => ({ id: m.id, target: m.target, reward: m.reward, progress: isNum(m.progress) ? Math.max(0, m.progress) : 0, done: m.done === true }));
     }
+    if (raw.worlds && typeof raw.worlds === 'object') {
+      for (const id of WORLD_ORDER) {
+        if (raw.worlds.clears && isNum(raw.worlds.clears[id]) && raw.worlds.clears[id] > 0) d.worlds.clears[id] = Math.floor(raw.worlds.clears[id]);
+        if (raw.worlds.best && isNum(raw.worlds.best[id]) && raw.worlds.best[id] > 0) d.worlds.best[id] = raw.worlds.best[id];
+      }
+      if (WORLDS[raw.worlds.selected] && worldUnlocked(d, raw.worlds.selected)) d.worlds.selected = raw.worlds.selected;
+    }
     return d;
+  }
+
+  /* ---------- 월드 ---------- */
+  /** 학교는 항상 열려 있고, 나머지는 바로 앞 월드의 보스를 한 번 이상 격파하면 열린다 */
+  function worldUnlocked(save, id) {
+    const w = WORLDS[id];
+    if (!w) return false;
+    if (!w.unlock) return true;
+    return (save.worlds.clears[w.unlock.world] || 0) >= 1;
+  }
+  function selectWorld(save, id) {
+    if (!worldUnlocked(save, id)) return false;
+    save.worlds.selected = id; return true;
   }
 
   function load(storage) {
@@ -176,27 +203,31 @@
   }
 
   /* ---------- 한 판 결과 반영 ---------- */
-  /** run: {kills, seconds, level, result:'dead'|'survive'|'clear', gems, echoes}
-   *  @returns {{earned:number, base:number, newAch:Array, missionsDone:Array}} */
+  /** run: {kills, seconds, level, result:'dead'|'survive'|'clear', gems, echoes, world}
+   *  @returns {{earned:number, base:number, total:number, newAch:Array, missionsDone:Array, newWorld:string|null}} */
   function recordRun(save, run, today) {
     // 날짜가 바뀌면 오늘의 미션 갱신
     if (save.daily.date !== today) save.daily = { date: today, missions: dailyMissions(today) };
 
+    const worldId = WORLDS[run.world] ? run.world : 'school';
+    const unlockedBefore = WORLD_ORDER.filter((w) => worldUnlocked(save, w));
     const st = save.stats;
     st.runs += 1; st.kills += run.kills; st.gems += run.gems || 0;
     if (run.result === 'clear') st.clears += 1;
     st.bestTime = Math.max(st.bestTime, run.seconds);
     st.bestLevel = Math.max(st.bestLevel, run.level);
+    if (run.result === 'clear') save.worlds.clears[worldId] = (save.worlds.clears[worldId] || 0) + 1;
+    save.worlds.best[worldId] = Math.max(save.worlds.best[worldId] || 0, run.seconds);
 
     // 기본 보상
     const base = Math.floor(run.kills * 0.4 + run.seconds * 0.5 + run.level * 3 + (run.result === 'clear' ? 100 : run.seconds >= 120 ? 40 : 0));
-    const earned = Math.round(base * coinMul(save));
+    const earned = Math.round(base * coinMul(save) * WORLDS[worldId].coinMul);
     let total = earned;
 
     // 도전 과제
     const newAch = [];
     for (const a of ACHIEVEMENTS) {
-      if (!save.ach[a.id] && a.test(st, run)) { save.ach[a.id] = true; newAch.push(a); total += a.reward; }
+      if (!save.ach[a.id] && a.test(st, run, save)) { save.ach[a.id] = true; newAch.push(a); total += a.reward; }
     }
 
     // 일일 미션
@@ -210,7 +241,8 @@
     }
 
     save.coins += total; st.totalCoins += total;
-    return { earned, base, total, newAch, missionsDone };
+    const newWorld = WORLD_ORDER.find((w) => worldUnlocked(save, w) && unlockedBefore.indexOf(w) < 0) || null;
+    return { earned, base, total, newAch, missionsDone, newWorld };
   }
 
   /* ---------- 백업 코드 (서버 저장 전까지 기기 이전용) ---------- */
@@ -235,7 +267,7 @@
   }
 
   const api = {
-    SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES,
+    SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld,
     shopCost, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode,
   };

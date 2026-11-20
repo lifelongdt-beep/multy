@@ -8,6 +8,9 @@
 (function (root) {
   'use strict';
 
+  const Worlds = (typeof module !== 'undefined' && module.exports) ? require('./worlds.js') : root.EchoWorlds;
+  const WORLDS = Worlds.WORLDS;
+
   const W = 360, H = 640;
   const TICK = 60;
   const PLAY_BOTTOM = H - 140;   // UI 전용: 이 아래를 '추천 조작 영역'으로 표시 (캐릭터 이동은 제한하지 않음)
@@ -74,32 +77,11 @@
     bellring: { name: '타종식',      desc: '형광펜 2+ & 종소리 1+ → 충격파 범위 +30%' },
   };
 
-  // 학교 월드 적
-  const ENEMY_TYPES = {
-    hw:      { name: '숙제',     emoji: '📄', hp: 3,   speed: 0.7,  r: 9,  dmg: 6,  xp: 1,  ai: 'chase' },
-    test:    { name: '쪽지시험', emoji: '📝', hp: 2,   speed: 1.1,  r: 8,  dmg: 5,  xp: 1,  ai: 'chase' },
-    alarm:   { name: '학원알림', emoji: '🔔', hp: 14,  speed: 0.5,  r: 14, dmg: 10, xp: 4,  ai: 'chase' },
-    late:    { name: '지각',     emoji: '⏰', hp: 4,   speed: 0.6,  r: 8,  dmg: 7,  xp: 2,  ai: 'dash',  dashCd: 110 },
-    chalk:   { name: '분필',     emoji: '🖍️', hp: 5,   speed: 0.6,  r: 8,  dmg: 4,  xp: 2,  ai: 'shoot', fireCd: 110 },
-    group:   { name: '조별과제', emoji: '👥', hp: 10,  speed: 0.55, r: 12, dmg: 8,  xp: 3,  ai: 'chase' },
-    teacher: { name: '담임',     emoji: '👨‍🏫', hp: 120, speed: 0.5,  r: 20, dmg: 14, xp: 14, ai: 'elite', fireCd: 150 },
-    boss:    { name: '기말고사', emoji: '📚', hp: 750, speed: 0.4,  r: 30, dmg: 12, xp: 30, ai: 'boss' },
-  };
-
-  // 시간대별 웨이브 (초). interval은 틱 단위 스폰 간격, n은 한 번에 나오는 수, w는 종류별 가중치
-  const WAVES = [
-    { from: 0,  to: 20,  interval: 52, n: 1, w: { hw: 6, test: 3 } },
-    { from: 20, to: 45,  interval: 40, n: 2, w: { hw: 5, test: 4, alarm: 1, late: 2 } },
-    { from: 45, to: 75,  interval: 30, n: 2, w: { hw: 4, test: 3, alarm: 2, late: 2, chalk: 2, group: 2 } },
-    { from: 75, to: 121, interval: 22, n: 3, w: { hw: 3, test: 3, alarm: 2, late: 2, chalk: 2, group: 2 } },
-  ];
-
-  // 포위 이벤트: 플레이어 주위를 원형으로 둘러싸고 몰려옴
-  const SWARMS = [
-    { t: 30,  type: 'test', n: 10, text: '쪽지시험 포위!' },
-    { t: 62,  type: 'late', n: 8, text: '지각 러시!' },
-    { t: 100, type: 'hw',   n: 16, text: '숙제 폭탄!' },
-  ];
+  // 월드 데이터는 worlds.js. 아래 상수들은 호환용(학교 월드 기준 / 모든 월드의 적 합집합)
+  const SCHOOL = WORLDS.school;
+  const ENEMY_TYPES = Object.assign({}, ...Object.keys(WORLDS).map((k) => WORLDS[k].enemies), { teacher: SCHOOL.elite, boss: SCHOOL.boss });
+  const WAVES = SCHOOL.waves;
+  const SWARMS = SCHOOL.swarms;
 
   /** 영구 강화·캐릭터 보너스(meta.js가 계산해서 전달). 기본값은 보너스 없음 */
   const NO_BONUS = { maxhp: 0, dmgMul: 1, speedMul: 1, cooldownMul: 1, magnet: 0, xpMul: 1, regen: 0, echoPower: 0, startStats: {} };
@@ -163,6 +145,8 @@
       this.emitOn = opts.events !== false;
       this.events = [];
       this.tick = 0;
+      this.world = WORLDS[opts.world] || WORLDS.school;
+      this.hazards = [];       // 지하철 열차 {y,h,x,dir,state,t,warn,speed,dmg}
       this.bonus = Object.assign({}, NO_BONUS, opts.bonus || {});
       const maxhp = Math.max(40, 130 + this.bonus.maxhp);
       this.player = {
@@ -234,22 +218,29 @@
     }
 
     /* ---------- 스폰 ---------- */
+    /** 이 월드에서의 적 정의 (중간 보스='teacher', 보스='boss'는 월드마다 다른 정의) */
+    _def(type) {
+      const w = this.world;
+      return type === 'boss' ? w.boss : type === 'teacher' ? w.elite : (w.enemies[type] || ENEMY_TYPES[type]);
+    }
+
     _hpScale() {
       const progress = this.tick / RUN_TICKS;
-      return (1 + progress * TUNING.hpGrowth) * (1 + TUNING.echoHpScale * this.echoes.length);
+      return (1 + progress * TUNING.hpGrowth) * (1 + TUNING.echoHpScale * this.echoes.length) * (this.world.rules.hpMul || 1);
     }
 
     _make(type, x, y) {
-      const b = ENEMY_TYPES[type];
+      const b = this._def(type);
       const progress = this.tick / RUN_TICKS;
       const hp = type === 'boss'
         ? b.hp * (1 + TUNING.echoBossScale * this.echoes.length) * (1 + TUNING.bossLevelScale * (this.player.level - 1))
         : b.hp * this._hpScale();
       const cdBase = b.fireCd || b.dashCd || 150;
       this.enemies.push({
-        type, x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * TUNING.enemySpeedGrowth), dmg: b.dmg, xp: b.xp,
+        type, def: b, emoji: b.emoji, name: b.name,
+        x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * TUNING.enemySpeedGrowth) * (this.world.rules.speedMul || 1), dmg: b.dmg, xp: b.xp,
         flash: 0, ocd: 0, cd: Math.round(cdBase * (0.4 + 0.6 * this.rng())), dashT: 0, dvx: 0, dvy: 0, warn: false,
-        phase: 1, t: 0,
+        phase: 1, t: 0, cst: 0, cw: 0,
       });
     }
 
@@ -283,15 +274,30 @@
       this._ev({ k: 'banner', text: '⚠ ' + s.text });
     }
 
+    /** 열차 한 대: 경고(warn틱) 후 y 높이의 가로 띠를 가로질러 달린다 */
+    _spawnTrain(y, dir, warn) {
+      this.hazards.push({ y, h: 46, x: dir > 0 ? -90 : W + 90, dir, state: 'warn', t: 0, warn: warn || 70, speed: 9, dmg: 20, hit: false });
+      this._ev({ k: 'train' });
+    }
+
     _spawnLogic(t) {
+      const w = this.world, rules = w.rules;
       const sec = t / TICK;
-      const wave = WAVES.find((w) => sec >= w.from && sec < w.to) || WAVES[WAVES.length - 1];
-      const interval = t >= BOSS_TICK ? wave.interval * 2 : wave.interval;   // 보스전 중에는 졸개 스폰을 절반으로
+      const waves = w.waves;
+      const wave = waves.find((x) => sec >= x.from && sec < x.to) || waves[waves.length - 1];
+      let interval = Math.max(8, Math.round(wave.interval / (rules.spawnMul || 1)));
+      if (t >= BOSS_TICK) interval *= 2;   // 보스전 중에는 졸개 스폰을 절반으로
       if (t % interval === 0) for (let i = 0; i < wave.n; i++) this._spawn(wave);
-      while (this.swarmIdx < SWARMS.length && t >= SWARMS[this.swarmIdx].t * TICK) this._ring(SWARMS[this.swarmIdx++]);
-      if (t === ELITE_TICK) { this._make('teacher', W / 2, -30); this._ev({ k: 'banner', text: '⚠ 담임 선생님 등장' }); }
-      if (t === BOSS_TICK - 180) this._ev({ k: 'banner', text: '⚠ 기말고사 접근 중 ⚠' });
-      if (t === BOSS_TICK && !this.bossSpawned) { this._make('boss', W / 2, -30); this.bossSpawned = true; this._ev({ k: 'boss' }); }
+      while (this.swarmIdx < w.swarms.length && t >= w.swarms[this.swarmIdx].t * TICK) this._ring(w.swarms[this.swarmIdx++]);
+      if (t === w.elite.t * TICK) { this._make('teacher', W / 2, -30); this._ev({ k: 'banner', text: w.elite.text }); }
+      if (t === BOSS_TICK - 180) this._ev({ k: 'banner', text: w.boss.warnText });
+      if (t === BOSS_TICK && !this.bossSpawned) { this._make('boss', W / 2, -30); this.bossSpawned = true; this._ev({ k: 'boss', text: w.boss.startText }); }
+      // 월드 고유 규칙: 지하철 열차 (보스 등장 전까지)
+      const tr = rules.trains;
+      if (tr && t >= tr.first * TICK && t < BOSS_TICK - 240 && (t - tr.first * TICK) % (tr.every * TICK) === 0) {
+        const p = this.player;
+        this._spawnTrain(Math.max(50, Math.min(H - 60, p.y + (this.rng() - 0.5) * 160)), this.rng() < 0.5 ? 1 : -1);
+      }
     }
 
     /* ---------- 전투 ---------- */
@@ -365,35 +371,121 @@
       }
     }
 
-    /** 보스 3페이즈. 이동량 {x,y} 반환 */
-    _bossAI(e, ux, uy, dist) {
+    _bossPhase(e) {
       const hpR = e.hp / e.maxhp;
       const phase = hpR > 0.66 ? 1 : hpR > 0.33 ? 2 : 3;
       if (phase !== e.phase) {
         e.phase = phase;
-        this._ev({ k: 'phase', phase });
+        this._ev({ k: 'phase', phase, name: e.name });
         this.fx.push({ x: e.x, y: e.y, t: 24, kind: 'nova', r: 120 });
       }
+      return phase;
+    }
+
+    _summon(e, type, n) {
+      for (let i = 0; i < n; i++) {
+        if (this.enemies.length >= MAX_ENEMIES) break;
+        const a = (i / n) * Math.PI * 2;
+        this._make(type, e.x + Math.cos(a) * 40, e.y + Math.sin(a) * 40);
+      }
+    }
+
+    /** 보스 3페이즈 (월드마다 패턴이 다름). 이동량 {x,y} 반환 */
+    _bossAI(e, ux, uy, dist) {
+      const phase = this._bossPhase(e);
       e.t += 1;
       const p = this.player;
-      if (e.t % 200 === 0) {
-        const n = phase === 1 ? 6 : 9;
-        const off = (e.t / 200) * 0.3;
-        for (let i = 0; i < n; i++) this._ebullet(e.x, e.y, off + (i / n) * Math.PI * 2, 1.6, 5);
-      }
-      if (phase >= 2 && e.t % 420 === 0) {
-        for (let i = 0; i < 4; i++) {
-          if (this.enemies.length >= MAX_ENEMIES) break;
-          const a = (i / 4) * Math.PI * 2;
-          this._make('hw', e.x + Math.cos(a) * 40, e.y + Math.sin(a) * 40);
+      const summon = e.def.summon;
+      switch (e.def.pattern) {
+        case 'spiral': {   // 학원 보스: 회전 탄막 (숨 돌릴 틈 있음)
+          const cyc = e.t % 240;
+          if (cyc < 150 && e.t % 8 === 0) {
+            const arms = phase === 1 ? 1 : 2;
+            for (let k = 0; k < arms; k++) this._ebullet(e.x, e.y, e.t * (phase === 3 ? 0.2 : 0.15) + k * Math.PI, 1.5, 4);
+          }
+          if (phase >= 2 && e.t % 260 === 0) {
+            const base = Math.atan2(p.y - e.y, p.x - e.x);
+            for (let i = -2; i <= 2; i++) this._ebullet(e.x, e.y, base + i * 0.22, 2.0, 5);
+          }
+          if (phase === 3 && e.t % 420 === 0) this._summon(e, summon, 3);
+          const sp = e.speed * (phase === 3 ? 1.3 : 1);
+          return { x: ux * sp, y: uy * sp };
+        }
+        case 'charge': {   // 회사 보스: 예고 후 돌진
+          const period = phase === 1 ? 200 : phase === 2 ? 160 : 130;
+          if (e.cst === 0) {
+            if (e.t % period === 0) { e.cst = 1; e.cw = 45; e.dvx = ux * 5.2; e.dvy = uy * 5.2; e.warn = true; }
+            if (phase >= 2 && e.t % 420 === 0) this._summon(e, summon, 4);
+            const sp = e.speed;
+            return { x: ux * sp, y: uy * sp };
+          }
+          if (e.cst === 1) {   // 예고: 제자리에서 조준
+            e.cw -= 1; e.dvx = ux * 5.2; e.dvy = uy * 5.2;
+            if (e.cw <= 0) { e.cst = 2; e.cw = 28; e.warn = false; }
+            return { x: 0, y: 0 };
+          }
+          e.cw -= 1;           // 돌진 중
+          if (e.cw <= 0) {
+            e.cst = 0;
+            const n = phase === 3 ? 10 : 8;
+            for (let i = 0; i < n; i++) this._ebullet(e.x, e.y, (i / n) * Math.PI * 2, 1.6, 5);
+          }
+          return { x: e.dvx, y: e.dvy };
+        }
+        case 'lane': {     // 지하철 보스: 가로로 달리는 열차 소환
+          const period = phase === 1 ? 190 : phase === 2 ? 150 : 120;
+          if (e.t % period === 0) {
+            const lanes = phase;
+            for (let k = 0; k < lanes; k++) {
+              const y = k === 0 ? p.y : Math.max(50, Math.min(H - 60, p.y + (this.rng() - 0.5) * 320));
+              this._spawnTrain(y, this.rng() < 0.5 ? 1 : -1, 60);
+            }
+          }
+          if (phase >= 2 && e.t % 300 === 0) this._summon(e, summon, 4);
+          if (phase === 3 && e.t % 150 === 0) {
+            const base = Math.atan2(p.y - e.y, p.x - e.x);
+            for (let i = -1; i <= 1; i++) this._ebullet(e.x, e.y, base + i * 0.2, 2.0, 5);
+          }
+          const sp = e.speed * (phase === 3 ? 1.3 : 1);
+          return { x: ux * sp, y: uy * sp };
+        }
+        default: {         // 학교 보스: 탄막 + 졸개 소환 + 조준 3연발
+          if (e.t % 200 === 0) {
+            const n = phase === 1 ? 6 : 9;
+            const off = (e.t / 200) * 0.3;
+            for (let i = 0; i < n; i++) this._ebullet(e.x, e.y, off + (i / n) * Math.PI * 2, 1.6, 5);
+          }
+          if (phase >= 2 && e.t % 420 === 0) this._summon(e, summon || 'hw', 4);
+          if (phase === 3 && e.t % 110 === 0) {
+            const base = Math.atan2(p.y - e.y, p.x - e.x);
+            for (let i = -1; i <= 1; i++) this._ebullet(e.x, e.y, base + i * 0.2, 2.3, 5);
+          }
+          const sp = e.speed * (phase === 3 ? 1.4 : 1);
+          return { x: ux * sp, y: uy * sp };
         }
       }
-      if (phase === 3 && e.t % 110 === 0) {
-        const base = Math.atan2(p.y - e.y, p.x - e.x);
-        for (let i = -1; i <= 1; i++) this._ebullet(e.x, e.y, base + i * 0.2, 2.3, 5);
+    }
+
+    /** 열차 위험물 갱신: 경고 → 질주. 플레이어에겐 큰 피해, 일반 적은 즉사 */
+    _updateHazards() {
+      const p = this.player;
+      for (let i = this.hazards.length - 1; i >= 0; i--) {
+        const h = this.hazards[i];
+        h.t += 1;
+        if (h.state === 'warn') {
+          if (h.t >= h.warn) { h.state = 'go'; }
+          continue;
+        }
+        h.x += h.dir * h.speed;
+        const half = 70;
+        if (!h.hit && p.inv === 0 && Math.abs(p.y - h.y) < h.h / 2 + p.r && Math.abs(p.x - h.x) < half + p.r) { this._hurtPlayer(h.dmg); h.hit = true; }
+        for (const e of this.enemies) {
+          const bt = e.def;
+          if (bt.ai === 'boss' || bt.ai === 'elite') continue;
+          if (e.hp > 0 && Math.abs(e.y - h.y) < h.h / 2 + e.r && Math.abs(e.x - h.x) < half + e.r) e.hp = 0;
+        }
+        if ((h.dir > 0 && h.x > W + 100) || (h.dir < 0 && h.x < -100)) { this.hazards[i] = this.hazards[this.hazards.length - 1]; this.hazards.pop(); }
       }
-      const sp = e.speed * (phase === 3 ? 1.4 : 1);
-      return { x: ux * sp, y: uy * sp };
     }
 
     _killEnemy(i) {
@@ -409,11 +501,15 @@
         const p = this.player;
         p.hp = Math.min(p.maxhp, p.hp + 25);
         this._ev({ k: 'heal' });
-        this._ev({ k: 'banner', text: '담임 격파! 체력 +25' });
+        this._ev({ k: 'banner', text: `${e.name} 격파! 체력 +25` });
       }
+      // 월드 규칙: 가끔 커피(체력 회복)
+      const cc = this.world.rules.coffeeChance;
+      if (cc && e.type !== 'boss' && this.rng() < cc) this.gems.push({ x: e.x, y: e.y, v: 15, kind: 'coffee' });
       this.enemies[i] = this.enemies[this.enemies.length - 1]; this.enemies.pop();
-      if (e.type === 'group') {
-        for (let s = 0; s < 2; s++) if (this.enemies.length < MAX_ENEMIES) this._make('hw', e.x + (s ? 8 : -8), e.y);
+      const od = e.def.onDeath;
+      if (od) {
+        for (let s = 0; s < od.n; s++) if (this.enemies.length < MAX_ENEMIES) this._make(od.type, e.x + (s - (od.n - 1) / 2) * 10, e.y);
       }
     }
 
@@ -493,13 +589,15 @@
         if (dead) { this.ebullets[i] = this.ebullets[this.ebullets.length - 1]; this.ebullets.pop(); }
       }
 
+      this._updateHazards();
+
       // 적 이동/AI/접촉/사망
       for (let i = this.enemies.length - 1; i >= 0; i--) {
         const e = this.enemies[i];
         if (e.hp <= 0) { this._killEnemy(i); continue; }
         if (e.flash > 0) e.flash -= 1;
         if (e.ocd > 0) e.ocd -= 1;
-        const bt = ENEMY_TYPES[e.type];
+        const bt = e.def;
         const ax = p.x - e.x, ay = p.y - e.y;
         const dist = Math.hypot(ax, ay) || 1;
         const ux = ax / dist, uy = ay / dist;
@@ -510,7 +608,17 @@
             const dir = dist > 150 ? 1 : dist < 110 ? -0.8 : 0;
             mvx = ux * e.speed * dir; mvy = uy * e.speed * dir;
             e.cd -= 1;
-            if (e.cd <= 0 && dist < 280) { this._ebullet(e.x, e.y, Math.atan2(ay, ax), 2.2, 5); e.cd = bt.fireCd; }
+            if (e.cd <= 0 && dist < 280) {
+              const n = bt.volley || 1, base = Math.atan2(ay, ax);
+              for (let k = 0; k < n; k++) this._ebullet(e.x, e.y, base + (k - (n - 1) / 2) * (bt.spread || 0.2), bt.bspeed || 2.2, bt.bdmg || 5);
+              e.cd = bt.fireCd;
+            }
+            break;
+          }
+          case 'zig': {
+            e.t += 1;
+            const side = Math.sin(e.t * 0.12 + e.maxhp) * 1.1;
+            mvx = ux * e.speed - uy * e.speed * side; mvy = uy * e.speed + ux * e.speed * side;
             break;
           }
           case 'dash': {
@@ -550,8 +658,8 @@
         const dist = Math.hypot(ax, ay);
         if (dist < d.magnet) { g.x += (ax / (dist || 1)) * 4; g.y += (ay / (dist || 1)) * 4; }
         if (dist < p.r + 5) {
-          p.xp += g.v * this.bonus.xpMul; this.gemCount += 1;
-          this._ev({ k: 'gem' });
+          if (g.kind === 'coffee') { p.hp = Math.min(p.maxhp, p.hp + g.v); this._ev({ k: 'heal' }); }
+          else { p.xp += g.v * this.bonus.xpMul * (this.world.rules.xpMul || 1); this.gemCount += 1; this._ev({ k: 'gem' }); }
           this.gems[i] = this.gems[this.gems.length - 1]; this.gems.pop();
         }
       }
@@ -571,7 +679,7 @@
     exportEcho() { return { path: this.rec.path.slice(), ups: this.rec.ups.slice(), kills: this.kills, ticks: this.tick }; }
   }
 
-  const api = { Sim, addEcho, mulberry32, derive, NO_BONUS, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
+  const api = { Sim, addEcho, mulberry32, derive, NO_BONUS, WORLDS, WORLD_ORDER: Worlds.ORDER, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoSim = api;
 })(typeof window !== 'undefined' ? window : globalThis);
