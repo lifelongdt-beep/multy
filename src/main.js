@@ -1,0 +1,455 @@
+/* 퇴근 에코 — 입력 / 렌더 / 저장 / 연출 */
+(function () {
+  'use strict';
+  const { Sim, addEcho, UPGRADES, SYNERGIES, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, MAX_ECHOES, MAX_LEVEL } = EchoSim;
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const $ = (id) => document.getElementById(id);
+
+  /* ---------- 에코 저장 (localStorage, Int16 양자화) ---------- */
+  const KEY = 'echo-proto-v2';
+  function pack(e) {
+    const a = new Int16Array(e.path.length);
+    for (let i = 0; i < a.length; i++) a[i] = Math.round(e.path[i] * 10);
+    let bin = ''; const u = new Uint8Array(a.buffer);
+    for (let i = 0; i < u.length; i += 8192) bin += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
+    return { p: btoa(bin), u: e.ups, k: e.kills, t: e.ticks };
+  }
+  function unpack(o) {
+    const bin = atob(o.p); const u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const a = new Int16Array(u.buffer); const path = new Array(a.length);
+    for (let i = 0; i < a.length; i++) path[i] = a[i] / 10;
+    return { path, ups: o.u, kills: o.k, ticks: o.t };
+  }
+  let echoes = [];
+  let echoWorld = 'school';   // 에코를 쌓은 월드 (월드를 옮기면 에코는 새로 시작)
+  let runCount = 0;
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (s) { echoes = s.echoes.map(unpack); runCount = s.runCount || 0; echoWorld = s.world || 'school'; }
+  } catch (e) { echoes = []; }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ runCount, world: echoWorld, echoes: echoes.map(pack) })); } catch (e) { /* 용량 초과 무시 */ }
+  }
+  /** 시작하려는 월드가 에코 풀의 월드와 다르면 에코를 비운다. 사라진 에코 수를 돌려준다. */
+  function syncEchoes(worldId) {
+    const r = Meta.echoesForWorld({ world: echoWorld, echoes }, worldId);
+    echoWorld = r.world;
+    if (r.cleared) { echoes = r.echoes; save(); }
+    return r.cleared;
+  }
+  window.GameEchoes = {
+    count() { return echoes.length; },
+    world() { return echoWorld; },
+    reset(worldId) { echoes = []; echoWorld = worldId || echoWorld; save(); },
+  };
+
+  /* ---------- 입력: 상대 드래그 + 키보드 ---------- */
+  const input = { dx: 0, dy: 0 };
+  const keys = {};
+  let drag = null;
+  function toLogical(ev) {
+    const r = cv.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
+  }
+  cv.addEventListener('pointerdown', (ev) => { cv.setPointerCapture(ev.pointerId); const p = toLogical(ev); drag = { ax: p.x, ay: p.y, px: p.x, py: p.y }; });
+  cv.addEventListener('pointermove', (ev) => {
+    if (!drag) return; const p = toLogical(ev); drag.px = p.x; drag.py = p.y;
+    let vx = p.x - drag.ax, vy = p.y - drag.ay; const len = Math.hypot(vx, vy);
+    if (len > 46) { drag.ax += vx / len * (len - 46); drag.ay += vy / len * (len - 46); vx = p.x - drag.ax; vy = p.y - drag.ay; }
+    input.dx = vx / 46; input.dy = vy / 46;
+  });
+  const endDrag = () => { drag = null; input.dx = 0; input.dy = 0; };
+  cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+  addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+  addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+  function currentInput() {
+    if (drag) return input;
+    const dx = (keys['arrowright'] || keys['d'] ? 1 : 0) - (keys['arrowleft'] || keys['a'] ? 1 : 0);
+    const dy = (keys['arrowdown'] || keys['s'] ? 1 : 0) - (keys['arrowup'] || keys['w'] ? 1 : 0);
+    return { dx, dy };
+  }
+
+  ['pointerdown', 'keydown'].forEach((t) => addEventListener(t, () => Sfx.unlock()));
+
+  /* ---------- 연출 상태 ---------- */
+  let shake = 0;
+  let hurtFlash = 0;   // 피격 시 화면 가장자리 붉은 번쩍임 (진동이 안 되는 기기에서도 피격을 알 수 있게)
+  // 내 에너지가 깎이면 진동: 피해량이 클수록 길게 (미지원 기기는 조용히 무시)
+  function vibrate(dmg) {
+    try { if (navigator.vibrate) navigator.vibrate(Math.min(220, Math.max(70, Math.round((dmg || 5) * 12)))); } catch (e) { /* 무시 */ }
+  }
+  let floats = [];
+  let banner = { text: '', t: 0 };
+  let toast = { text: '', t: 0 };
+
+  function handleEvents() {
+    for (const ev of sim.drainEvents()) {
+      switch (ev.k) {
+        case 'shoot': Sfx.play('shoot'); break;
+        case 'dmg':
+          if (ev.owner !== 'echo' || ev.crit) { if (floats.length < 40) floats.push({ x: ev.x, y: ev.y, v: ev.v, crit: ev.crit, t: 40 }); }
+          Sfx.play('hit'); break;
+        case 'kill': Sfx.play('kill'); break;
+        case 'gem': Sfx.play('gem'); break;
+        case 'levelup': Sfx.play('levelup'); break;
+        case 'hurt': shake = Math.max(shake, 7); hurtFlash = 1; Sfx.play('hurt'); vibrate(ev.dmg); break;
+        case 'nova': shake = Math.max(shake, 3); Sfx.play('nova'); break;
+        case 'echoDown': Sfx.play('echoDown'); break;
+        case 'heal': Sfx.play('heal'); break;
+        case 'banner': banner = { text: ev.text, t: 150 }; break;
+        case 'boss': banner = { text: ev.text || '보스 등장!', t: 150 }; shake = 10; Sfx.play('boss'); break;
+        case 'helper': Sfx.play('heal'); break;
+        case 'helped': Sfx.play('levelup'); break;
+        case 'train': Sfx.play('train'); banner = { text: '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
+        case 'phase': banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
+        case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
+        default: break;
+      }
+    }
+  }
+
+  /* ---------- 게임 상태 ---------- */
+  let playerEmoji = '🧑‍🎓';
+  let sim = null, state = 'menu';   // menu | play | levelup | end
+  let acc = 0, last = 0;
+
+  function resize() {
+    const st = $('stage'), k = Math.min(innerWidth / W, innerHeight / H);
+    st.style.width = Math.floor(W * k) + 'px'; st.style.height = Math.floor(H * k) + 'px';
+    const r = cv.getBoundingClientRect(); const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  }
+  addEventListener('resize', resize); resize();
+
+  function startRun() {
+    Sfx.unlock(); Sfx.play('click');
+    runCount += 1;
+    const clearedEchoes = syncEchoes(GameUI.worldId());
+    sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId() });
+    playerEmoji = GameUI.emoji();
+    state = 'play'; acc = 0; last = performance.now();
+    shake = 0; hurtFlash = 0; floats = [];
+    const needE = sim.world.boss.needEchoes;
+    if (echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
+    banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
+    ['start', 'levelup', 'end'].forEach((id) => $(id).classList.add('hidden'));
+  }
+
+  function showLevelUp() {
+    state = 'levelup';
+    const box = $('choices'); box.innerHTML = '';
+    const stats = sim.player.stats;
+    $('lvTitle').textContent = sim.choiceKind === 'helper' ? `${sim.world.helper.emoji} ${sim.world.helper.name}의 조언` : '성장했어요! 🌱';
+    sim.choices.forEach((u) => {
+      const b = document.createElement('button'); b.className = 'card' + (u.boon ? ' syn' : '');
+      const lv = (u.instant || !(u.id in stats)) ? '' : `Lv ${stats[u.id]} → ${stats[u.id] + 1}/${MAX_LEVEL} · `;
+      b.innerHTML = `${u.icon} ${u.name}<small>${lv}${u.desc}</small>`;
+      b.onclick = () => { Sfx.play('click'); sim.choose(u.id); handleEvents(); $('levelup').classList.add('hidden'); state = 'play'; last = performance.now(); acc = 0; };
+      box.appendChild(b);
+    });
+    $('levelup').classList.remove('hidden');
+  }
+
+  /** 결과 화면의 따뜻한 한마디 (실패해도 괜찮고, 도움을 청하는 건 좋은 일) */
+  function cheerMessage(result, helped, echoCount) {
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    if (helped) return pick(['도움을 청한 건 용기 있는 선택이었어요 🙋', '함께하면 더 멀리 갈 수 있어요 💛', '도움을 받는 것도 실력이에요']);
+    if (result === 'clear') return pick(['혼자가 아니었어요. 과거의 나도 함께했어요 💛', '큰 도전을 해냈어요. 정말 잘했어요!', '차근차근 해낸 만큼 성장했어요 🌱']);
+    if (result === 'survive') return pick(['끝까지 버틴 끈기가 멋져요!', '한 번만 더 도전하면 넘을 수 있어요']);
+    return pick(['넘어져도 괜찮아요. 방금의 나는 에코가 되어 다음 판을 도와요 👻', '실패는 배움의 일부예요. 조금씩 나아지고 있어요 🌱', '선생님께 도움을 청해 보는 건 어때요? 🙋']);
+  }
+
+  function showEnd() {
+    state = 'end';
+    const out = sim.exportEcho();
+    const res = addEcho(echoes, out, MAX_ECHOES);
+    echoes = res.list; echoWorld = sim.world.id;
+    save();
+    const title = { dead: '쓰러졌다… 하지만!', clear: `${sim.world.boss.name} 극복! 🎉`, survive: '120초 버텼어요!' }[sim.result];
+    Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
+    $('endTitle').textContent = title;
+    $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;
+    $('cheer').textContent = cheerMessage(sim.result, sim.helped, sim.echoes.length);
+    if (sim.result !== 'clear' && sim.echoes.length < sim.world.boss.needEchoes) $('cheer').textContent += `  (👻 이 월드의 큰 도전은 에코 ${sim.world.boss.needEchoes}명 이상일 때 도전할 만해요 · 이번 판 ${sim.echoes.length}명)`;
+    const alive = sim.echoes.filter((e) => e.alive).length;
+    $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}` + (sim.helped ? ` · 도움 ${sim.helped}회` : '') + (sim.bossCount > 1 ? ` · 큰 도전 ${sim.bossDefeated}/${sim.bossCount}` : '') + '<br>' +
+      (sim.echoes.length ? `이번 판 에코 ${alive}/${sim.echoes.length}명 생존<br>` : '') +
+      (res.removed.length
+        ? `가장 일찍 쓰러진 에코(${(res.removed[0].ticks / TICK).toFixed(0)}초)가 퇴장했습니다<br>`
+        : '') +
+      `가장 오래 버틴 에코 ${(Math.max(...echoes.map((e) => e.ticks)) / TICK).toFixed(0)}초까지 다음 판을 도와줍니다<br><small>(에코는 ${sim.world.name}에서만 함께해요)</small>`;
+    // 학점 · 도전 과제 · 일일 미션
+    const sum = GameUI.recordRun({ kills: sim.kills, seconds: Math.floor(sim.tick / TICK), level: sim.player.level, result: sim.result, gems: sim.gemCount, echoes: sim.echoes.length, world: sim.world.id, helped: sim.helped });
+    const lines = [`🎓 학점 +${sum.earned}`];
+    for (const a of sum.newAch) lines.push(`🏆 과제 달성: ${a.name} (+${a.reward})`);
+    for (const m of sum.missionsDone) lines.push(`🎯 미션 완료! (+${m.reward})`);
+    if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 새 월드 해금: ${w.emoji} ${w.name}!`); }
+    $('reward').innerHTML = '';
+    lines.forEach((t) => { const d = document.createElement('div'); d.textContent = t; $('reward').appendChild(d); });
+    if (sum.newAch.length || sum.missionsDone.length || sum.newWorld) Sfx.play('levelup');
+    $('end').classList.remove('hidden');
+  }
+
+  $('go').onclick = startRun; $('again').onclick = startRun;
+  $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; };
+  $('reset').onclick = () => { echoes = []; runCount = 0; save(); $('reset').textContent = '초기화됨'; };
+  $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); $('mute').textContent = Sfx.isMuted() ? '🔇' : '🔊'; };
+
+  /* ---------- 렌더 ---------- */
+  /** 화면 폭(W-16)에 맞게 글자 크기를 줄여서 가운데 정렬로 그린다 */
+  function fitText(text, x, y, size) {
+    ctx.font = `bold ${size}px sans-serif`;
+    const w = ctx.measureText(text).width, maxW = W - 16;
+    if (w > maxW) ctx.font = `bold ${Math.max(10, Math.floor(size * maxW / w))}px sans-serif`;
+    ctx.fillText(text, x, y);
+  }
+  function emoji(ch, x, y, size) { ctx.font = `${size}px serif`; ctx.fillText(ch, x, y); }
+
+  function render() {
+    const sc = cv.width / W;
+    const sx = shake > 0 ? (Math.random() - 0.5) * shake : 0, sy = shake > 0 ? (Math.random() - 0.5) * shake : 0;
+    ctx.setTransform(sc, 0, 0, cv.height / H, sx * sc, sy * sc);
+    const th = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).theme;
+    ctx.fillStyle = th.bg; ctx.fillRect(-20, -20, W + 40, H + 40);
+    ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
+    if (th.deco === 'ruled') {            // 학원: 공책 줄무늬
+      for (let y = 20; y <= H; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(255,90,120,.18)'; ctx.beginPath(); ctx.moveTo(36, 0); ctx.lineTo(36, H); ctx.stroke();
+    } else if (th.deco === 'tiles') {     // 회사: 사무실 타일
+      for (let x = 0; x <= W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 0; y <= H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(255,255,255,.018)';
+      for (let x = 0; x < W; x += 80) for (let y = 0; y < H; y += 80) ctx.fillRect(x, y, 40, 40);
+      for (let x = 40; x < W; x += 80) for (let y = 40; y < H; y += 80) ctx.fillRect(x, y, 40, 40);
+    } else if (th.deco === 'rails') {     // 지하철: 레일 두 줄 + 침목
+      for (let y = 60; y <= H; y += 100) {
+        ctx.strokeStyle = 'rgba(190,200,210,.16)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, y - 6); ctx.lineTo(W, y - 6); ctx.moveTo(0, y + 6); ctx.lineTo(W, y + 6); ctx.stroke();
+        ctx.strokeStyle = 'rgba(150,120,90,.14)'; ctx.lineWidth = 4;
+        for (let x = 8; x < W; x += 22) { ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x, y + 10); ctx.stroke(); }
+      }
+    } else {                              // 학교: 격자
+      for (let x = 0; x <= W; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 0; y <= H; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    }
+    if (!sim) return;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    for (const g of sim.gems) {
+      if (g.kind === 'coffee') { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji('☕', g.x, g.y, 15); continue; }
+      ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.arc(g.x, g.y, 3.2, 0, 7); ctx.fill();
+    }
+    // 열차 (경고 줄 → 질주)
+    for (const h of sim.hazards) {
+      if (h.state === 'warn') {
+        const k = h.t / h.warn, blink = 0.35 + 0.3 * Math.sin(h.t * 0.5);
+        ctx.fillStyle = `rgba(255,60,80,${blink * (0.5 + 0.5 * k)})`; ctx.fillRect(0, h.y - h.h / 2, W, h.h);
+        ctx.strokeStyle = 'rgba(255,200,200,.8)'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]);
+        ctx.beginPath(); ctx.moveTo(0, h.y - h.h / 2); ctx.lineTo(W, h.y - h.h / 2); ctx.moveTo(0, h.y + h.h / 2); ctx.lineTo(W, h.y + h.h / 2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(h.dir > 0 ? '▶ ▶ ▶' : '◀ ◀ ◀', W / 2, h.y);
+      } else {
+        const hx = h.x, hy = h.y;
+        ctx.fillStyle = '#c9d3dc'; ctx.fillRect(hx - 70, hy - 20, 140, 40);
+        ctx.fillStyle = '#2a3340'; for (let k = -2; k <= 2; k++) ctx.fillRect(hx + k * 26 - 8, hy - 12, 16, 12);
+        ctx.fillStyle = '#e53950'; ctx.fillRect(hx - 70, hy + 10, 140, 6);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji('🚆', hx + h.dir * 62, hy, 30);
+      }
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // 에코 (반투명 시안 유령)
+    for (const ec of sim.echoes) {
+      if (!ec.alive) continue;
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 11, 0, 7); ctx.fill();
+      ctx.globalAlpha = 0.45; emoji('👻', ec.x, ec.y + 1, 17);
+      ctx.globalAlpha = 1;
+    }
+
+    // 도우미(선생님 등): 빛나는 상담 구역 + 게이지. 가까이 가서 잠시 머물면 조언 카드를 받는다
+    if (sim.helper) {
+      const hp = sim.helper, bob = Math.sin(performance.now() / 300) * 2;
+      const fadeA = hp.state === 'wait' ? 1 : Math.max(0, hp.fade / (hp.state === 'done' ? 150 : 90));
+      ctx.globalAlpha = fadeA;
+      const glow = ctx.createRadialGradient(hp.x, hp.y, 4, hp.x, hp.y, hp.r + 8);
+      glow.addColorStop(0, 'rgba(255,225,120,.35)'); glow.addColorStop(1, 'rgba(255,225,120,.05)');
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r + 8, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,225,120,.9)'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 6]);
+      ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      if (hp.prog > 0 && hp.state === 'wait') {
+        ctx.strokeStyle = '#7dffb2'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r - 5, -Math.PI / 2, -Math.PI / 2 + (hp.prog / hp.need) * Math.PI * 2); ctx.stroke();
+      }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      emoji(hp.emoji, hp.x, hp.y + bob, 34);
+      if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
+      ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
+      if (hp.state === 'wait') { ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.fillText(hp.prog > 0 ? '조언을 듣는 중…' : '곁에 가서 잠시 머물러 보세요', hp.x, hp.y + hp.r + 12); }
+      ctx.globalAlpha = 1;
+    }
+
+    // 적
+    for (const e of sim.enemies) {
+      if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
+      if (e.warn) { ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, 7); ctx.stroke(); }
+      emoji(e.emoji, e.x, e.y + 1, e.r * 2);
+      if (e.type === 'boss') {
+        ctx.fillStyle = '#000a'; ctx.fillRect(40, 54, W - 80, 7);
+        ctx.fillStyle = '#ff5d73'; ctx.fillRect(40, 54, (W - 80) * Math.max(0, e.hp / e.maxhp), 7);
+        ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText(`${e.label} · ${e.phase}/3`, W / 2, 48);
+      }
+    }
+
+    // 탄환 / 형광펜 / 적 탄환
+    for (const b of sim.bullets) {
+      ctx.globalAlpha = b.owner === 'echo' ? 0.4 : 1;
+      ctx.fillStyle = b.crit ? '#ffd34d' : b.owner === 'echo' ? '#8fe3ff' : '#ffe27a';
+      ctx.beginPath(); ctx.arc(b.x, b.y, (b.owner === 'echo' ? 2.6 : 3.2) + (b.crit ? 1.2 : 0), 0, 7); ctx.fill();
+    }
+    // 형광펜: 점이 아니라 막대 모양(몸통 + 뚜껑)으로, 궤도 접선 방향으로 회전
+    for (const o of sim.orbs) {
+      const echo = o.owner === 'echo';
+      ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.ang + Math.PI / 2);
+      ctx.globalAlpha = echo ? 0.4 : 1;
+      ctx.fillStyle = echo ? '#8fe3ff' : '#d8ff3c';
+      ctx.fillRect(-3, -9, 6, 14);                       // 몸통
+      ctx.fillStyle = echo ? '#5fb8d8' : '#ff8a1f';
+      ctx.fillRect(-3, 5, 6, 4);                         // 뚜껑
+      ctx.fillStyle = echo ? '#bfefff' : '#fff';
+      ctx.beginPath(); ctx.moveTo(-3, -9); ctx.lineTo(3, -9); ctx.lineTo(1.2, -13); ctx.lineTo(-1.2, -13); ctx.closePath(); ctx.fill();   // 펜촉
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalAlpha = 1;
+    for (const b of sim.ebullets) { ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff8'; ctx.lineWidth = 1; ctx.stroke(); }
+
+    // 플레이어
+    const p = sim.player;
+    // 내 위치 표시: 몸 아래 초록 링(숨쉬듯 깜빡임) + 머리 위 ▼ (에코의 시안색과 구분)
+    {
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 200);
+      const pr = 13 + 11 * pulse;                  // 반지름 13 ↔ 24 로 눈에 띄게 커졌다 작아졌다
+      ctx.fillStyle = `rgba(125,255,178,${0.20 - 0.12 * pulse})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7); ctx.fill();
+      ctx.strokeStyle = `rgba(125,255,178,${0.95 - 0.45 * pulse})`; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7); ctx.stroke();
+      const ay = p.y - 30 - 2 * pulse;
+      ctx.fillStyle = '#7dffb2';
+      ctx.beginPath(); ctx.moveTo(p.x - 5, ay - 5); ctx.lineTo(p.x + 5, ay - 5); ctx.lineTo(p.x, ay + 2); ctx.closePath(); ctx.fill();
+    }
+    if (p.inv > 0 && Math.floor(p.inv / 4) % 2) ctx.globalAlpha = 0.4;
+    emoji(playerEmoji, p.x, p.y + 1, 22); ctx.globalAlpha = 1;
+
+    // 이펙트
+    for (const f of sim.fx) {
+      ctx.globalAlpha = Math.min(1, f.t / 12);
+      if (f.kind === 'pop') { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(f.x, f.y, 14 - f.t, 0, 7); ctx.stroke(); }
+      else if (f.kind === 'hurt') { ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.arc(f.x, f.y, 16 - f.t, 0, 7); ctx.fill(); }
+      else if (f.kind === 'vanish') { ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(f.x, f.y, 24 - f.t, 0, 7); ctx.fill(); }
+      else if (f.kind === 'nova') { ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 - f.t / 24), 0, 7); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+
+    // 데미지 숫자
+    ctx.textAlign = 'center';
+    for (const f of floats) {
+      ctx.globalAlpha = Math.min(1, f.t / 20);
+      ctx.fillStyle = f.crit ? '#ffd34d' : '#fff';
+      ctx.font = f.crit ? 'bold 15px sans-serif' : '11px sans-serif';
+      ctx.fillText(f.v, f.x, f.y - (40 - f.t) * 0.6);
+    }
+    ctx.globalAlpha = 1;
+
+    // HUD
+    ctx.textAlign = 'left'; ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, 34);
+    ctx.fillStyle = '#ff5d73'; ctx.fillRect(8, 8, 100 * Math.max(0, p.hp / p.maxhp), 8);
+    ctx.strokeStyle = '#fff6'; ctx.lineWidth = 1; ctx.strokeRect(8, 8, 100, 8);
+    ctx.fillStyle = '#7dffb2'; ctx.fillRect(8, 20, 100 * Math.min(1, p.xp / p.need), 5);
+    ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif';
+    ctx.fillText(`Lv ${p.level}`, 116, 14);
+    ctx.textAlign = 'center';
+    const left = Math.max(0, Math.ceil((RUN_TICKS - sim.tick) / TICK));
+    ctx.font = 'bold 16px sans-serif';
+    if (sim.tick >= RUN_TICKS) { ctx.fillStyle = '#ff9aa8'; ctx.fillText('연장전', W / 2, 16); ctx.fillStyle = '#fff'; }
+    else ctx.fillText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`, W / 2, 16);
+    if (sim.bossCount > 1 && (sim.bossIdx > 0 || sim.tick > 60 * 30)) {     // 큰 도전이 여러 번인 월드: 극복한 수 표시
+      ctx.textAlign = 'center'; ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#ffe58a';
+      ctx.fillText('🏁 ' + '●'.repeat(sim.bossDefeated) + '○'.repeat(sim.bossCount - sim.bossDefeated), W / 2, 29); ctx.fillStyle = '#fff';
+    }
+    ctx.textAlign = 'right'; ctx.font = '12px sans-serif';
+    const alive = sim.echoes.filter((e) => e.alive).length;
+    ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
+
+    // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림)
+    if (!drag) {
+      ctx.globalAlpha = 0.35 + 0.2 * Math.sin(performance.now() / 350);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
+      ctx.fillText('👆 여기서 드래그하면 캐릭터가 안 가려져요', W / 2, PLAY_BOTTOM + 76);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, PLAY_BOTTOM + 76, 38, 0, 7); ctx.globalAlpha *= 0.5; ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // 보유 업그레이드 (조작 영역 위쪽 가장자리)
+    ctx.textAlign = 'left'; ctx.font = '12px sans-serif'; ctx.fillStyle = '#fff';
+    let ux = 6;
+    for (const u of UPGRADES) {
+      const lv = p.stats[u.id];
+      if (!lv || u.instant) continue;
+      const s = `${u.icon}${lv}`;
+      ctx.fillText(s, ux, PLAY_BOTTOM + 12); ux += ctx.measureText(s).width + 8;
+    }
+    // 조이스틱 표시 (드래그 중)
+    if (drag) {
+      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(drag.ax, drag.ay, 46, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(140,170,255,.85)';
+      ctx.beginPath(); ctx.arc(drag.px, drag.py, 18, 0, 7); ctx.fill();
+    }
+
+    // 배너 / 시너지 토스트
+    if (banner.t > 0) {
+      ctx.globalAlpha = Math.min(1, banner.t / 30);
+      ctx.textAlign = 'center'; ctx.fillStyle = /^[⚠]/.test(banner.text) ? '#ff5d73' : '#ffe58a'; fitText(banner.text, W / 2, 100, 18);
+      ctx.globalAlpha = 1;
+    }
+    if (toast.t > 0) {
+      ctx.globalAlpha = Math.min(1, toast.t / 30);
+      ctx.textAlign = 'center'; ctx.fillStyle = '#ffd34d'; fitText(toast.text, W / 2, 130, 15);
+      ctx.globalAlpha = 1;
+    }
+    if (hurtFlash > 0) {
+      const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.62);
+      g.addColorStop(0, 'rgba(255,40,70,0)'); g.addColorStop(1, `rgba(255,40,70,${0.5 * hurtFlash})`);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  /* ---------- 메인 루프 (고정 60Hz) ---------- */
+  function frame(now) {
+    if (state === 'play') {
+      acc += Math.min(100, now - last); last = now;
+      const dt = 1000 / TICK;
+      while (acc >= dt && state === 'play') {
+        acc -= dt; sim.step(currentInput());
+        handleEvents();
+        if (sim.choices) { showLevelUp(); break; }
+        if (sim.over) { showEnd(); break; }
+      }
+    }
+    if (shake > 0) shake = Math.max(0, shake - 0.4);
+    if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - 0.06);
+    for (const f of floats) f.t -= 1;
+    floats = floats.filter((f) => f.t > 0);
+    if (banner.t > 0) banner.t -= 1;
+    if (toast.t > 0) toast.t -= 1;
+    render();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // 테스트/디버그용 훅
+  window.__echo = { get sim() { return sim; }, get state() { return state; }, get echoes() { return echoes; } };
+})();
