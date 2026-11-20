@@ -95,6 +95,7 @@
   }
 
   /* ---------- 게임 상태 ---------- */
+  let playerEmoji = '🧑‍🎓';
   let sim = null, state = 'menu';   // menu | play | levelup | end
   let acc = 0, last = 0;
 
@@ -109,7 +110,8 @@
   function startRun() {
     Sfx.unlock(); Sfx.play('click');
     runCount += 1;
-    sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes });
+    sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus() });
+    playerEmoji = GameUI.emoji();
     state = 'play'; acc = 0; last = performance.now();
     shake = 0; hurtFlash = 0; floats = []; banner.t = 0; toast.t = 0;
     ['start', 'levelup', 'end'].forEach((id) => $(id).classList.add('hidden'));
@@ -146,10 +148,19 @@
         ? `가장 일찍 쓰러진 에코(${(res.removed[0].ticks / TICK).toFixed(0)}초)가 퇴장했습니다<br>`
         : '') +
       `가장 오래 버틴 에코 ${(Math.max(...echoes.map((e) => e.ticks)) / TICK).toFixed(0)}초까지 다음 판을 도와줍니다`;
+    // 학점 · 도전 과제 · 일일 미션
+    const sum = GameUI.recordRun({ kills: sim.kills, seconds: Math.floor(sim.tick / TICK), level: sim.player.level, result: sim.result, gems: sim.gemCount, echoes: sim.echoes.length });
+    const lines = [`🎓 학점 +${sum.earned}`];
+    for (const a of sum.newAch) lines.push(`🏆 과제 달성: ${a.name} (+${a.reward})`);
+    for (const m of sum.missionsDone) lines.push(`🎯 미션 완료! (+${m.reward})`);
+    $('reward').innerHTML = '';
+    lines.forEach((t) => { const d = document.createElement('div'); d.textContent = t; $('reward').appendChild(d); });
+    if (sum.newAch.length || sum.missionsDone.length) Sfx.play('levelup');
     $('end').classList.remove('hidden');
   }
 
   $('go').onclick = startRun; $('again').onclick = startRun;
+  $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; };
   $('reset').onclick = () => { echoes = []; runCount = 0; save(); $('reset').textContent = '초기화됨'; };
   $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); $('mute').textContent = Sfx.isMuted() ? '🔇' : '🔊'; };
 
@@ -233,7 +244,7 @@
       ctx.beginPath(); ctx.moveTo(p.x - 5, ay - 5); ctx.lineTo(p.x + 5, ay - 5); ctx.lineTo(p.x, ay + 2); ctx.closePath(); ctx.fill();
     }
     if (p.inv > 0 && Math.floor(p.inv / 4) % 2) ctx.globalAlpha = 0.4;
-    emoji('🧑‍🎓', p.x, p.y + 1, 22); ctx.globalAlpha = 1;
+    emoji(playerEmoji, p.x, p.y + 1, 22); ctx.globalAlpha = 1;
 
     // 이펙트
     for (const f of sim.fx) {

@@ -101,10 +101,14 @@
     { t: 100, type: 'hw',   n: 16, text: '숙제 폭탄!' },
   ];
 
-  function derive(st) {
+  /** 영구 강화·캐릭터 보너스(meta.js가 계산해서 전달). 기본값은 보너스 없음 */
+  const NO_BONUS = { maxhp: 0, dmgMul: 1, speedMul: 1, cooldownMul: 1, magnet: 0, xpMul: 1, regen: 0, echoPower: 0, startStats: {} };
+
+  function derive(st, b) {
+    b = b || NO_BONUS;
     const T = TUNING;
-    const cooldown = 22 * Math.pow(T.rateMul, st.rate);
-    const base = 1 + T.dmgPer * st.dmg;
+    const cooldown = 22 * Math.pow(T.rateMul, st.rate) * b.cooldownMul;
+    const base = (1 + T.dmgPer * st.dmg) * b.dmgMul;
     let dmg = base;
     let pierce = st.pierce;
     let crit = T.critPer * st.crit;
@@ -118,8 +122,8 @@
       cooldown: Math.max(5, Math.round(cooldown)),
       shots: 1 + st.multi,
       dmg,
-      speed: 2.1 * (1 + T.speedPer * st.speed),
-      magnet: 50 + T.magnetPer * st.magnet,
+      speed: 2.1 * (1 + T.speedPer * st.speed) * b.speedMul,
+      magnet: 50 + T.magnetPer * st.magnet + b.magnet,
       pierce,
       crit: Math.min(0.9, crit),
       critMul: T.critMul,
@@ -128,7 +132,7 @@
       novaDmg: (6 + 5 * st.nova) * base,
       orbN: st.orbit,
       orbDmg: 2.5 * base,
-      regen: T.regenPer * st.regen / TICK,
+      regen: (T.regenPer * st.regen + b.regen) / TICK,
       syn,
     };
   }
@@ -152,17 +156,20 @@
   }
 
   class Sim {
-    /** @param {{seed:number, echoes?:Array, events?:boolean}} opts  echoes: [{path:number[], ups:[{t,id}]}] */
+    /** @param {{seed:number, echoes?:Array, events?:boolean, bonus?:object}} opts  echoes: [{path:number[], ups:[{t,id}]}] */
     constructor(opts) {
       this.seed = opts.seed >>> 0;
       this.rng = mulberry32(this.seed);
       this.emitOn = opts.events !== false;
       this.events = [];
       this.tick = 0;
+      this.bonus = Object.assign({}, NO_BONUS, opts.bonus || {});
+      const maxhp = Math.max(40, 130 + this.bonus.maxhp);
       this.player = {
-        x: W / 2, y: H * 0.45, hp: 130, maxhp: 130, r: 7, xp: 0, level: 1, need: 4,
+        x: W / 2, y: H * 0.45, hp: maxhp, maxhp, r: 7, xp: 0, level: 1, need: 4,
         inv: 0, cd: 0, stats: newStats(), syn: {},
       };
+      this.gemCount = 0;
       this.enemies = [];
       this.bullets = [];
       this.ebullets = [];      // 적 탄환
@@ -177,6 +184,12 @@
       this.result = null;      // 'dead' | 'clear' | 'survive'
       this.choices = null;     // 레벨업 대기 중이면 3택1 배열
       this.rec = { path: [], ups: [] };
+      // 캐릭터의 시작 아이템: 에코도 똑같이 갖도록 t=0 업그레이드로 기록한다
+      for (const id in (this.bonus.startStats || {})) {
+        if (!(id in this.player.stats) || id === 'heal') continue;
+        for (let k = 0; k < this.bonus.startStats[id]; k++) { this.player.stats[id] += 1; this.rec.ups.push({ t: 0, id }); }
+      }
+      for (const sid of derive(this.player.stats).syn) this.player.syn[sid] = true;
       const list = (opts.echoes || []).slice(-MAX_ECHOES);
       this.echoes = list.map((e, i) => ({
         path: e.path, ups: e.ups || [],
@@ -413,7 +426,7 @@
       if (p.inv > 0) p.inv -= 1;
 
       // 이동 + 기록
-      const d = derive(p.stats);
+      const d = derive(p.stats, this.bonus);
       let dx = input.dx || 0, dy = input.dy || 0;
       const len = Math.hypot(dx, dy);
       if (len > 1) { dx /= len; dy /= len; }
@@ -441,7 +454,7 @@
           ec.upIdx++;
         }
         const ed = derive(ec.stats);
-        const pm = ec.power * boost;
+        const pm = ec.power * boost * (1 + this.bonus.echoPower);
         ec.cd -= 1;
         if (ec.cd <= 0 && this._fire(ec.x, ec.y, ed, 'echo', pm)) ec.cd = Math.max(6, Math.round(ed.cooldown / boost));
         this._skills(ec, ed, pm, t, 'echo');
@@ -537,7 +550,7 @@
         const dist = Math.hypot(ax, ay);
         if (dist < d.magnet) { g.x += (ax / (dist || 1)) * 4; g.y += (ay / (dist || 1)) * 4; }
         if (dist < p.r + 5) {
-          p.xp += g.v;
+          p.xp += g.v * this.bonus.xpMul; this.gemCount += 1;
           this._ev({ k: 'gem' });
           this.gems[i] = this.gems[this.gems.length - 1]; this.gems.pop();
         }
@@ -558,7 +571,7 @@
     exportEcho() { return { path: this.rec.path.slice(), ups: this.rec.ups.slice(), kills: this.kills, ticks: this.tick }; }
   }
 
-  const api = { Sim, addEcho, mulberry32, derive, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
+  const api = { Sim, addEcho, mulberry32, derive, NO_BONUS, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoSim = api;
 })(typeof window !== 'undefined' ? window : globalThis);
