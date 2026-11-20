@@ -12,7 +12,10 @@
  * 월드마다 다른 것: 배경(theme) · 적 · 웨이브 · 포위 이벤트 · 도우미(helper) · 보스(boss+패턴) · 고유 규칙(rules)
  * 보스의 타입 id는 항상 'boss' (월드별로 정의만 다름)
  * boss.times: 보스 등장 시각(초) 목록 = 한 판에서 극복할 큰 도전의 횟수 (월드가 높을수록 많음)
- * boss.fightSec: 한 보스를 상대하는 목표 시간(초). 보스 체력은 이 시간에 맞춰 플레이어+에코의 화력에서 계산된다 (아슬아슬한 승부)
+ * boss.needEchoes: "겨우 이길 수 있는" 에코 수. 보스 체력은 (나 + 에코 needEchoes명)의 기준 화력으로 정해지고 에코의 화력은 반영되지 않으므로,
+ *   에코가 이보다 적으면 사실상 못 잡고 이 수만큼 있으면 아슬아슬하게, 더 많으면 여유 있게 잡는다. (정원 10명 이하)
+ * boss.refMul: 기준 화력 배율 = 그 월드에서 보스가 나올 때 "평균적인 내" 화력 / 40 (실측: 학원은 경험치 +30%라 높고, 보스가 일찍 나오는 회사·지하철은 낮음)
+ * boss.fightSec: 필요 에코 수가 갖춰졌을 때 한 보스를 상대하는 목표 시간(초)
  *
  * enemies 필드: hp, speed, r(반지름), dmg(접촉 피해), xp, ai
  *   ai: chase | zig(지그재그) | dash(돌진) | shoot(원거리) | boss
@@ -46,7 +49,7 @@
         leaveText: '선생님은 언제나 기다리고 계세요',
         boons: { heal: '따뜻한 격려', power: '오답 노트 정리', focus: '집중하는 법', team: '친구와 함께' },
       },
-      boss: { name: '시험 불안', emoji: '😱', hp: 750, times: [90], fightSec: 40, speed: 0.4, r: 30, dmg: 12, xp: 30, ai: 'boss', pattern: 'exam', warnText: '⚠ 기말고사 D-DAY, 불안이 밀려와요 ⚠', startText: '😱 시험 불안, 극복해 봐요!', summon: 'hw' },
+      boss: { name: '시험 불안', emoji: '😱', hp: 750, times: [90], needEchoes: 7, fightSec: 50, refMul: 1.0, speed: 0.4, r: 30, dmg: 12, xp: 30, ai: 'boss', pattern: 'exam', warnText: '⚠ 기말고사 D-DAY, 불안이 밀려와요 ⚠', startText: '😱 시험 불안, 극복해 봐요!', summon: 'hw' },
       waves: [
         { from: 0,  to: 20,  interval: 52, n: 1, w: { hw: 6, test: 3 } },
         { from: 20, to: 45,  interval: 40, n: 2, w: { hw: 5, test: 4, alarm: 1, late: 2 } },
@@ -67,7 +70,7 @@
       ruleText: '빡센 진도: 경험치 +30% · 방해 요소가 더 단단하고 많이 나옴 · 원거리 적 多',
       unlock: { world: 'school' },
       theme: { bg: '#1d1530', grid: 'rgba(190,140,255,.07)', deco: 'ruled' },
-      rules: { hpMul: 1.1, xpMul: 1.3, speedMul: 1.0, spawnMul: 1.1 },
+      rules: { hpMul: 1.05, xpMul: 1.3, speedMul: 1.0, spawnMul: 1.0 },
       enemies: {
         book:  { name: '조급함',            emoji: '😖', hp: 4,  speed: 0.75, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         quiz:  { name: '불안',              emoji: '😟', hp: 3,  speed: 1.2,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -82,7 +85,7 @@
         leaveText: '질문은 언제든 환영이에요',
         boons: { heal: '마음 다독이기', power: '개념 완성', focus: '시간 관리법', team: '스터디 그룹' },
       },
-      boss:  { name: '슬럼프', emoji: '🌧️', hp: 850, times: [70, 105], fightSec: 34, speed: 0.35, r: 30, dmg: 12, xp: 34, ai: 'boss', pattern: 'spiral', warnText: '⚠ 슬럼프가 찾아와요 ⚠', startText: '🌧️ 슬럼프, 함께 이겨내요!', summon: 'memo' },
+      boss:  { name: '슬럼프', emoji: '🌧️', hp: 850, times: [85, 125], needEchoes: 8, fightSec: 33, refMul: 1.3, speed: 0.35, r: 30, dmg: 12, xp: 34, ai: 'boss', pattern: 'spiral', warnText: '⚠ 슬럼프가 찾아와요 ⚠', startText: '🌧️ 슬럼프, 함께 이겨내요!', summon: 'memo' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { book: 6, quiz: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { book: 5, quiz: 4, memo: 2, ox: 1 } },
@@ -100,10 +103,10 @@
     office: {
       id: 'office', name: '회사', emoji: '🏢', coinMul: 1.6,
       desc: '야근의 연속. 방해 요소를 잡으면 가끔 커피가 떨어져 힘이 납니다. 멘토 선배가 조언해 줍니다.',
-      ruleText: '야근 커피: 방해 요소를 잡으면 가끔 ☕ 떨어짐(체력 +15) · 일이 몰려 방해가 많이 나옴 · 방해 요소가 더 단단함',
+      ruleText: '야근 커피: 방해 요소를 잡으면 가끔 ☕ 떨어짐(체력 +12) · 일이 몰려 방해가 많이 나옴 · 방해 요소가 더 단단함',
       unlock: { world: 'academy' },
       theme: { bg: '#172229', grid: 'rgba(140,200,220,.07)', deco: 'tiles' },
-      rules: { hpMul: 1.2, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.25, coffeeChance: 0.03 },
+      rules: { hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04 },
       enemies: {
         doc:     { name: '스트레스',      emoji: '😫', hp: 4,  speed: 0.8,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         mail:    { name: '압박감',        emoji: '💢', hp: 2,  speed: 1.25, r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -118,7 +121,7 @@
         leaveText: '궁금한 건 언제든 물어보세요',
         boons: { heal: '숨 돌리기', power: '업무 노하우', focus: '우선순위 정리', team: '동료와 협업' },
       },
-      boss:  { name: '번아웃', emoji: '🥵', hp: 1000, times: [60, 90, 120], fightSec: 33, speed: 0.35, r: 30, dmg: 14, xp: 38, ai: 'boss', pattern: 'charge', warnText: '⚠ 번아웃이 다가와요 ⚠', startText: '🥵 번아웃, 쉬어가며 극복해요!', summon: 'mail' },
+      boss:  { name: '번아웃', emoji: '🥵', hp: 1000, times: [80, 115, 150], needEchoes: 9, fightSec: 30, refMul: 0.6, speed: 0.35, r: 30, dmg: 14, xp: 38, ai: 'boss', pattern: 'charge', warnText: '⚠ 번아웃이 다가와요 ⚠', startText: '🥵 번아웃, 쉬어가며 극복해요!', summon: 'mail' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { doc: 6, mail: 4 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { doc: 5, mail: 4, call: 2, meeting: 1 } },
@@ -136,10 +139,10 @@
     subway: {
       id: 'subway', name: '지하철', emoji: '🚇', coinMul: 2.0,
       desc: '퇴근길 만원 지하철. 달려오는 열차를 피하세요! 친절한 역무원이 길을 안내해 줍니다.',
-      ruleText: '열차 습격: 경고 줄이 뜬 뒤 열차가 가로질러 지나감 (나에게 큰 피해, 방해 요소는 즉사)',
+      ruleText: '열차 습격: 경고 줄이 뜬 뒤 열차가 가로질러 지나감 (치이면 최대 체력의 40%가 깎임! 방해 요소는 즉사)',
       unlock: { world: 'office' },
       theme: { bg: '#10201f', grid: 'rgba(255,255,255,.03)', deco: 'rails' },
-      rules: { hpMul: 1.3, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.05, coffeeChance: 0.04, trains: { first: 20, every: 30 } },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, trains: { first: 24, every: 36 } },
       enemies: {
         sleepy:  { name: '졸음',          emoji: '😪', hp: 5,  speed: 0.9,  r: 9,  dmg: 6,  xp: 1, ai: 'zig' },
         bag:     { name: '무거운 가방',   emoji: '🎒', hp: 9,  speed: 0.6,  r: 11, dmg: 8,  xp: 2, ai: 'chase' },
@@ -154,7 +157,7 @@
         leaveText: '도움이 필요하면 언제든 말씀하세요',
         boons: { heal: '잠깐 쉬어가기', power: '빠른 환승 길', focus: '졸음 깨우기', team: '함께 가는 길' },
       },
-      boss:  { name: '급행열차', emoji: '🚆', hp: 950, times: [55, 85, 115, 145], fightSec: 30, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'lane', warnText: '⚠ 급행열차가 들어와요 ⚠', startText: '🚆 급행열차를 피해 집으로!', summon: 'sleepy' },
+      boss:  { name: '급행열차', emoji: '🚆', hp: 950, times: [75, 110, 145, 180], needEchoes: 9, fightSec: 22, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'lane', warnText: '⚠ 급행열차가 들어와요 ⚠', startText: '🚆 급행열차를 피해 집으로!', summon: 'sleepy' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { sleepy: 7, bag: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { sleepy: 5, bag: 3, phone: 2, ad: 1 } },
@@ -173,7 +176,7 @@
 
   /** 도우미가 주는 조언 카드 (공통 효과, 이름만 월드별) */
   const BOONS = {
-    heal:  { icon: '💛', desc: '체력을 모두 회복' },
+    heal:  { icon: '💛', desc: '체력을 절반 회복' },
     power: { icon: '📒', desc: '공격력 Lv +1' },
     focus: { icon: '⏳', desc: '발사 속도 Lv +1' },
     team:  { icon: '🤝', desc: '에코 응원 Lv +1' },

@@ -297,7 +297,8 @@ test('도우미: 정해진 시간(45초)에 등장하고 안내 문구/이벤트
     const s = new Sim({ seed: 3, events: true, world: id });
     s.player.hp = 1e9;
     let appeared = null, banner = null;
-    while (s.tick <= WORLDS[id].helper.t * 60 + 5) {
+    while (s.tick <= WORLDS[id].helper.t * 60 + 5 && !s.over) {
+      s.player.hp = 1e9;
       if (s.choices) s.choose(s.choices[0].id);
       s.step({ dx: 0, dy: 0 });
       for (const ev of s.drainEvents()) { if (ev.k === 'helper') appeared = s.tick; if (ev.k === 'banner' && ev.text === WORLDS[id].helper.arriveText) banner = true; }
@@ -334,7 +335,7 @@ test('도우미: 충분히 머물면 조언 카드 3장을 받고, 선택한 효
   assert.strictEqual(s.helper.state, 'done');
   assert.ok(s.choices.every((c) => c.name && c.desc && c.icon));
   s.player.hp = 10; s.choose('boon_heal');
-  assert.strictEqual(s.player.hp, s.player.maxhp);
+  assert.ok(Math.abs(s.player.hp - (10 + s.player.maxhp * TUNING.boonHealFrac)) < 1e-9, '체력 회복 카드는 절반만 회복');
   assert.strictEqual(s.choices, null); assert.strictEqual(s.choiceKind, 'levelup');
   // 공격력 / 발사 속도
   s = mk(); ask(s); s.choose('boon_power');
@@ -454,26 +455,104 @@ test('다음 보스일수록 더 단단하고 빠르다', () => {
   assert.ok(labels[0].includes('3/4'), labels[0]);
 });
 
-test('보스 체력은 플레이어+에코의 화력에 비례한다 (강해져도 쉬워지지 않는다)', () => {
+test('보스 체력은 "내" 화력에 비례하고, 에코 수와는 무관하다', () => {
   const hpOf = (setup) => { const s = new Sim({ seed: 34, events: false, world: 'school', echoes: setup.echoes, bonus: setup.bonus }); if (setup.stats) Object.assign(s.player.stats, setup.stats); s._make('boss', 0, 0, 0); return s.enemies[0].maxhp; };
   const base = hpOf({});
   const strong = hpOf({ stats: { dmg: 4, rate: 4, multi: 2, crit: 3 }, bonus: { dmgMul: 1.3 } });
-  assert.ok(strong > base * 1.5, `강한 플레이어 ${strong | 0} > 기본 ${base | 0}`);
-  const echo = { path: new Array(7200).fill(100), ups: [{ t: 0, id: 'dmg' }, { t: 0, id: 'dmg' }, { t: 0, id: 'rate' }], ticks: 7200 };
-  const s0 = new Sim({ seed: 34, events: false, echoes: [echo, echo, echo, echo] });
-  s0.echoes.forEach((e) => { e.stats.dmg = 2; e.stats.rate = 2; });
-  s0._make('boss', 0, 0, 0);
-  assert.ok(s0.enemies[0].maxhp > base * 1.5, `에코 4명 ${s0.enemies[0].maxhp | 0} > 기본 ${base | 0}`);
-  // 죽은 에코는 화력에 포함되지 않는다
-  s0.echoes.forEach((e) => { e.alive = false; });
-  assert.ok(Math.abs(s0._firepower() - new Sim({ seed: 34, events: false })._firepower()) < 1e-9);
-  // 최소 체력(바닥)
+  assert.ok(strong > base * 1.5, `내가 강하면 보스도 단단: ${strong | 0} > ${base | 0}`);
+  const echo = { path: new Array(7200).fill(100), ups: [], ticks: 7200 };
+  for (const n of [0, 1, 4, 10]) {
+    assert.strictEqual(hpOf({ echoes: Array.from({ length: n }, () => echo) }), base, `에코 ${n}명이어도 보스 체력은 같다`);
+  }
   const weak = new Sim({ seed: 34, events: false, bonus: { dmgMul: 0.01 } });
   weak._make('boss', 0, 0, 0);
-  assert.ok(weak.enemies[0].maxhp >= WORLDS.school.boss.hp * TUNING.bossFloorMul - 1e-9);
+  assert.ok(weak.enemies[0].maxhp >= WORLDS.school.boss.hp * TUNING.bossFloorMul - 1e-9, '최소 체력');
 });
 
-test('보스전이 길어지면 격앙(피해 +40%, 이동 +25%)되고 안내 문구가 나온다', () => {
+test('필요 에코 수: 에코가 그 수만큼 있어야 목표 시간에 잡고, 적으면 몇 배로 오래 걸린다', () => {
+  for (const id of ORDER) {
+    const def = WORLDS[id].boss, need = def.needEchoes, mul = def.refMul;
+    assert.ok(need >= 7 && need <= E.MAX_ECHOES, `${id}: 필요 에코 수 ${need}`);
+    // 화력 추정을 기준값으로 고정해서(나=기준, 에코 1명=기준) 설계 의도를 검증
+    const killTime = (n) => {
+      const echoes = Array.from({ length: n }, () => ({ path: new Array(7200).fill(100), ups: [], ticks: 7200 }));
+      const s = new Sim({ seed: 40, events: false, world: id, echoes });
+      s._fp = function (stats) { return (stats === this.player.stats ? TUNING.refSoloFp : TUNING.refEchoFp) * mul; };
+      s._make('boss', 0, 0, 0);
+      return s.enemies[0].maxhp / s._firepower();
+    };
+    const atNeed = killTime(need);
+    assert.ok(Math.abs(atNeed / def.fightSec - 1) < 1e-9, `${id}: 에코 ${need}명이면 정확히 ${def.fightSec}초 (실제 ${atNeed.toFixed(2)}초)`);
+    assert.ok(killTime(1) > def.fightSec * 3, `${id}: 에코 1명이면 ${killTime(1).toFixed(0)}초 (목표의 3배 이상)`);
+    assert.ok(killTime(need - 2) > def.fightSec * 1.2, `${id}: 에코 ${need - 2}명이면 눈에 띄게 오래 걸림`);
+    assert.ok(killTime(E.MAX_ECHOES) < def.fightSec * 0.95 || need === E.MAX_ECHOES, `${id}: 에코가 가득이면 더 수월`);
+    assert.ok(killTime(0) > killTime(1) && killTime(1) > killTime(need), '에코가 많을수록 빨리 잡힘');
+  }
+});
+
+test('보스 체력은 내 화력을 절반만(제곱근) 따라간다 (상한/하한 있음)', () => {
+  const hpAt = (solo) => { const s = new Sim({ seed: 41, events: false, world: 'school' }); s._fp = () => solo; s._make('boss', 0, 0, 0); return s.enemies[0].maxhp; };
+  const ref = hpAt(TUNING.refSoloFp);
+  assert.ok(Math.abs(hpAt(TUNING.refSoloFp * 2) / ref - Math.sqrt(2)) < 1e-9, '내 화력 2배 → 보스 체력 √2배');
+  assert.ok(Math.abs(hpAt(TUNING.refSoloFp * 100) / ref - TUNING.bossAdaptMax) < 1e-9, '상한');
+  assert.ok(Math.abs(hpAt(TUNING.refSoloFp * 0.01) / ref - TUNING.bossAdaptMin) < 1e-9, '하한');
+});
+
+test('필요 에코 수는 월드가 높을수록 같거나 많다 (학교는 최소 7명)', () => {
+  const needs = ORDER.map((id) => WORLDS[id].boss.needEchoes);
+  assert.strictEqual(needs[0], 7);
+  for (let i = 1; i < needs.length; i++) assert.ok(needs[i] >= needs[i - 1], needs.join());
+});
+
+test('보스전 중에는 받는 피해가 최대 체력에 비례해 커지고, 평소에는 그대로', () => {
+  const taken = (opts, boss) => {
+    const s = new Sim({ seed: 36, events: false, ...opts });
+    s.bossAlive = !!boss; const p = s.player; const hp0 = p.hp; p.inv = 0; s._hurtPlayer(10); return (hp0 - p.hp);
+  };
+  const normal = taken({}, false), boss = taken({}, true);
+  assert.ok(Math.abs(boss / normal - TUNING.bossAtkMul) < 1e-9, `보스전 배율 ${boss / normal}`);
+  const tanky = taken({ bonus: { maxhp: 110 } }, true);
+  assert.ok(tanky > boss * 1.5, `체력이 높을수록 한 방이 더 아프다: ${tanky} vs ${boss}`);
+  assert.ok(Math.abs(taken({ bonus: { maxhp: 110 } }, false) - normal) < 1e-9, '평소에는 체력 강화가 그대로 이득');
+  const echo = { path: new Array(100).fill(100), ups: [], ticks: 100 };
+  assert.ok(Math.abs(taken({ echoes: [echo, echo, echo, echo] }, true) - boss) < 1e-9, '에코 수는 받는 피해에 영향 없음');
+  assert.ok(Math.abs(taken({ bonus: { maxhp: -50 } }, true) - boss) < 1e-9, '체력이 낮아도 불리해지지 않음(하한 1)');
+});
+
+test('체력 계열이 과하지 않다: 기본 체력 110, 재생·회복량 상한', () => {
+  const s = new Sim({ seed: 1, events: false });
+  assert.strictEqual(s.player.maxhp, 110);
+  assert.ok(TUNING.healAmount <= 35 && TUNING.regenPer <= 1.0 && TUNING.bossBreatherHeal <= 0.25 && TUNING.boonHealFrac <= 0.5 && TUNING.coffeeHeal <= 12);
+  // 급식 시간 5레벨 + 상점 최대 재생 + 보건 도우미 재생을 모두 합쳐도 초당 회복은 제한적
+  const d = E.derive({ ...new Sim({ seed: 1, events: false }).player.stats, regen: 5 }, { ...E.NO_BONUS, regen: 5 * 0.25 + 0.7 });
+  assert.ok(d.regen * 60 < 8, `초당 재생 ${(d.regen * 60).toFixed(1)}`);
+});
+
+test('열차에 치이면 최대 체력의 40%가 깎인다 (막을 수 없는 큰 피해)', () => {
+  const hit = (bonus, boss) => {
+    const s = new Sim({ seed: 3, events: false, world: 'subway', bonus });
+    s.player.x = 180; s.player.y = 300; s.bossAlive = !!boss;
+    s._spawnTrain(300, 1, 1);
+    const hp0 = s.player.hp, mx = s.player.maxhp;
+    for (let i = 0; i < 120; i++) { s.player.hp = Math.max(s.player.hp, 1); s.step({ dx: 0, dy: 0 }); }
+    return { lost: hp0 - s.player.hp, mx };
+  };
+  const a = hit({}, false);
+  assert.ok(a.lost >= a.mx * 0.4 - 1e-6, `기본 체력 ${a.mx}에서 ${a.lost.toFixed(1)} 감소`);
+  const rich = hit({ maxhp: 100 }, false);
+  assert.ok(rich.lost >= rich.mx * 0.4 - 1e-6 && rich.lost > a.lost, `체력이 높아도 비례해서 아픔: ${rich.lost.toFixed(1)}/${rich.mx}`);
+  assert.ok(Math.abs(hit({}, true).lost - a.lost) < 1e-6, '보스전 배율에도 영향 없이 고정');
+  const tiny = hit({ maxhp: -60 }, false);
+  assert.ok(tiny.lost >= TUNING.trainMinDmg - 1e-6, `최소 ${TUNING.trainMinDmg} 피해: ${tiny.lost.toFixed(1)}`);
+  // 한 대에 두 번 맞지 않는다
+  const s = new Sim({ seed: 3, events: false, world: 'subway' });
+  s.player.x = 180; s.player.y = 300; s._spawnTrain(300, 1, 1);
+  let hits = 0;
+  for (let i = 0; i < 140; i++) { s.player.hp = 1e9; const h0 = s.player.hp; s.player.inv = 0; s.step({ dx: 0, dy: 0 }); if (s.player.hp < h0) hits++; }
+  assert.strictEqual(hits, 1, '열차 한 대에 한 번만');
+});
+
+test('보스전이 길어지면 격앙(이동 +25%)되고 안내 문구가 나온다', () => {
   const s = new Sim({ seed: 35, events: true, world: 'school' });
   stepTo(s, () => s.bossAlive, 9000);
   const b = s.enemies.find((e) => e.type === 'boss');
@@ -482,26 +561,9 @@ test('보스전이 길어지면 격앙(피해 +40%, 이동 +25%)되고 안내 �
   s.drainEvents();
   stepTo(s, () => b.enraged, TUNING.enrageSec * 60 + 600);
   assert.strictEqual(b.enraged, true);
-  assert.ok(Math.abs(b.dmg - dmg0 * 1.4) < 1e-9 && Math.abs(b.speed - sp0 * 1.25) < 1e-9);
+  assert.ok(Math.abs(b.speed - sp0 * 1.25) < 1e-9);
   assert.ok(s.drainEvents().some((e) => e.k === 'banner' && e.text.includes('거세')));
   assert.ok(b.t >= TUNING.enrageSec * 60 - 2, '격앙 시점');
-});
-
-test('보스전 중에는 받는 피해가 최대 체력/에코 수에 비례해 커지고, 평소에는 그대로', () => {
-  const taken = (opts, boss) => {
-    const s = new Sim({ seed: 36, events: false, ...opts });
-    s.bossAlive = !!boss; const p = s.player; const hp0 = p.hp; p.inv = 0; s._hurtPlayer(10); return (hp0 - p.hp);
-  };
-  const normal = taken({}, false), boss = taken({}, true);
-  assert.ok(Math.abs(boss / normal - TUNING.bossAtkMul) < 1e-9, `보스전 배율 ${boss / normal}`);
-  const tanky = taken({ bonus: { maxhp: 130 } }, true);
-  assert.ok(tanky > boss * 1.5, `체력이 높을수록 한 방이 더 아프다: ${tanky} vs ${boss}`);
-  assert.ok(Math.abs(taken({ bonus: { maxhp: 130 } }, false) - normal) < 1e-9, '평소에는 체력 강화가 그대로 이득');
-  const echo = { path: new Array(100).fill(100), ups: [], ticks: 100 };
-  const withEchoes = taken({ echoes: [echo, echo, echo, echo] }, true);
-  assert.ok(Math.abs(withEchoes / boss - (1 + 4 * TUNING.bossAtkPerEcho)) < 1e-9);
-  // 체력이 낮은 캐릭터도 불리해지지 않는다 (하한 1)
-  assert.ok(Math.abs(taken({ bonus: { maxhp: -50 } }, true) - boss) < 1e-9);
 });
 
 test('보스전 중에는 체력 재생이 줄어든다', () => {
@@ -533,4 +595,19 @@ test('큰 도전이 여러 번인 월드도 졸개 스폰은 첫 보스부터 �
   const s = new Sim({ seed: 39, events: false, world: 'academy' });
   stepTo(s, () => s.bossAlive, 9000);
   assert.ok(s.bossIdx > 0);
+});
+
+
+test('격앙 이후에는 전투가 길어질수록 받는 피해가 계속 커진다 (최대 6배)', () => {
+  const s = new Sim({ seed: 42, events: false, world: 'school' });
+  stepTo(s, () => s.bossAlive, 9000);
+  const b = s.enemies.find((e) => e.type === 'boss'); b.hp = b.maxhp = 1e9;
+  const scaleAt = (sec) => { stepTo(s, () => b.t >= sec * 60, 20000); return s._bossDmgScale(); };
+  const a0 = scaleAt(TUNING.enrageSec - 2), a1 = scaleAt(TUNING.enrageSec + 10), a2 = scaleAt(TUNING.enrageSec + 20), a3 = scaleAt(TUNING.enrageSec + 40);
+  assert.ok(a1 > a0 && a2 > a1, `${a0.toFixed(2)} < ${a1.toFixed(2)} < ${a2.toFixed(2)}`);
+  assert.ok(Math.abs(a1 / a0 - (1 + TUNING.rageRamp * 10)) < 0.02, '초당 +15%');
+  assert.ok(Math.abs(a3 / a0 - TUNING.rageMax) < 1e-6, `상한 x${TUNING.rageMax}: ${(a3 / a0).toFixed(2)}`);
+  // 보스를 극복하면 배율이 평소로 돌아온다
+  b.hp = 0; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 });
+  assert.strictEqual(s.bossRage, 1);
 });

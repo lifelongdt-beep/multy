@@ -14,22 +14,22 @@
   // mods: maxhp(+), dmgMul, speedMul, cooldownMul(<1이 빠름), regen(초당), startStats(시작 아이템 레벨)
   const CHARACTERS = {
     student: { id: 'student', emoji: '🧑‍🎓', name: '학생',   cost: 0,   desc: '균형 잡힌 기본 캐릭터', mods: {} },
-    athlete: { id: 'athlete', emoji: '🏃',   name: '운동부', cost: 300, desc: '체력 +30, 이동속도 +15%, 공격은 조금 느림 · 운동화 Lv1 시작',
-               mods: { maxhp: 30, speedMul: 1.15, cooldownMul: 1.1, startStats: { speed: 1 } } },
+    athlete: { id: 'athlete', emoji: '🏃',   name: '운동부', cost: 300, desc: '체력 +20, 이동속도 +15%, 공격은 조금 느림 · 운동화 Lv1 시작',
+               mods: { maxhp: 20, speedMul: 1.15, cooldownMul: 1.1, startStats: { speed: 1 } } },
     genius:  { id: 'genius',  emoji: '🤓',   name: '전교 1등', cost: 600, desc: '공격력 +25%, 체력 -20 · 시험 만점 Lv1 시작',
                mods: { maxhp: -20, dmgMul: 1.25, startStats: { crit: 1 } } },
-    nurse:   { id: 'nurse',   emoji: '🧑‍⚕️', name: '보건 도우미', cost: 900, desc: '체력 +10, 초당 체력 재생 +1 · 급식 시간 Lv1 시작',
-               mods: { maxhp: 10, regen: 1, startStats: { regen: 1 } } },
+    nurse:   { id: 'nurse',   emoji: '🧑‍⚕️', name: '보건 도우미', cost: 900, desc: '체력 +10, 초당 체력 재생 +0.7 · 급식 시간 Lv1 시작',
+               mods: { maxhp: 10, regen: 0.7, startStats: { regen: 1 } } },
   };
 
   /* ---------- 영구 강화 (상점) ---------- */
   const SHOP = [
-    { id: 'hp',     icon: '❤️', name: '튼튼한 체력',   max: 5, base: 40, per: 10,   fmt: (v) => `체력 +${v}` },
+    { id: 'hp',     icon: '❤️', name: '튼튼한 체력',   max: 5, base: 40, per: 7,    fmt: (v) => `체력 +${v}` },
     { id: 'dmg',    icon: '💪', name: '단련된 필기',   max: 5, base: 50, per: 0.06, fmt: (v) => `공격력 +${Math.round(v * 100)}%` },
     { id: 'speed',  icon: '👟', name: '가벼운 발걸음', max: 5, base: 40, per: 0.04, fmt: (v) => `이동속도 +${Math.round(v * 100)}%` },
     { id: 'magnet', icon: '🧲', name: '넓은 자석',     max: 5, base: 30, per: 8,    fmt: (v) => `구슬 흡수 범위 +${v}` },
     { id: 'xp',     icon: '📚', name: '빠른 습득',     max: 5, base: 60, per: 0.08, fmt: (v) => `경험치 +${Math.round(v * 100)}%` },
-    { id: 'regen',  icon: '🍱', name: '든든한 도시락', max: 5, base: 70, per: 0.4,  fmt: (v) => `체력 재생 +${v.toFixed(1)}/초` },
+    { id: 'regen',  icon: '🍱', name: '든든한 도시락', max: 5, base: 70, per: 0.25,  fmt: (v) => `체력 재생 +${v.toFixed(1)}/초` },
     { id: 'echo',   icon: '👻', name: '에코 단련',     max: 5, base: 80, per: 0.05, fmt: (v) => `에코 공격력 +${Math.round(v * 100)}%` },
     { id: 'coin',   icon: '🎓', name: '장학금',        max: 5, base: 90, per: 0.10, fmt: (v) => `학점 획득 +${Math.round(v * 100)}%` },
   ];

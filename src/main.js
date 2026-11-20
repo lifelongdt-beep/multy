@@ -131,6 +131,8 @@
     playerEmoji = GameUI.emoji();
     state = 'play'; acc = 0; last = performance.now();
     shake = 0; hurtFlash = 0; floats = [];
+    const needE = sim.world.boss.needEchoes;
+    if (echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
     ['start', 'levelup', 'end'].forEach((id) => $(id).classList.add('hidden'));
   }
@@ -170,6 +172,7 @@
     $('endTitle').textContent = title;
     $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;
     $('cheer').textContent = cheerMessage(sim.result, sim.helped, sim.echoes.length);
+    if (sim.result !== 'clear' && sim.echoes.length < sim.world.boss.needEchoes) $('cheer').textContent += `  (👻 이 월드의 큰 도전은 에코 ${sim.world.boss.needEchoes}명 이상일 때 도전할 만해요 · 이번 판 ${sim.echoes.length}명)`;
     const alive = sim.echoes.filter((e) => e.alive).length;
     $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}` + (sim.helped ? ` · 도움 ${sim.helped}회` : '') + (sim.bossCount > 1 ? ` · 큰 도전 ${sim.bossDefeated}/${sim.bossCount}` : '') + '<br>' +
       (sim.echoes.length ? `이번 판 에코 ${alive}/${sim.echoes.length}명 생존<br>` : '') +

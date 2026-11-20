@@ -50,7 +50,7 @@ test('보너스 계산: 상점 레벨과 캐릭터 효과가 합쳐진다', () =
   s.shop.hp = 2; s.shop.dmg = 3; s.coins = 999;
   s.chars.unlocked.push('athlete'); s.chars.selected = 'athlete';
   const b = M.bonusFor(s);
-  assert.strictEqual(b.maxhp, 2 * 10 + 30);
+  assert.strictEqual(b.maxhp, 2 * 7 + 20);
   assert.ok(Math.abs(b.dmgMul - (1 + 3 * 0.06)) < 1e-9);
   assert.ok(Math.abs(b.speedMul - 1.15) < 1e-9);
   assert.ok(Math.abs(b.cooldownMul - 1.1) < 1e-9);

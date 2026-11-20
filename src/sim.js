@@ -31,15 +31,25 @@
     bossLaterFight: 0.12,    // n번째 보스일수록 목표 전투 시간 +12%씩 (더 단단함)
     bossLaterSpeed: 0.08,    // n번째 보스일수록 이동 +8%씩
     bossHitFactor: 0.5,      // 화력 추정 시 실제 명중률 보정
+    rageRamp: 0.15,          // 격앙 이후 초당 피해 +15% (전투가 길어질수록 급격히 치명적 → 에코가 부족하면 못 버팀)
+    rageMax: 6.0,
     enrageSec: 32,           // 보스전이 이 시간을 넘기면 보스가 거세짐 (피해 +40%, 이동 +25%)
     bossAtkMul: 1.25,        // 보스전 중 받는 피해 배율 (팽팽한 승부)
-    bossAtkPerEcho: 0.06,    // 살아 있는 에코 1명당 보스전 피해 +6%
-    bossDmgExp: 0.8,         // 보스전 피해 배율 = (최대체력/130)^0.8 (체력이 높을수록 한 방이 더 아프다)
+    refSoloFp: 40,           // [기준값] 보스가 나올 때 "평균적인 나"의 화력 추정치 (실측)
+    refEchoFp: 47,           // [기준값] 에코 1명의 화력 추정치 (실측: 에코는 피하느라 쉬지 않고 쏨)
+    bossAdaptExp: 0.5,       // 내 화력이 기준보다 세면 보스도 (비율)^0.5 만큼만 단단해짐 (절반만 반영)
+    bossAdaptMin: 0.7, bossAdaptMax: 1.5,
+    bossDmgExp: 0.8,         // 보스전 피해 배율 = (최대체력/기본체력)^0.8 (체력이 높을수록 한 방이 더 아프다)
+    baseHp: 110,             // 기본 최대 체력
+    trainMinDmg: 40,         // 열차에 치이면 최소 이만큼, 또는 최대 체력의 trainHpFrac 중 큰 쪽 (치명적!)
+    trainHpFrac: 0.4,
+    boonHealFrac: 0.5,       // 도우미의 "체력 회복" 카드: 최대 체력의 50%
+    coffeeHeal: 12,
     bossRegenMul: 0.4,       // 보스전 중 체력 재생 배율
-    bossBreatherHeal: 0.45,  // 보스 한 번 극복할 때마다 체력 회복 비율 (마지막 보스 제외)
+    bossBreatherHeal: 0.25,  // 보스 한 번 극복할 때마다 체력 회복 비율 (마지막 보스 제외)
     bossGapSec: 6,           // 보스 극복 후 다음 보스가 나오기까지 최소 간격(초)
     hpGrowth: 1.6,           // 진행도에 따른 적 체력 증가
-    healAmount: 50,
+    healAmount: 35,
     // ---- 아이템(업그레이드) 1레벨당 효과 ----
     rateMul: 0.80,           // 발사 간격 x0.80 (이전 0.85)
     dmgPer: 0.5,             // 공격력 +50% (이전 35%)
@@ -47,9 +57,9 @@
     magnetPer: 30,           // 구슬 흡수 범위 +30 (이전 22)
     critPer: 0.14,           // 치명타 확률 +14% (이전 10%)
     critMul: 2.5,            // 치명타 피해 x2.5 (이전 x2)
-    regenPer: 1.5,           // 체력 재생 +1.5/초 (이전 0.8)
+    regenPer: 1.0,           // 급식 시간 1레벨당 체력 재생 +1.0/초
     echoBoostPer: 0.25,      // 에코 응원 +25% (이전 15%)
-    damageTaken: 0.75,       // 플레이어가 받는 피해 배율 (낮출수록 쉬움)
+    damageTaken: 0.9,        // 플레이어가 받는 피해 배율 (낮출수록 쉬움)
     hurtInvTicks: 50,        // 피격 후 무적 시간(틱)
     enemySpeedGrowth: 0.15,  // 진행도에 따른 적 속도 증가
   };
@@ -73,9 +83,9 @@
     { id: 'crit',   icon: '💯', name: '시험 만점',     desc: '치명타 확률 +14% (피해 x2.5)' },
     { id: 'nova',   icon: '🔔', name: '종소리',        desc: '주기적으로 주변에 충격파' },
     { id: 'orbit',  icon: '🖍️', name: '형광펜',        desc: '몸 주위를 도는 형광펜 +1' },
-    { id: 'regen',  icon: '🍱', name: '급식 시간',     desc: '체력 재생 +1.5/초' },
+    { id: 'regen',  icon: '🍱', name: '급식 시간',     desc: '체력 재생 +1.0/초' },
     { id: 'echo',   icon: '👻', name: '에코 응원',     desc: '모든 에코의 공격력·속도 +25%' },
-    { id: 'heal',   icon: '🩹', name: '보건실',        desc: '체력 50 즉시 회복', instant: true },
+    { id: 'heal',   icon: '🩹', name: '보건실',        desc: '체력 35 즉시 회복', instant: true },
   ];
 
   const SYNERGIES = {
@@ -159,7 +169,7 @@
       this.choiceKind = 'levelup';   // 'levelup' | 'helper' (선택창 종류)
       this.hazards = [];       // 지하철 열차 {y,h,x,dir,state,t,warn,speed,dmg}
       this.bonus = Object.assign({}, NO_BONUS, opts.bonus || {});
-      const maxhp = Math.max(40, 130 + this.bonus.maxhp);
+      const maxhp = Math.max(40, TUNING.baseHp + this.bonus.maxhp);
       this.player = {
         x: W / 2, y: H * 0.45, hp: maxhp, maxhp, r: 7, xp: 0, level: 1, need: 4,
         inv: 0, cd: 0, stats: newStats(), syn: {},
@@ -180,6 +190,7 @@
       this.bossDefeated = 0;
       this.bossCount = this.world.boss.times.length;
       this.lastBossDeath = 0;
+      this.bossRage = 1;            // 보스전이 길어질수록 커지는 피해 배율
       this.over = false;
       this.result = null;      // 'dead' | 'clear' | 'survive'
       this.choices = null;     // 레벨업 대기 중이면 3택1 배열
@@ -208,7 +219,7 @@
       const p = this.player;
       if (id.indexOf('boon_') === 0) {          // 도우미가 주는 조언 카드
         const k = id.slice(5);
-        if (k === 'heal') { p.hp = p.maxhp; this._ev({ k: 'heal' }); }
+        if (k === 'heal') { p.hp = Math.min(p.maxhp, p.hp + p.maxhp * TUNING.boonHealFrac); this._ev({ k: 'heal' }); }
         else {
           const stat = { power: 'dmg', focus: 'rate', team: 'echo' }[k];
           if (stat) {
@@ -277,10 +288,16 @@
       return sum;
     }
 
-    /** 보스 체력 = 화력 x 목표 전투 시간. 강해질수록 보스도 단단해져서 "한 번에 쉽게 이기는" 일이 없다. */
+    /** 보스 체력 = (기준 화력: 나 1명 + 에코 needEchoes명) x 목표 전투 시간 x (내 화력/기준)^0.5.
+     *  - 기준 화력 대비 에코가 부족하면 전투가 몇 배로 길어져 사실상 못 잡고, needEchoes명이 갖춰지면 목표 시간(fightSec)에 겨우 잡는다.
+     *  - 에코의 화력은 체력에 반영되지 않는다(에코가 많을수록 쉬워짐). 내가 강해지면 보스는 절반만 따라서 단단해진다. */
     _bossHp(def, idx) {
-      const target = def.fightSec * (1 + TUNING.bossLaterFight * idx);
-      return Math.max(def.hp * TUNING.bossFloorMul * (1 + TUNING.bossLaterFight * idx), this._firepower() * target);
+      const T = TUNING, mul = def.refMul || 1;
+      const refSolo = T.refSoloFp * mul, refEcho = T.refEchoFp * mul;
+      const base = (refSolo + def.needEchoes * refEcho) * def.fightSec * (1 + T.bossLaterFight * idx);
+      const solo = this._fp(this.player.stats, this.bonus, 1);
+      const adapt = Math.min(T.bossAdaptMax, Math.max(T.bossAdaptMin, Math.pow(solo / refSolo, T.bossAdaptExp)));
+      return Math.max(def.hp * T.bossFloorMul * (1 + T.bossLaterFight * idx), base * adapt);
     }
 
     _make(type, x, y, idx) {
@@ -403,13 +420,13 @@
     /** 보스전 중에는 받는 피해가 내 최대 체력에 (일부) 비례해서 커진다 → 체력 강화만으로 보스전이 시시해지지 않는다 */
     _bossDmgScale() {
       if (!this.bossAlive) return 1;
-      const helpers = this.echoes.filter((e) => e.alive).length;      // 함께 싸우는 에코가 많을수록 보스도 더 거세게 몰아친다
-      return TUNING.bossAtkMul * (1 + TUNING.bossAtkPerEcho * helpers) * Math.max(1, Math.pow(this.player.maxhp / 130, TUNING.bossDmgExp));
+      return TUNING.bossAtkMul * this.bossRage * Math.max(1, Math.pow(this.player.maxhp / TUNING.baseHp, TUNING.bossDmgExp));
     }
 
-    _hurtPlayer(dmg) {
+    /** raw=true면 배율 없이 그대로 (열차처럼 막을 수 없는 큰 피해) */
+    _hurtPlayer(dmg, raw) {
       const p = this.player;
-      const taken = dmg * TUNING.damageTaken * this._bossDmgScale();
+      const taken = raw ? dmg : dmg * TUNING.damageTaken * this._bossDmgScale();
       p.hp -= taken; p.inv = TUNING.hurtInvTicks;
       this.fx.push({ x: p.x, y: p.y, t: 10, kind: 'hurt' });
       this._ev({ k: 'hurt', dmg: taken });
@@ -464,8 +481,9 @@
     _bossAI(e, ux, uy, dist) {
       const phase = this._bossPhase(e);
       e.t += 1;
+      this.bossRage = Math.min(TUNING.rageMax, 1 + TUNING.rageRamp * Math.max(0, e.t / TICK - TUNING.enrageSec));
       if (!e.enraged && e.t >= TUNING.enrageSec * TICK) {   // 오래 끌면 거세진다 → 시간에 쫓기는 긴장감
-        e.enraged = true; e.dmg *= 1.4; e.speed *= 1.25;
+        e.enraged = true; e.speed *= 1.25;
         this._ev({ k: 'banner', text: '💢 점점 거세져요! 서둘러요' });
         this.fx.push({ x: e.x, y: e.y, t: 24, kind: 'nova', r: 140 });
       }
@@ -508,12 +526,12 @@
           return { x: e.dvx, y: e.dvy };
         }
         case 'lane': {     // 지하철 보스: 가로로 달리는 열차 소환
-          const period = phase === 1 ? 190 : phase === 2 ? 150 : 120;
+          const period = phase === 1 ? 280 : phase === 2 ? 230 : 190;     // 열차 한 방이 치명적이므로 여유 있는 주기
           if (e.t % period === 0) {
-            const lanes = phase;
+            const lanes = Math.min(2, phase);
             for (let k = 0; k < lanes; k++) {
               const y = k === 0 ? p.y : Math.max(50, Math.min(H - 60, p.y + (this.rng() - 0.5) * 320));
-              this._spawnTrain(y, this.rng() < 0.5 ? 1 : -1, 60);
+              this._spawnTrain(y, this.rng() < 0.5 ? 1 : -1, 80);
             }
           }
           if (phase >= 2 && e.t % 300 === 0) this._summon(e, summon, 4);
@@ -596,7 +614,7 @@
         }
         h.x += h.dir * h.speed;
         const half = 70;
-        if (!h.hit && p.inv === 0 && Math.abs(p.y - h.y) < h.h / 2 + p.r && Math.abs(p.x - h.x) < half + p.r) { this._hurtPlayer(h.dmg); h.hit = true; }
+        if (!h.hit && p.inv === 0 && Math.abs(p.y - h.y) < h.h / 2 + p.r && Math.abs(p.x - h.x) < half + p.r) { this._hurtPlayer(Math.max(TUNING.trainMinDmg, p.maxhp * TUNING.trainHpFrac), true); h.hit = true; }
         for (const e of this.enemies) {
           const bt = e.def;
           if (bt.ai === 'boss') continue;
@@ -615,7 +633,7 @@
       this.fx.push({ x: e.x, y: e.y, t: 14, kind: 'pop' });
       this._ev({ k: 'kill' });
       if (e.type === 'boss') {
-        this.bossDefeated += 1; this.bossAlive = false; this.lastBossDeath = this.tick;
+        this.bossDefeated += 1; this.bossAlive = false; this.lastBossDeath = this.tick; this.bossRage = 1;
         if (this.bossDefeated >= this.bossCount) this.bossDead = true;
         else {
           const p = this.player;
@@ -626,7 +644,7 @@
       }
       // 월드 규칙: 가끔 커피(체력 회복)
       const cc = this.world.rules.coffeeChance;
-      if (cc && e.type !== 'boss' && this.rng() < cc) this.gems.push({ x: e.x, y: e.y, v: 15, kind: 'coffee' });
+      if (cc && e.type !== 'boss' && this.rng() < cc) this.gems.push({ x: e.x, y: e.y, v: TUNING.coffeeHeal, kind: 'coffee' });
       this.enemies[i] = this.enemies[this.enemies.length - 1]; this.enemies.pop();
       const od = e.def.onDeath;
       if (od) {
