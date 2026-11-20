@@ -15,7 +15,6 @@
   const TICK = 60;
   const PLAY_BOTTOM = H - 140;   // UI 전용: 이 아래를 '추천 조작 영역'으로 표시 (캐릭터 이동은 제한하지 않음)
   const RUN_TICKS = 120 * TICK;
-  const ELITE_TICK = 45 * TICK;
   const BOSS_TICK = 90 * TICK;
   const MAX_ECHOES = 10;  // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
   const MAX_ENEMIES = 260;
@@ -79,7 +78,7 @@
 
   // 월드 데이터는 worlds.js. 아래 상수들은 호환용(학교 월드 기준 / 모든 월드의 적 합집합)
   const SCHOOL = WORLDS.school;
-  const ENEMY_TYPES = Object.assign({}, ...Object.keys(WORLDS).map((k) => WORLDS[k].enemies), { teacher: SCHOOL.elite, boss: SCHOOL.boss });
+  const ENEMY_TYPES = Object.assign({}, ...Object.keys(WORLDS).map((k) => WORLDS[k].enemies), { boss: SCHOOL.boss });
   const WAVES = SCHOOL.waves;
   const SWARMS = SCHOOL.swarms;
 
@@ -146,6 +145,9 @@
       this.events = [];
       this.tick = 0;
       this.world = WORLDS[opts.world] || WORLDS.school;
+      this.helper = null;      // 도우미(선생님 등): {x,y,r,state,prog,need,t,stay,fade}
+      this.helped = 0;         // 이번 판에 도움을 받은 횟수
+      this.choiceKind = 'levelup';   // 'levelup' | 'helper' (선택창 종류)
       this.hazards = [];       // 지하철 열차 {y,h,x,dir,state,t,warn,speed,dmg}
       this.bonus = Object.assign({}, NO_BONUS, opts.bonus || {});
       const maxhp = Math.max(40, 130 + this.bonus.maxhp);
@@ -190,6 +192,19 @@
     choose(id) {
       if (!this.choices) return;
       const p = this.player;
+      if (id.indexOf('boon_') === 0) {          // 도우미가 주는 조언 카드
+        const k = id.slice(5);
+        if (k === 'heal') { p.hp = p.maxhp; this._ev({ k: 'heal' }); }
+        else {
+          const stat = { power: 'dmg', focus: 'rate', team: 'echo' }[k];
+          if (stat) {
+            p.stats[stat] += 1; this.rec.ups.push({ t: this.tick, id: stat });   // 에코도 같은 조언을 받는다
+            for (const sid of derive(p.stats).syn) if (!p.syn[sid]) { p.syn[sid] = true; this._ev({ k: 'synergy', id: sid, name: SYNERGIES[sid].name }); }
+          }
+        }
+        this.choices = null; this.choiceKind = 'levelup';
+        return;
+      }
       const up = UPGRADES.find((u) => u.id === id);
       if (up && up.instant) {
         p.hp = Math.min(p.maxhp, p.hp + TUNING.healAmount);
@@ -214,14 +229,15 @@
       const picks = [];
       for (let i = 0; i < 3 && pool.length; i++) picks.push(pool.splice(Math.floor(this.rng() * pool.length), 1)[0]);
       this.choices = picks;
+      this.choiceKind = 'levelup';
       this._ev({ k: 'levelup' });
     }
 
     /* ---------- 스폰 ---------- */
-    /** 이 월드에서의 적 정의 (중간 보스='teacher', 보스='boss'는 월드마다 다른 정의) */
+    /** 이 월드에서의 적 정의 (보스='boss'는 월드마다 다른 정의) */
     _def(type) {
       const w = this.world;
-      return type === 'boss' ? w.boss : type === 'teacher' ? w.elite : (w.enemies[type] || ENEMY_TYPES[type]);
+      return type === 'boss' ? w.boss : (w.enemies[type] || ENEMY_TYPES[type]);
     }
 
     _hpScale() {
@@ -289,7 +305,7 @@
       if (t >= BOSS_TICK) interval *= 2;   // 보스전 중에는 졸개 스폰을 절반으로
       if (t % interval === 0) for (let i = 0; i < wave.n; i++) this._spawn(wave);
       while (this.swarmIdx < w.swarms.length && t >= w.swarms[this.swarmIdx].t * TICK) this._ring(w.swarms[this.swarmIdx++]);
-      if (t === w.elite.t * TICK) { this._make('teacher', W / 2, -30); this._ev({ k: 'banner', text: w.elite.text }); }
+      if (t === w.helper.t * TICK) this._spawnHelper();
       if (t === BOSS_TICK - 180) this._ev({ k: 'banner', text: w.boss.warnText });
       if (t === BOSS_TICK && !this.bossSpawned) { this._make('boss', W / 2, -30); this.bossSpawned = true; this._ev({ k: 'boss', text: w.boss.startText }); }
       // 월드 고유 규칙: 지하철 열차 (보스 등장 전까지)
@@ -466,6 +482,45 @@
       }
     }
 
+    /** 도우미(선생님 등) 등장: 플레이어와 떨어진 곳에 "상담 구역"을 연다 */
+    _spawnHelper() {
+      const p = this.player, h = this.world.helper;
+      let x = W / 2, y = H * 0.35, best = -1;
+      for (let i = 0; i < 12; i++) {      // 플레이어에게서 적당히(너무 멀지도 가깝지도 않게) 떨어진 위치
+        const cx = 60 + this.rng() * (W - 120), cy = 110 + this.rng() * (H - 300);
+        const d = Math.hypot(cx - p.x, cy - p.y);
+        const score = d < 90 ? -1 : Math.min(d, 220);
+        if (score > best) { best = score; x = cx; y = cy; }
+      }
+      this.helper = { x, y, r: 46, state: 'wait', prog: 0, need: 150, t: 0, stay: 1500, fade: 0, name: h.name, emoji: h.emoji };
+      this._ev({ k: 'banner', text: h.arriveText });
+      this._ev({ k: 'helper' });
+    }
+
+    /** 도우미 곁(상담 구역)에 머무르면 게이지가 차고, 가득 차면 조언 카드를 받는다. 적은 도우미를 건드리지 못한다. */
+    _updateHelper() {
+      const hp = this.helper;
+      if (!hp) return;
+      const p = this.player;
+      hp.t += 1;
+      if (hp.state === 'wait') {
+        const inside = Math.hypot(p.x - hp.x, p.y - hp.y) < hp.r + p.r;
+        hp.prog = inside ? Math.min(hp.need, hp.prog + 1) : Math.max(0, hp.prog - 2);
+        if (hp.prog >= hp.need) {
+          hp.state = 'done'; hp.fade = 150; this.helped += 1;
+          const w = this.world.helper;
+          const ids = ['heal', 'power', this.echoes.length > 0 ? 'team' : 'focus'];
+          this.choices = ids.map((id) => ({ id: 'boon_' + id, icon: Worlds.BOONS[id].icon, name: w.boons[id], desc: Worlds.BOONS[id].desc, instant: true, boon: true }));
+          this.choiceKind = 'helper';
+          this._ev({ k: 'banner', text: w.thanksText });
+          this._ev({ k: 'helped' });
+        } else if (hp.t >= hp.stay) {
+          hp.state = 'gone'; hp.fade = 90;
+          this._ev({ k: 'banner', text: this.world.helper.leaveText });
+        }
+      } else if (--hp.fade <= 0) this.helper = null;
+    }
+
     /** 열차 위험물 갱신: 경고 → 질주. 플레이어에겐 큰 피해, 일반 적은 즉사 */
     _updateHazards() {
       const p = this.player;
@@ -481,7 +536,7 @@
         if (!h.hit && p.inv === 0 && Math.abs(p.y - h.y) < h.h / 2 + p.r && Math.abs(p.x - h.x) < half + p.r) { this._hurtPlayer(h.dmg); h.hit = true; }
         for (const e of this.enemies) {
           const bt = e.def;
-          if (bt.ai === 'boss' || bt.ai === 'elite') continue;
+          if (bt.ai === 'boss') continue;
           if (e.hp > 0 && Math.abs(e.y - h.y) < h.h / 2 + e.r && Math.abs(e.x - h.x) < half + e.r) e.hp = 0;
         }
         if ((h.dir > 0 && h.x > W + 100) || (h.dir < 0 && h.x < -100)) { this.hazards[i] = this.hazards[this.hazards.length - 1]; this.hazards.pop(); }
@@ -491,18 +546,12 @@
     _killEnemy(i) {
       const e = this.enemies[i];
       this.kills += 1;
-      const big = e.type === 'boss' ? 12 : e.type === 'teacher' ? 6 : 1;
-      const v = e.type === 'boss' ? 3 : e.type === 'teacher' ? Math.ceil(e.xp / 6) : e.xp;
+      const big = e.type === 'boss' ? 12 : 1;
+      const v = e.type === 'boss' ? 3 : e.xp;
       for (let g = 0; g < big; g++) this.gems.push({ x: e.x + (this.rng() - 0.5) * 14, y: e.y + (this.rng() - 0.5) * 14, v });
       this.fx.push({ x: e.x, y: e.y, t: 14, kind: 'pop' });
       this._ev({ k: 'kill' });
       if (e.type === 'boss') this.bossDead = true;
-      if (e.type === 'teacher') {
-        const p = this.player;
-        p.hp = Math.min(p.maxhp, p.hp + 25);
-        this._ev({ k: 'heal' });
-        this._ev({ k: 'banner', text: `${e.name} 격파! 체력 +25` });
-      }
       // 월드 규칙: 가끔 커피(체력 회복)
       const cc = this.world.rules.coffeeChance;
       if (cc && e.type !== 'boss' && this.rng() < cc) this.gems.push({ x: e.x, y: e.y, v: 15, kind: 'coffee' });
@@ -590,6 +639,7 @@
       }
 
       this._updateHazards();
+      this._updateHelper();
 
       // 적 이동/AI/접촉/사망
       for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -627,15 +677,6 @@
               e.cd -= 1;
               e.warn = e.cd <= 18;
               if (e.cd <= 0) { e.dashT = 22; e.dvx = ux * 4.4; e.dvy = uy * 4.4; e.cd = bt.dashCd; e.warn = false; }
-            }
-            break;
-          }
-          case 'elite': {
-            e.cd -= 1;
-            if (e.cd <= 0) {
-              const base = Math.atan2(ay, ax);
-              for (let k = -2; k <= 2; k++) this._ebullet(e.x, e.y, base + k * 0.22, 2.0, 6);
-              e.cd = bt.fireCd;
             }
             break;
           }
@@ -679,7 +720,7 @@
     exportEcho() { return { path: this.rec.path.slice(), ups: this.rec.ups.slice(), kills: this.kills, ticks: this.tick }; }
   }
 
-  const api = { Sim, addEcho, mulberry32, derive, NO_BONUS, WORLDS, WORLD_ORDER: Worlds.ORDER, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, ELITE_TICK, MAX_ECHOES, MAX_LEVEL };
+  const api = { Sim, addEcho, mulberry32, derive, NO_BONUS, WORLDS, WORLD_ORDER: Worlds.ORDER, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, MAX_ECHOES, MAX_LEVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoSim = api;
 })(typeof window !== 'undefined' ? window : globalThis);

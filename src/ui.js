@@ -43,6 +43,7 @@
   function closePanel() { $('panel').classList.add('hidden'); $('start').classList.remove('hidden'); currentRender = null; refresh(); }
 
   /* ---------- 월드 선택 ---------- */
+  let armedWorld = null;
   function renderWorlds() {
     const body = $('pbody'); body.innerHTML = '';
     for (const id of M.WORLD_ORDER) {
@@ -52,16 +53,21 @@
       const clears = save.worlds.clears[id] || 0, best = Math.floor(save.worlds.best[id] || 0);
       const prev = w.unlock ? M.WORLDS[w.unlock.world] : null;
       const desc = open
-        ? `${w.desc}\n✨ ${w.ruleText}\n🎓 학점 x${w.coinMul} · 보스 격파 ${clears}회 · 최장 ${best}초`
-        : `🔒 ${prev.emoji} ${prev.name}의 보스 "${prev.boss.name}"를 격파하면 열립니다`;
+        ? `${w.desc}\n✨ ${w.ruleText}\n🎓 학점 x${w.coinMul} · 보스 극복 ${clears}회 · 최장 ${best}초`
+        : `🔒 ${prev.emoji} ${prev.name}의 큰 도전 "${prev.boss.name}"을(를) 극복하면 열립니다`;
       const row = item(open ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
       row.querySelector('small').style.whiteSpace = 'pre-line';
       const b = el('button', '', sel ? '선택됨' : open ? '선택' : '잠김');
       b.disabled = sel || !open;
-      b.onclick = () => { if (M.selectWorld(save, id)) { Sfx.play('click'); commit(); rerender(); } };
+      b.onclick = () => {
+        // 다른 월드로 옮기면 지금까지 쌓은 에코가 사라진다 → 한 번 더 눌러 확인
+        const losing = GameEchoes.count() > 0 && GameEchoes.world() !== id;
+        if (losing && armedWorld !== id) { armedWorld = id; b.textContent = `⚠ 에코 ${GameEchoes.count()}명 초기화`; return; }
+        if (M.selectWorld(save, id)) { if (GameEchoes.world() !== id) GameEchoes.reset(id); armedWorld = null; Sfx.play('click'); commit(); rerender(); }
+      };
       row.appendChild(b); body.appendChild(row);
     }
-    body.appendChild(el('div', 'msg', '※ 에코는 월드를 넘어 이어집니다. 학교에서 쌓은 에코가 학원에서도 함께 싸워요.'));
+    body.appendChild(el('div', 'msg', `※ 에코는 월드를 옮기면 새로 시작해요. (지금 ${M.WORLDS[GameEchoes.world()].name}의 에코 ${GameEchoes.count()}명) 새 월드에서 다시 쌓아 보세요.`));
   }
 
   /* ---------- 상점 ---------- */
@@ -115,7 +121,7 @@
       body.appendChild(item(done ? '✅' : a.icon, a.name, `${a.desc} · 보상 🎓 ${a.reward}`, { done }));
     }
     const st = save.stats;
-    body.appendChild(el('div', 'msg', `통계: ${st.runs}판 · 처치 ${st.kills} · 보스 격파 ${st.clears} · 최장 ${Math.floor(st.bestTime)}초 · 최고 Lv ${st.bestLevel}`));
+    body.appendChild(el('div', 'msg', `통계: ${st.runs}판 · 물리친 방해 ${st.kills} · 보스 극복 ${st.clears} · 도움 ${st.helped || 0}회 · 최장 ${Math.floor(st.bestTime)}초 · 최고 Lv ${st.bestLevel}`));
   }
 
   /* ---------- 백업 ---------- */

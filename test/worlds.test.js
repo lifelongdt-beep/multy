@@ -37,7 +37,10 @@ test('월드 순서와 데이터 구조', () => {
     assert.ok(w.theme && w.theme.bg && w.theme.grid);
     assert.ok(w.coinMul >= 1);
     assert.ok(w.boss && w.boss.ai === 'boss' && w.boss.pattern && w.boss.hp > 0);
-    assert.ok(w.elite && w.elite.ai === 'elite' && w.elite.t > 0);
+    assert.ok(!('elite' in w), `${id}: 사람을 적(중간 보스)으로 두지 않는다`);
+    const h = w.helper;
+    assert.ok(h && h.name && h.emoji && h.t > 0 && h.arriveText && h.thanksText && h.leaveText, `${id}: 도우미 정의`);
+    for (const k of ['heal', 'power', 'focus', 'team']) assert.ok(h.boons[k], `${id}: 조언 카드 ${k} 이름`);
     assert.ok(w.waves.length >= 3 && w.swarms.length >= 3);
   }
 });
@@ -102,7 +105,7 @@ test('월드별 보스 패턴: 보스 체력을 깎으면 3페이즈를 모두 �
       s.step({ dx: Math.sin(s.tick / 40) * 0.6, dy: 0 });
       bullets = Math.max(bullets, s.ebullets.length);
       for (const ev of s.drainEvents()) { if (ev.k === 'phase') phases.add(ev.phase); if (ev.k === 'train') trains++; }
-      if (boss && s.enemies.some((e) => e.type !== 'boss' && e.type !== 'teacher' && e.t === 0 && Math.hypot(e.x - boss.x, e.y - boss.y) < 60)) summoned = true;
+      if (boss && s.enemies.some((e) => e.type !== 'boss' && e.t === 0 && Math.hypot(e.x - boss.x, e.y - boss.y) < 60)) summoned = true;
     }
     assert.ok(phases.has(2) && phases.has(3), `${id}: 페이즈 ${[...phases]}`);
     assert.strictEqual(s.result, 'clear', `${id}: 클리어`);
@@ -118,7 +121,6 @@ test('지하철 열차: 경고 후 질주하며 플레이어에게 피해, 일�
   s._spawnTrain(300, 1, 20);
   assert.strictEqual(s.hazards[0].state, 'warn');
   s._make('bag', 260, 300); const bag = s.enemies[0]; bag.speed = 0;
-  s._make('teacher', 100, 300); const elite = s.enemies[1]; elite.speed = 0;
   const hp0 = p.hp;
   for (let i = 0; i < 18; i++) s.step({ dx: 0, dy: 0 });
   assert.strictEqual(s.hazards[0].state, 'warn', '경고 중에는 피해 없음');
@@ -126,7 +128,6 @@ test('지하철 열차: 경고 후 질주하며 플레이어에게 피해, 일�
   for (let i = 0; i < 80; i++) s.step({ dx: 0, dy: 0 });
   assert.ok(p.hp < hp0, '열차에 치이면 피해');
   assert.ok(!s.enemies.includes(bag), '일반 적은 열차에 즉사');
-  assert.ok(s.enemies.includes(elite), '중간 보스는 열차에 안 죽음');
   assert.strictEqual(s.hazards.length, 0, '화면을 벗어난 열차는 사라짐');
 });
 
@@ -240,4 +241,149 @@ test('성능: 월드당 한 판이 틱당 평균 1ms 미만', () => {
     const ms = Number(process.hrtime.bigint() - t0) / 1e6 / Math.max(1, s.tick);
     assert.ok(ms < 1, `${id}: ${ms.toFixed(3)}ms/tick`);
   }
+});
+
+
+/* ===================== 가치 방향 (사람을 적으로 만들지 않기) ===================== */
+
+const PERSON_EMOJI = /[\u{1F464}-\u{1F465}\u{1F466}-\u{1F469}\u{1F46E}-\u{1F478}\u{1F47C}\u{1F481}-\u{1F487}\u{1F645}-\u{1F64F}\u{1F9B8}-\u{1F9B9}\u{1F9CD}-\u{1F9CF}\u{1F9D0}-\u{1F9DF}\u{1F6B6}\u{1F977}\u{1F575}]/u;
+const FORBIDDEN_WORDS = ['숙제', '선생', '강사', '팀장', '상사', '승객', '승무원', '역무원', '소매치기', '손님', '경찰', '사장'];
+
+test('가치: 적과 보스는 사람이 아니고, 사람/숙제를 가리키는 이름도 아니다', () => {
+  for (const id of ORDER) {
+    const w = WORLDS[id];
+    const all = Object.assign({}, w.enemies, { boss: w.boss });
+    for (const k in all) {
+      const e = all[k];
+      assert.ok(!PERSON_EMOJI.test(e.emoji), `${id}.${k}: 사람 이모지 ${e.emoji}를 적으로 쓰면 안 됨`);
+      for (const bad of FORBIDDEN_WORDS) assert.ok(!e.name.includes(bad), `${id}.${k}: 적 이름 "${e.name}"에 "${bad}" 사용 금지`);
+    }
+    for (const s of w.swarms) for (const bad of FORBIDDEN_WORDS) assert.ok(!s.text.includes(bad), `${id}: 포위 문구 "${s.text}"에 "${bad}" 금지`);
+    for (const t of [w.boss.warnText, w.boss.startText]) for (const bad of FORBIDDEN_WORDS) assert.ok(!t.includes(bad), `${id}: 보스 문구 "${t}"`);
+  }
+});
+
+test('가치: 도우미(선생님·선배·역무원)는 사람이고, 적 목록/웨이브/포위에는 나오지 않는다', () => {
+  for (const id of ORDER) {
+    const w = WORLDS[id];
+    assert.ok(PERSON_EMOJI.test(w.helper.emoji), `${id}: 도우미는 사람 이모지`);
+    const enemyEmojis = Object.values(w.enemies).map((e) => e.emoji);
+    assert.ok(!enemyEmojis.includes(w.helper.emoji), `${id}: 도우미와 같은 이모지의 적이 있으면 안 됨`);
+    assert.ok(!Object.keys(w.enemies).includes('teacher'));
+  }
+  assert.ok(WORLDS.school.helper.name.includes('선생님'), '학교의 도우미는 담임 선생님');
+});
+
+test('가치: 시뮬레이션 어디에도 사람 적(teacher/elite)이 생성되지 않는다', () => {
+  for (const id of ORDER) {
+    const s = new Sim({ seed: 14, events: false, world: id });
+    const types = new Set();
+    while (!s.over && s.tick < RUN_TICKS) {
+      s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id);
+      s.step({ dx: Math.sin(s.tick / 50), dy: Math.cos(s.tick / 70) });
+      for (const e of s.enemies) types.add(e.type);
+    }
+    assert.ok(!types.has('teacher') && !types.has('elite'), `${id}: ${[...types]}`);
+    for (const t of types) assert.ok(t === 'boss' || WORLDS[id].enemies[t], `${id}: 정의 없는 적 ${t}`);
+  }
+});
+
+/* ===================== 도우미(도움 요청하기) ===================== */
+
+function nearHelper(s) { const h = s.helper; s.player.x = h.x; s.player.y = h.y; }
+
+test('도우미: 정해진 시간(45초)에 등장하고 안내 문구/이벤트가 나온다', () => {
+  for (const id of ORDER) {
+    const s = new Sim({ seed: 3, events: true, world: id });
+    s.player.hp = 1e9;
+    let appeared = null, banner = null;
+    while (s.tick <= WORLDS[id].helper.t * 60 + 5) {
+      if (s.choices) s.choose(s.choices[0].id);
+      s.step({ dx: 0, dy: 0 });
+      for (const ev of s.drainEvents()) { if (ev.k === 'helper') appeared = s.tick; if (ev.k === 'banner' && ev.text === WORLDS[id].helper.arriveText) banner = true; }
+      if (s.helper && appeared === null) appeared = s.tick;
+    }
+    assert.ok(s.helper && s.helper.state === 'wait', `${id}: 도우미 등장`);
+    assert.ok(Math.abs(appeared - WORLDS[id].helper.t * 60) <= 2, `${id}: 등장 시각 ${appeared}`);
+    assert.ok(banner, `${id}: 안내 배너`);
+    assert.ok(s.helper.x > 40 && s.helper.x < W - 40 && s.helper.y > 80 && s.helper.y < H - 100, `${id}: 화면 안에 등장 (${s.helper.x | 0},${s.helper.y | 0})`);
+  }
+});
+
+test('도우미: 곁에 머물면 게이지가 차고, 떠나면 줄어든다', () => {
+  const s = new Sim({ seed: 3, events: false });
+  s._spawnHelper(); s.player.hp = 1e9;
+  const far = () => { s.player.x = s.helper.x < W / 2 ? W - 20 : 20; s.player.y = s.helper.y; };
+  nearHelper(s);
+  for (let i = 0; i < 60; i++) { nearHelper(s); s.step({ dx: 0, dy: 0 }); }
+  assert.ok(s.helper.prog >= 55, `머무는 동안 증가: ${s.helper.prog}`);
+  const p1 = s.helper.prog;
+  for (let i = 0; i < 20; i++) { far(); s.step({ dx: 0, dy: 0 }); }
+  assert.ok(s.helper.prog < p1, '멀어지면 감소');
+  assert.strictEqual(s.helper.state, 'wait');
+});
+
+test('도우미: 충분히 머물면 조언 카드 3장을 받고, 선택한 효과가 적용된다', () => {
+  const mk = () => { const s = new Sim({ seed: 3, events: true }); s._spawnHelper(); s.player.hp = 100; return s; };
+  const ask = (s) => { for (let i = 0; i < 200 && !s.choices; i++) { nearHelper(s); s.player.hp = Math.max(1, s.player.hp); s.step({ dx: 0, dy: 0 }); } };
+  // 체력 회복
+  let s = mk(); ask(s);
+  assert.ok(s.choices && s.choices.length === 3 && s.choiceKind === 'helper');
+  assert.deepStrictEqual(s.choices.map((c) => c.id), ['boon_heal', 'boon_power', 'boon_focus'], '에코가 없으면 3번째는 집중');
+  assert.strictEqual(s.helped, 1);
+  assert.strictEqual(s.helper.state, 'done');
+  assert.ok(s.choices.every((c) => c.name && c.desc && c.icon));
+  s.player.hp = 10; s.choose('boon_heal');
+  assert.strictEqual(s.player.hp, s.player.maxhp);
+  assert.strictEqual(s.choices, null); assert.strictEqual(s.choiceKind, 'levelup');
+  // 공격력 / 발사 속도
+  s = mk(); ask(s); s.choose('boon_power');
+  assert.strictEqual(s.player.stats.dmg, 1);
+  assert.ok(s.rec.ups.some((u) => u.id === 'dmg'), '에코도 같은 조언을 받도록 기록');
+  s = mk(); ask(s); s.choose('boon_focus');
+  assert.strictEqual(s.player.stats.rate, 1);
+});
+
+test('도우미: 에코가 있으면 세 번째 카드가 "에코 응원"이고 효과가 적용된다', () => {
+  const echo = { path: new Array(4000).fill(100), ups: [], ticks: 2000 };
+  const s = new Sim({ seed: 3, events: false, echoes: [echo] });
+  s._spawnHelper(); s.player.hp = 1e9;
+  for (let i = 0; i < 200 && !s.choices; i++) { nearHelper(s); s.step({ dx: 0, dy: 0 }); }
+  assert.deepStrictEqual(s.choices.map((c) => c.id), ['boon_heal', 'boon_power', 'boon_team']);
+  s.choose('boon_team');
+  assert.strictEqual(s.player.stats.echo, 1);
+});
+
+test('도우미: 시간 안에 못 가면 떠나고(불이익 없음), 선택창이 떠도 게임이 정상 진행된다', () => {
+  const s = new Sim({ seed: 3, events: true });
+  s._spawnHelper(); s.player.hp = 1e9;
+  s.player.x = s.helper.x < W / 2 ? W - 20 : 20; s.player.y = s.helper.y;
+  const hp0 = s.player.hp;
+  let left = false;
+  for (let i = 0; i < 1700; i++) {
+    s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id);
+    s.step({ dx: 0, dy: 0 });
+    for (const ev of s.drainEvents()) if (ev.k === 'banner' && ev.text === WORLDS.school.helper.leaveText) left = true;
+    if (!s.helper) break;
+  }
+  assert.ok(left, '떠나는 문구');
+  assert.strictEqual(s.helper, null);
+  assert.strictEqual(s.helped, 0);
+  assert.strictEqual(s.player.hp, hp0, '도움을 못 받아도 벌은 없다');
+});
+
+test('도우미는 적이 건드릴 수 없다 (적 목록에 없고 접촉 판정 대상이 아님)', () => {
+  const s = new Sim({ seed: 3, events: false });
+  s._spawnHelper(); s.player.hp = 1e9; s.player.x = 10; s.player.y = H - 20;
+  for (let i = 0; i < 30; i++) { s._make('alarm', s.helper.x, s.helper.y); s.step({ dx: 0, dy: 0 }); }
+  assert.ok(s.helper && s.helper.state === 'wait');
+  assert.ok(!s.enemies.some((e) => e === s.helper));
+});
+
+test('도우미: 이번 판 도움 횟수가 helped에 기록된다', () => {
+  const s = new Sim({ seed: 3, events: false });
+  s._spawnHelper(); s.player.hp = 1e9;
+  for (let i = 0; i < 200 && !s.choices; i++) { nearHelper(s); s.step({ dx: 0, dy: 0 }); }
+  s.choose('boon_power');
+  assert.strictEqual(s.helped, 1);
 });

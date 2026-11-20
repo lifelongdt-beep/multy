@@ -42,17 +42,19 @@
   const ACHIEVEMENTS = [
     { id: 'first_run',  icon: '🎒', name: '첫 등교',       desc: '게임을 1판 플레이',           reward: 20,  test: (s) => s.runs >= 1 },
     { id: 'runs_10',    icon: '📅', name: '개근상',        desc: '10판 플레이',                 reward: 60,  test: (s) => s.runs >= 10 },
-    { id: 'kills_100',  icon: '🗑️', name: '숙제 정리',     desc: '누적 100마리 처치',           reward: 40,  test: (s) => s.kills >= 100 },
-    { id: 'kills_1000', icon: '🧹', name: '대청소',        desc: '누적 1000마리 처치',          reward: 150, test: (s) => s.kills >= 1000 },
+    { id: 'kills_100',  icon: '🧹', name: '마음 정리',     desc: '방해 요소를 누적 100개 물리치기',           reward: 40,  test: (s) => s.kills >= 100 },
+    { id: 'kills_1000', icon: '✨', name: '마음 대청소',        desc: '방해 요소를 누적 1000개 물리치기',          reward: 150, test: (s) => s.kills >= 1000 },
     { id: 'survive_60', icon: '⏱️', name: '1분 버티기',    desc: '한 판에서 60초 생존',         reward: 40,  test: (s) => s.bestTime >= 60 },
     { id: 'survive_90', icon: '🕰️', name: '90초의 벽',     desc: '한 판에서 90초 생존 (보스 등장)', reward: 80,  test: (s) => s.bestTime >= 90 },
     { id: 'level_10',   icon: '📈', name: '우등생',        desc: '한 판에서 Lv 10 달성',        reward: 50,  test: (s) => s.bestLevel >= 10 },
     { id: 'level_20',   icon: '🏅', name: '수석',          desc: '한 판에서 Lv 20 달성',        reward: 120, test: (s) => s.bestLevel >= 20 },
-    { id: 'clear_1',    icon: '📚', name: '기말고사 격파', desc: '보스 "기말고사" 처치',        reward: 200, test: (s) => s.clears >= 1 },
-    { id: 'clear_5',    icon: '🎖️', name: '졸업 준비',     desc: '보스를 5번 처치',             reward: 400, test: (s) => s.clears >= 5 },
-    { id: 'clear_academy', icon: '📖', name: '수능 만점',     desc: '학원 월드의 보스 "수능" 처치',       reward: 300, test: (s, run, sv) => !!sv && (sv.worlds.clears.academy || 0) >= 1 },
-    { id: 'clear_office',  icon: '🏢', name: '승진',          desc: '회사 월드의 보스 "인사평가" 처치',   reward: 500, test: (s, run, sv) => !!sv && (sv.worlds.clears.office || 0) >= 1 },
-    { id: 'clear_subway',  icon: '🚇', name: '퇴근 성공!',    desc: '지하철 월드의 보스 "급행열차" 처치', reward: 800, test: (s, run, sv) => !!sv && (sv.worlds.clears.subway || 0) >= 1 },
+    { id: 'clear_1',    icon: '🌈', name: '시험 불안 극복', desc: '학교 월드의 “시험 불안”을 극복',        reward: 200, test: (s) => s.clears >= 1 },
+    { id: 'clear_5',    icon: '🎖️', name: '졸업 준비',     desc: '큰 도전(보스)을 5번 극복',             reward: 400, test: (s) => s.clears >= 5 },
+    { id: 'clear_academy', icon: '☀️', name: '슬럼프 탈출',     desc: '학원 월드의 “슬럼프”를 극복',       reward: 300, test: (s, run, sv) => !!sv && (sv.worlds.clears.academy || 0) >= 1 },
+    { id: 'clear_office',  icon: '🌿', name: '번아웃 극복',          desc: '회사 월드의 “번아웃”을 극복',   reward: 500, test: (s, run, sv) => !!sv && (sv.worlds.clears.office || 0) >= 1 },
+    { id: 'clear_subway',  icon: '🏠', name: '퇴근 성공!',    desc: '지하철 월드에서 “급행열차”를 피해 무사히 퇴근', reward: 800, test: (s, run, sv) => !!sv && (sv.worlds.clears.subway || 0) >= 1 },
+    { id: 'help_1',     icon: '🙋', name: '도움 요청하기', desc: '선생님·선배께 도움을 청해 조언 받기',  reward: 40,  test: (s) => s.helped >= 1 },
+    { id: 'help_10',    icon: '💛', name: '든든한 인연',   desc: '도움을 청해 조언을 10번 받기',        reward: 150, test: (s) => s.helped >= 10 },
     { id: 'echo_5',     icon: '👻', name: '유령 친구들',   desc: '에코 5명과 함께 플레이',      reward: 80,  test: (s, run) => !!run && run.echoes >= 5 },
     { id: 'echo_10',    icon: '👥', name: '유령 반 편성',  desc: '에코 10명과 함께 플레이',     reward: 200, test: (s, run) => !!run && run.echoes >= 10 },
   ];
@@ -60,11 +62,12 @@
   /* ---------- 일일 미션 ---------- */
   // kind: sum(누적) | max(한 판 최고) | count(횟수)
   const MISSION_TEMPLATES = [
-    { id: 'kills',   kind: 'sum', field: 'kills',   targets: [[60, 30], [120, 55], [200, 90]],  text: (t) => `적 ${t}마리 처치` },
+    { id: 'kills',   kind: 'sum', field: 'kills',   targets: [[60, 30], [120, 55], [200, 90]],  text: (t) => `방해 요소 ${t}개 물리치기` },
     { id: 'gems',    kind: 'sum', field: 'gems',    targets: [[40, 30], [80, 50], [140, 80]],   text: (t) => `구슬 ${t}개 획득` },
     { id: 'survive', kind: 'max', field: 'seconds', targets: [[45, 30], [75, 55], [100, 90]],   text: (t) => `한 판에서 ${t}초 생존` },
     { id: 'level',   kind: 'max', field: 'level',   targets: [[6, 30], [10, 55], [15, 90]],     text: (t) => `한 판에서 Lv ${t} 달성` },
-    { id: 'clear',   kind: 'sum', field: 'clear',   targets: [[1, 120]],                        text: () => '보스 "기말고사" 처치' },
+    { id: 'clear',   kind: 'sum', field: 'clear',   targets: [[1, 120]],                        text: () => '큰 도전(보스) 극복하기' },
+    { id: 'help',    kind: 'sum', field: 'helped',  targets: [[1, 40], [2, 70]],                text: (t) => t === 1 ? '선생님·선배께 도움 청하기' : `도움을 ${t}번 청하기` },
     { id: 'runs',    kind: 'sum', field: 'runs',    targets: [[3, 30], [5, 50]],                text: (t) => `${t}판 플레이` },
   ];
 
@@ -92,7 +95,7 @@
       coins: 0,
       shop: {},                                   // id -> level
       chars: { unlocked: ['student'], selected: 'student' },
-      stats: { runs: 0, kills: 0, gems: 0, clears: 0, bestTime: 0, bestLevel: 0, totalCoins: 0 },
+      stats: { runs: 0, kills: 0, gems: 0, clears: 0, bestTime: 0, bestLevel: 0, totalCoins: 0, helped: 0 },
       ach: {},                                    // id -> true
       daily: { date: '', missions: [] },
       worlds: { selected: 'school', clears: {}, best: {} },   // 월드별 보스 격파 횟수 / 최장 생존(초)
@@ -178,6 +181,17 @@
   }
   function coinMul(save) { return 1 + shopLevel(save, 'coin') * SHOP_BY_ID.coin.per; }
 
+  /* ---------- 에코 풀 ---------- */
+  /** 에코는 쌓은 월드에서만 함께한다. 다른 월드에서 시작하면 빈 풀로 새로 시작한다.
+   *  @param pool {world, echoes} (없으면 null)   @returns {{world:string, echoes:Array, cleared:number}} cleared=사라진 에코 수 */
+  function echoesForWorld(pool, worldId) {
+    const w = WORLDS[worldId] ? worldId : 'school';
+    const list = pool && Array.isArray(pool.echoes) ? pool.echoes : [];
+    const poolWorld = pool && pool.world ? pool.world : 'school';      // 월드 정보 없는 옛 데이터는 학교 것
+    if (poolWorld === w) return { world: w, echoes: list, cleared: 0 };
+    return { world: w, echoes: [], cleared: list.length };
+  }
+
   /* ---------- 구매/선택 ---------- */
   function buyUpgrade(save, id) {
     const it = SHOP_BY_ID[id];
@@ -203,7 +217,7 @@
   }
 
   /* ---------- 한 판 결과 반영 ---------- */
-  /** run: {kills, seconds, level, result:'dead'|'survive'|'clear', gems, echoes, world}
+  /** run: {kills, seconds, level, result:'dead'|'survive'|'clear', gems, echoes, world, helped}
    *  @returns {{earned:number, base:number, total:number, newAch:Array, missionsDone:Array, newWorld:string|null}} */
   function recordRun(save, run, today) {
     // 날짜가 바뀌면 오늘의 미션 갱신
@@ -212,7 +226,7 @@
     const worldId = WORLDS[run.world] ? run.world : 'school';
     const unlockedBefore = WORLD_ORDER.filter((w) => worldUnlocked(save, w));
     const st = save.stats;
-    st.runs += 1; st.kills += run.kills; st.gems += run.gems || 0;
+    st.runs += 1; st.kills += run.kills; st.gems += run.gems || 0; st.helped += run.helped || 0;
     if (run.result === 'clear') st.clears += 1;
     st.bestTime = Math.max(st.bestTime, run.seconds);
     st.bestLevel = Math.max(st.bestLevel, run.level);
@@ -267,7 +281,7 @@
   }
 
   const api = {
-    SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld,
+    SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld, echoesForWorld,
     shopCost, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode,
   };

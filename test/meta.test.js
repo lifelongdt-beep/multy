@@ -299,3 +299,52 @@ test('백업 코드 왕복에 월드 진행이 포함된다', () => {
   const back = M.importCode(M.exportCode(s));
   assert.deepStrictEqual(back.worlds, s.worlds);
 });
+
+
+/* ---------- 가치 방향: 도움 요청, 에코 월드 초기화 ---------- */
+
+test('도움 통계: helped가 누적되고 "도움 요청하기" 과제가 달성된다', () => {
+  const s = M.defaultSave();
+  const r1 = M.recordRun(s, run({ helped: 0 }), '2026-11-20');
+  assert.ok(!r1.newAch.some((a) => a.id === 'help_1'));
+  const r2 = M.recordRun(s, run({ helped: 1 }), '2026-11-20');
+  assert.ok(r2.newAch.some((a) => a.id === 'help_1'));
+  assert.strictEqual(s.stats.helped, 1);
+  for (let i = 0; i < 9; i++) M.recordRun(s, run({ helped: 1 }), '2026-11-20');
+  assert.strictEqual(s.stats.helped, 10);
+  assert.strictEqual(s.ach.help_10, true);
+});
+
+test('일일 미션: "도움 청하기" 미션이 있고 도움을 받으면 진행된다', () => {
+  assert.ok(M.MISSION_TEMPLATES.some((t) => t.id === 'help'));
+  const s = M.defaultSave();
+  s.daily = { date: '2026-11-20', missions: [{ id: 'help', target: 1, reward: 40, progress: 0, done: false }, { id: 'runs', target: 5, reward: 50, progress: 0, done: false }, { id: 'kills', target: 999, reward: 99, progress: 0, done: false }] };
+  assert.strictEqual(M.missionText(s.daily.missions[0]), '선생님·선배께 도움 청하기');
+  assert.strictEqual(M.recordRun(s, run({ helped: 0 }), '2026-11-20').missionsDone.length, 0);
+  assert.deepStrictEqual(M.recordRun(s, run({ helped: 1 }), '2026-11-20').missionsDone.map((x) => x.id), ['help']);
+});
+
+test('과제/미션 문구에 숙제·시험을 적으로 보는 표현이 없다', () => {
+  const texts = M.ACHIEVEMENTS.map((a) => a.name + ' ' + a.desc).concat(M.MISSION_TEMPLATES.map((t) => t.text(5)));
+  for (const t of texts) {
+    assert.ok(!/숙제 정리|기말고사 격파|수능 만점|처치|격파/.test(t), `문구: ${t}`);
+  }
+});
+
+test('에코 풀: 같은 월드에서는 유지, 다른 월드로 가면 모두 사라진다', () => {
+  const pool = { world: 'school', echoes: [{ ticks: 1 }, { ticks: 2 }, { ticks: 3 }] };
+  const same = M.echoesForWorld(pool, 'school');
+  assert.strictEqual(same.echoes.length, 3); assert.strictEqual(same.cleared, 0);
+  const moved = M.echoesForWorld(pool, 'academy');
+  assert.deepStrictEqual(moved, { world: 'academy', echoes: [], cleared: 3 });
+  // 되돌아가도 사라진 에코는 돌아오지 않는다 (풀은 하나)
+  const back = M.echoesForWorld({ world: moved.world, echoes: moved.echoes }, 'school');
+  assert.strictEqual(back.echoes.length, 0); assert.strictEqual(back.cleared, 0);
+});
+
+test('에코 풀: 월드 정보가 없는 옛 데이터는 학교의 에코로 취급, 빈 풀은 문제없음', () => {
+  assert.strictEqual(M.echoesForWorld({ echoes: [{}, {}] }, 'school').echoes.length, 2);
+  assert.strictEqual(M.echoesForWorld({ echoes: [{}, {}] }, 'office').cleared, 2);
+  assert.deepStrictEqual(M.echoesForWorld(null, 'subway'), { world: 'subway', echoes: [], cleared: 0 });
+  assert.strictEqual(M.echoesForWorld({ world: 'school', echoes: [] }, 'zzz').world, 'school', '모르는 월드는 학교');
+});
