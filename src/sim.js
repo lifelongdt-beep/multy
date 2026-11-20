@@ -102,7 +102,8 @@
   const SWARMS = SCHOOL.swarms;
 
   /** 영구 강화·캐릭터 보너스(meta.js가 계산해서 전달). 기본값은 보너스 없음 */
-  const NO_BONUS = { maxhp: 0, dmgMul: 1, speedMul: 1, cooldownMul: 1, magnet: 0, xpMul: 1, regen: 0, echoPower: 0, startStats: {} };
+  // teamMul: 매점 장비의 팀 공격력(에코에게도 적용, 플레이어 몫은 dmgMul에 이미 포함) · takenMul: 매점 장비의 받는 피해 배율
+  const NO_BONUS = { maxhp: 0, dmgMul: 1, speedMul: 1, cooldownMul: 1, magnet: 0, xpMul: 1, regen: 0, echoPower: 0, teamMul: 1, takenMul: 1, startStats: {} };
 
   function derive(st, b) {
     b = b || NO_BONUS;
@@ -156,7 +157,8 @@
   }
 
   class Sim {
-    /** @param {{seed:number, echoes?:Array, events?:boolean, bonus?:object}} opts  echoes: [{path:number[], ups:[{t,id}]}] */
+    /** @param {{seed:number, echoes?:Array, events?:boolean, bonus?:object, world?:string, cycle?:number}} opts  echoes: [{path:number[], ups:[{t,id}]}]
+     *  cycle: 회차(0부터). 월드 순서와 회차로 단계가 정해지고, 단계가 높을수록 적이 강하다(worlds.js의 stageMul) */
     constructor(opts) {
       this.seed = opts.seed >>> 0;
       this.rng = mulberry32(this.seed);
@@ -164,6 +166,8 @@
       this.events = [];
       this.tick = 0;
       this.world = WORLDS[opts.world] || WORLDS.school;
+      this.cycle = Math.max(0, opts.cycle | 0);
+      this.mul = Worlds.stageMul(this.world.id, this.cycle);   // {stage, hp, dmg, speed, spawn}
       this.helper = null;      // 도우미(선생님 등): {x,y,r,state,prog,need,t,stay,fade}
       this.helped = 0;         // 이번 판에 도움을 받은 횟수
       this.choiceKind = 'levelup';   // 'levelup' | 'helper' (선택창 종류)
@@ -267,7 +271,7 @@
 
     _hpScale() {
       const progress = this.tick / RUN_TICKS;
-      return (1 + progress * TUNING.hpGrowth) * (1 + TUNING.echoHpScale * this.echoes.length) * (this.world.rules.hpMul || 1);
+      return (1 + progress * TUNING.hpGrowth) * (1 + TUNING.echoHpScale * this.echoes.length) * (this.world.rules.hpMul || 1) * this.mul.hp;
     }
 
     /** 한 스탯 조합의 초당 피해 추정 (보스 체력 산정용) */
@@ -283,7 +287,7 @@
     _firepower() {
       const p = this.player;
       let sum = this._fp(p.stats, this.bonus, 1);
-      const boost = (1 + TUNING.echoBoostPer * p.stats.echo) * (1 + this.bonus.echoPower);
+      const boost = (1 + TUNING.echoBoostPer * p.stats.echo) * (1 + this.bonus.echoPower) * this.bonus.teamMul;
       for (const ec of this.echoes) if (ec.alive) sum += this._fp(ec.stats, NO_BONUS, ec.power * boost);
       return sum;
     }
@@ -292,12 +296,12 @@
      *  - 기준 화력 대비 에코가 부족하면 전투가 몇 배로 길어져 사실상 못 잡고, needEchoes명이 갖춰지면 목표 시간(fightSec)에 겨우 잡는다.
      *  - 에코의 화력은 체력에 반영되지 않는다(에코가 많을수록 쉬워짐). 내가 강해지면 보스는 절반만 따라서 단단해진다. */
     _bossHp(def, idx) {
-      const T = TUNING, mul = def.refMul || 1;
+      const T = TUNING, mul = (def.refMul || 1) * this.mul.hp;   // 단계가 높을수록 기준 화력(=권장 장비를 갖춘 나)도 높다
       const refSolo = T.refSoloFp * mul, refEcho = T.refEchoFp * mul;
       const base = (refSolo + def.needEchoes * refEcho) * def.fightSec * (1 + T.bossLaterFight * idx);
       const solo = this._fp(this.player.stats, this.bonus, 1);
       const adapt = Math.min(T.bossAdaptMax, Math.max(T.bossAdaptMin, Math.pow(solo / refSolo, T.bossAdaptExp)));
-      return Math.max(def.hp * T.bossFloorMul * (1 + T.bossLaterFight * idx), base * adapt);
+      return Math.max(def.hp * this.mul.hp * T.bossFloorMul * (1 + T.bossLaterFight * idx), base * adapt);
     }
 
     _make(type, x, y, idx) {
@@ -308,7 +312,7 @@
       this.enemies.push({
         type, def: b, emoji: b.emoji, name: b.name, idx: idx || 0,
         label: type === 'boss' && this.bossCount > 1 ? `${b.name} ${(idx || 0) + 1}/${this.bossCount}` : b.name,
-        x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * TUNING.enemySpeedGrowth) * (this.world.rules.speedMul || 1) * (type === 'boss' ? 1 + TUNING.bossLaterSpeed * (idx || 0) : 1), dmg: b.dmg, xp: b.xp,
+        x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * TUNING.enemySpeedGrowth) * (this.world.rules.speedMul || 1) * this.mul.speed * (type === 'boss' ? 1 + TUNING.bossLaterSpeed * (idx || 0) : 1), dmg: b.dmg, xp: b.xp,
         flash: 0, ocd: 0, cd: Math.round(cdBase * (0.4 + 0.6 * this.rng())), dashT: 0, dvx: 0, dvy: 0, warn: false,
         phase: 1, t: 0, cst: 0, cw: 0,
       });
@@ -347,7 +351,8 @@
     /** 열차 한 대: 경고(warn틱) 후 y 높이의 가로 띠를 가로질러 달린다 */
     _spawnTrain(y, dir, warn) {
       this.hazards.push({ y, h: 46, x: dir > 0 ? -90 : W + 90, dir, state: 'warn', t: 0, warn: warn || 70, speed: 9, dmg: 20, hit: false });
-      this._ev({ k: 'train' });
+      const tr = this.world.rules.trains;
+      this._ev({ k: 'train', text: tr && tr.text });
     }
 
     _spawnLogic(t) {
@@ -355,7 +360,7 @@
       const sec = t / TICK;
       const waves = w.waves;
       const wave = waves.find((x) => sec >= x.from && sec < x.to) || waves[waves.length - 1];
-      let interval = Math.max(8, Math.round(wave.interval / (rules.spawnMul || 1)));
+      let interval = Math.max(8, Math.round(wave.interval / ((rules.spawnMul || 1) * this.mul.spawn)));
       if (this.bossIdx > 0) interval *= 2;   // 보스전이 시작되면 졸개 스폰을 절반으로
       if (t % interval === 0) for (let i = 0; i < wave.n; i++) this._spawn(wave);
       while (this.swarmIdx < w.swarms.length && t >= w.swarms[this.swarmIdx].t * TICK) this._ring(w.swarms[this.swarmIdx++]);
@@ -391,7 +396,7 @@
     }
 
     _fire(x, y, d, owner, pm) {
-      const target = this._nearest(x, y, 260);
+      const target = this._nearest(x, y, this.world.rules.sight || 260);   // 밤·안개 월드는 조준 거리가 짧다
       if (!target) return false;
       const base = Math.atan2(target.y - y, target.x - x);
       const n = d.shots;
@@ -426,7 +431,8 @@
     /** raw=true면 배율 없이 그대로 (열차처럼 막을 수 없는 큰 피해) */
     _hurtPlayer(dmg, raw) {
       const p = this.player;
-      const taken = raw ? dmg : dmg * TUNING.damageTaken * this._bossDmgScale();
+      // 단계가 높을수록 적이 아프게 때리고(mul.dmg), 매점 방어 장비가 줄여 준다(takenMul)
+      const taken = raw ? dmg : dmg * TUNING.damageTaken * this._bossDmgScale() * this.mul.dmg * this.bonus.takenMul;
       p.hp -= taken; p.inv = TUNING.hurtInvTicks;
       this.fx.push({ x: p.x, y: p.y, t: 10, kind: 'hurt' });
       this._ev({ k: 'hurt', dmg: taken });
@@ -665,7 +671,9 @@
       let dx = input.dx || 0, dy = input.dy || 0;
       const len = Math.hypot(dx, dy);
       if (len > 1) { dx /= len; dy /= len; }
-      p.x = Math.min(W - p.r, Math.max(p.r, p.x + dx * d.speed));
+      const wind = this.world.rules.wind;   // 바닷가·산: 좌우로 번갈아 부는 바람
+      const wx = wind ? wind.amp * Math.sin((t / (wind.period * TICK)) * Math.PI * 2) : 0;
+      p.x = Math.min(W - p.r, Math.max(p.r, p.x + dx * d.speed + wx));
       p.y = Math.min(H - p.r, Math.max(p.r, p.y + dy * d.speed));
       this.rec.path.push(p.x, p.y);
 
@@ -689,7 +697,7 @@
           ec.upIdx++;
         }
         const ed = derive(ec.stats);
-        const pm = ec.power * boost * (1 + this.bonus.echoPower);
+        const pm = ec.power * boost * (1 + this.bonus.echoPower) * this.bonus.teamMul;
         ec.cd -= 1;
         if (ec.cd <= 0 && this._fire(ec.x, ec.y, ed, 'echo', pm)) ec.cd = Math.max(6, Math.round(ed.cooldown / boost));
         this._skills(ec, ed, pm, t, 'echo');

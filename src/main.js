@@ -110,7 +110,7 @@
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 150 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
         case 'helped': Sfx.play('levelup'); break;
-        case 'train': Sfx.play('train'); banner = { text: '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
+        case 'train': Sfx.play('train'); banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
         case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
         default: break;
@@ -145,7 +145,7 @@
     } else {
       runCount += 1;
       clearedEchoes = syncEchoes(GameUI.worldId());
-      sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId() });
+      sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId(), cycle: GameUI.cycle() });
     }
     playerEmoji = GameUI.emoji();
     state = 'play'; acc = 0; last = performance.now();
@@ -153,6 +153,8 @@
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
+    const short = tutorial ? null : GameUI.gearShort(sim.world.id);
+    if (short) toast = { text: `🧰 장비가 부족해요 (⚔ -${short.atk} 🛡 -${short.def}) · 매점에서 사면 수월해요`, t: 260 };
     ['start', 'levelup', 'end', 'tutorial', 'pause'].forEach((id) => $(id).classList.add('hidden'));
     $('again').textContent = '한 판만 더';
     if (tutorial) banner = { text: '📘 튜토리얼 · 과거의 나 10명과 함께!', t: 150 };
@@ -262,10 +264,18 @@
     const lines = [`🎓 학점 +${sum.earned}`];
     for (const a of sum.newAch) lines.push(`🏆 과제 달성: ${a.name} (+${a.reward})`);
     for (const m of sum.missionsDone) lines.push(`🎯 미션 완료! (+${m.reward})`);
-    if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 새 월드 해금: ${w.emoji} ${w.name}!`); }
+    if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 새 월드 해금: ${w.emoji} ${w.name}! (매점에 새 장비 입고)`); }
+    if (sum.newCycle !== null && sum.newCycle !== undefined) {
+      lines.push(`🔁 12개 월드 완주! ${sum.newCycle + 1}회차 시작 — 학교부터 다시, 적이 더 강해져요`);
+      lines.push(`🧰 매점 장비 최대 레벨이 ${Meta.GEAR.maxBase + Meta.GEAR.maxPerLoop * sum.newCycle}까지 올랐어요`);
+    }
+    if (sim.result !== 'clear') {
+      const short = GameUI.gearShort(sim.world.id);
+      if (short) lines.push(`🧰 이 월드는 장비가 더 필요해요 (⚔ -${short.atk} 🛡 -${short.def}) · 매점에서 사 보세요`);
+    }
     $('reward').innerHTML = '';
     lines.forEach((t) => { const d = document.createElement('div'); d.textContent = t; $('reward').appendChild(d); });
-    if (sum.newAch.length || sum.missionsDone.length || sum.newWorld) Sfx.play('levelup');
+    if (sum.newAch.length || sum.missionsDone.length || sum.newWorld || sum.newCycle !== null) Sfx.play('levelup');
     $('end').classList.remove('hidden');
   }
 
@@ -312,6 +322,18 @@
         ctx.strokeStyle = 'rgba(150,120,90,.14)'; ctx.lineWidth = 4;
         for (let x = 8; x < W; x += 22) { ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x, y + 10); ctx.stroke(); }
       }
+    } else if (th.deco === 'stars') {     // 집·무대: 밤하늘 별
+      ctx.fillStyle = 'rgba(255,255,255,.25)';
+      for (let i = 0; i < 60; i++) { const x = (i * 97) % W, y = (i * 193) % H, tw = 0.5 + 0.5 * Math.sin(performance.now() / 600 + i); ctx.globalAlpha = 0.3 + 0.5 * tw; ctx.fillRect(x, y, 2, 2); }
+      ctx.globalAlpha = 1;
+    } else if (th.deco === 'waves') {     // 바닷가: 물결
+      for (let y = 30; y <= H; y += 40) {
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 6) { const yy = y + Math.sin(x / 22 + performance.now() / 700 + y) * 4; if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy); }
+        ctx.stroke();
+      }
+    } else if (th.deco === 'diag') {      // 산: 비탈 사선
+      for (let x = -H; x <= W; x += 34) { ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x + H * 0.6, 0); ctx.stroke(); }
     } else {                              // 학교: 격자
       for (let x = 0; x <= W; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
       for (let y = 0; y <= H; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
@@ -320,7 +342,7 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
     for (const g of sim.gems) {
-      if (g.kind === 'coffee') { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji('☕', g.x, g.y, 15); continue; }
+      if (g.kind === 'coffee') { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(sim.world.rules.dropEmoji || '☕', g.x, g.y, 15); continue; }
       ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.arc(g.x, g.y, 3.2, 0, 7); ctx.fill();
     }
     // 열차 (경고 줄 → 질주)
@@ -337,7 +359,7 @@
         ctx.fillStyle = '#c9d3dc'; ctx.fillRect(hx - 70, hy - 20, 140, 40);
         ctx.fillStyle = '#2a3340'; for (let k = -2; k <= 2; k++) ctx.fillRect(hx + k * 26 - 8, hy - 12, 16, 12);
         ctx.fillStyle = '#e53950'; ctx.fillRect(hx - 70, hy + 10, 140, 6);
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji('🚆', hx + h.dir * 62, hy, 30);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji((sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆', hx + h.dir * 62, hy, 30);
       }
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -445,6 +467,22 @@
       ctx.fillText(f.v, f.x, f.y - (40 - f.t) * 0.6);
     }
     ctx.globalAlpha = 1;
+
+    // 밤·안개 월드: 조준 거리 밖은 어둡게 (자동 공격이 닿는 범위가 보이도록)
+    const sight = sim.world.rules.sight;
+    if (sight) {
+      const g = ctx.createRadialGradient(p.x, p.y, sight * 0.75, p.x, p.y, sight * 1.25);
+      g.addColorStop(0, 'rgba(4,6,14,0)'); g.addColorStop(1, 'rgba(4,6,14,.62)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
+    // 바람 월드: 지금 바람 방향 표시
+    const wind = sim.world.rules.wind;
+    if (wind) {
+      const wx = Math.sin((sim.tick / (wind.period * TICK)) * Math.PI * 2);
+      ctx.globalAlpha = Math.min(0.8, Math.abs(wx)); ctx.fillStyle = '#cfefff'; ctx.textAlign = 'center'; ctx.font = 'bold 13px sans-serif';
+      ctx.fillText(wx > 0 ? '🌬️ 바람 → → →' : '← ← ← 바람 🌬️', W / 2, 50);
+      ctx.globalAlpha = 1;
+    }
 
     // HUD
     ctx.textAlign = 'left'; ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, 34);

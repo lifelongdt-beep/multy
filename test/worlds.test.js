@@ -29,7 +29,7 @@ function runBot(sim, maxTicks, { god = true } = {}) {
 }
 
 test('월드 순서와 데이터 구조', () => {
-  assert.deepStrictEqual(ORDER, ['school', 'academy', 'office', 'subway']);
+  assert.deepStrictEqual(ORDER, ['school', 'academy', 'office', 'subway', 'home', 'gym', 'library', 'beach', 'airport', 'hospital', 'mountain', 'stage']);
   for (const id of ORDER) {
     const w = WORLDS[id];
     assert.strictEqual(w.id, id);
@@ -42,7 +42,10 @@ test('월드 순서와 데이터 구조', () => {
     assert.ok(h && h.name && h.emoji && h.t > 0 && h.arriveText && h.thanksText && h.leaveText, `${id}: 도우미 정의`);
     for (const k of ['heal', 'power', 'focus', 'team']) assert.ok(h.boons[k], `${id}: 조언 카드 ${k} 이름`);
     assert.ok(w.waves.length >= 3 && w.swarms.length >= 3);
+    assert.ok(w.gear && w.gear.atk.icon && w.gear.atk.name && w.gear.def.icon && w.gear.def.name, `${id}: 매점 장비 이름`);
+    if (id !== 'school') assert.strictEqual(w.unlock.world, ORDER[ORDER.indexOf(id) - 1], `${id}: 바로 앞 월드를 극복하면 열림`);
   }
+  for (let i = 1; i < ORDER.length; i++) assert.ok(WORLDS[ORDER[i]].coinMul > WORLDS[ORDER[i - 1]].coinMul, '뒤 월드일수록 학점 배율이 높다');
 });
 
 test('모든 월드: 웨이브·포위·분열에 쓰이는 적이 정의되어 있고 정의가 정상', () => {
@@ -396,9 +399,11 @@ const { TUNING } = E;
 const killBoss = (s) => { const b = s.enemies.find((e) => e.type === 'boss'); b.hp = 0; };
 const stepTo = (s, cond, max) => { for (let i = 0; i < max && !cond(); i++) { s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 }); } };
 
-test('월드가 높을수록 보스가 더 여러 번 등장한다 (1, 2, 3, 4번)', () => {
+test('월드가 높을수록 보스가 더 여러 번 등장한다 (1, 2, 3, 4번 … 최대 4번)', () => {
   const counts = ORDER.map((id) => WORLDS[id].boss.times.length);
-  assert.deepStrictEqual(counts, [1, 2, 3, 4]);
+  assert.deepStrictEqual(counts.slice(0, 4), [1, 2, 3, 4]);
+  for (const c of counts.slice(4)) assert.ok(c >= 3 && c <= 4, `5번째 월드부터 3~4번: ${counts}`);
+  assert.strictEqual(counts[counts.length - 1], 4, '마지막 월드는 4번');
   for (const id of ORDER) {
     const t = WORLDS[id].boss.times;
     for (let i = 1; i < t.length; i++) assert.ok(t[i] > t[i - 1], `${id}: 보스 시각은 증가`);
@@ -477,7 +482,8 @@ test('필요 에코 수: 에코가 그 수만큼 있어야 목표 시간에 잡�
     const killTime = (n) => {
       const echoes = Array.from({ length: n }, () => ({ path: new Array(7200).fill(100), ups: [], ticks: 7200 }));
       const s = new Sim({ seed: 40, events: false, world: id, echoes });
-      s._fp = function (stats) { return (stats === this.player.stats ? TUNING.refSoloFp : TUNING.refEchoFp) * mul; };
+      // 단계가 높은 월드는 "권장 장비를 갖춘 나·에코"가 기준 (기준 화력 x 단계 배율)
+      s._fp = function (stats) { return (stats === this.player.stats ? TUNING.refSoloFp : TUNING.refEchoFp) * mul * this.mul.hp; };
       s._make('boss', 0, 0, 0);
       return s.enemies[0].maxhp / s._firepower();
     };

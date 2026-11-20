@@ -279,7 +279,8 @@ test('이전 버전 저장(월드 정보 없음)도 문제없이 불러온다', 
   const old = { v: 1, coins: 321, shop: { hp: 1 }, chars: { unlocked: ['student'], selected: 'student' }, stats: { runs: 4 }, ach: {}, daily: { date: '', missions: [] } };
   const s = M.sanitize(old);
   assert.strictEqual(s.coins, 321);
-  assert.deepStrictEqual(s.worlds, { selected: 'school', clears: {}, best: {} });
+  assert.deepStrictEqual(s.worlds, { selected: 'school', clears: {}, best: {}, cycleClears: {} });
+  assert.strictEqual(s.cycle, 0); assert.deepStrictEqual(s.gear, {});
   assert.deepStrictEqual(M.importCode(M.exportCode(old)).worlds.selected, 'school');
 });
 

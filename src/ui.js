@@ -17,7 +17,7 @@
   function refresh() {
       $('coins').textContent = save.coins; $('pcoins').textContent = save.coins;
       const w = M.WORLDS[save.worlds.selected] || M.WORLDS.school;
-      $('bWorld').textContent = `🗺️ 월드: ${w.emoji} ${w.name}`;
+      $('bWorld').textContent = `🗺️ 월드: ${w.emoji} ${w.name}` + (save.cycle > 0 ? ` · 🔁 ${save.cycle + 1}회차` : '');
     }
 
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
@@ -52,8 +52,11 @@
       const sel = save.worlds.selected === id;
       const clears = save.worlds.clears[id] || 0, best = Math.floor(save.worlds.best[id] || 0);
       const prev = w.unlock ? M.WORLDS[w.unlock.world] : null;
+      const rec = M.recommendedGear(id, save.cycle), gt = M.gearTotals(save);
+      const gearLine = rec.atk + rec.def === 0 ? '🧰 장비 없이도 OK'
+        : `🧰 권장 장비 ⚔${rec.atk} 🛡${rec.def} (내 장비 ⚔${gt.atk} 🛡${gt.def})` + (gt.atk < rec.atk || gt.def < rec.def ? ' ⚠ 매점에서 장비를 더 사야 해요' : ' ✅');
       const desc = open
-        ? `${w.desc}\n✨ ${w.ruleText}\n🏁 큰 도전 ${w.boss.times.length}번 · 👻 권장 에코 ${w.boss.needEchoes}명+ · 🎓 학점 x${w.coinMul} · 극복 ${clears}회 · 최장 ${best}초`
+        ? `${w.desc}\n✨ ${w.ruleText}\n🏁 큰 도전 ${w.boss.times.length}번 · 👻 권장 에코 ${w.boss.needEchoes}명+ · 🎓 학점 x${(w.coinMul * M.cycleCoinMul(save.cycle)).toFixed(1)} · 극복 ${clears}회 · 최장 ${best}초\n${gearLine}`
         : `🔒 ${prev.emoji} ${prev.name}의 큰 도전 "${prev.boss.name}"을(를) 극복하면 열립니다`;
       const row = item(open ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
       row.querySelector('small').style.whiteSpace = 'pre-line';
@@ -67,12 +70,14 @@
       };
       row.appendChild(b); body.appendChild(row);
     }
+    if (save.cycle > 0) body.insertBefore(el('div', 'msg', `🔁 ${save.cycle + 1}회차: 적이 더 강해졌어요. 매점 장비 최대 Lv ${M.gearMax(save)}`), body.firstChild);
     body.appendChild(el('div', 'msg', `※ 에코는 월드를 옮기면 새로 시작해요. (지금 ${M.WORLDS[GameEchoes.world()].name}의 에코 ${GameEchoes.count()}명) 새 월드에서 다시 쌓아 보세요.`));
   }
 
   /* ---------- 상점 ---------- */
   function renderShop() {
     const body = $('pbody'); body.innerHTML = '';
+    body.appendChild(el('div', 'msg', '🏪 기본 강화 (모든 월드 공통)'));
     for (const it of M.SHOP) {
       const lv = M.shopLevel(save, it.id);
       const maxed = lv >= it.max;
@@ -83,6 +88,32 @@
       b.disabled = maxed || save.coins < cost;
       b.onclick = () => { if (M.buyUpgrade(save, it.id).ok) { Sfx.play('levelup'); commit(); rerender(); } };
       row.appendChild(b); body.appendChild(row);
+    }
+    renderGear(body);
+  }
+
+  function renderGear(body) {
+    const gt = M.gearTotals(save), max = M.gearMax(save);
+    const sel = save.worlds.selected, rec = M.recommendedGear(sel, save.cycle);
+    body.appendChild(el('div', 'msg', `🧰 월드 매점 · 장비는 에코에게도 적용돼요 (최대 Lv ${max}${save.cycle > 0 ? ` · ${save.cycle + 1}회차` : ''})`));
+    body.appendChild(el('div', 'msg', `내 장비 ⚔${gt.atk} 🛡${gt.def} · ${M.WORLDS[sel].emoji} ${M.WORLDS[sel].name} 권장 ⚔${rec.atk} 🛡${rec.def}` + (gt.atk < rec.atk || gt.def < rec.def ? ' ⚠' : ' ✅')));
+    let lockedShown = false;
+    for (const wid of M.WORLD_ORDER) {
+      const w = M.WORLDS[wid];
+      if (!M.gearAvailable(save, wid)) {
+        if (!lockedShown) { body.appendChild(item('🔒', `${w.emoji} ${w.name} 매점`, `${w.name}에 도착하면 새 장비를 살 수 있어요`)); lockedShown = true; }
+        continue;
+      }
+      for (const g of M.GEAR_ITEMS.filter((x) => x.world === wid)) {
+        const lv = M.gearLevel(save, g.id), maxed = lv >= max;
+        const cost = maxed ? 0 : M.gearCost(g.id, lv);
+        const row = item(g.icon, `${w.emoji} ${g.name}  ${g.kind === 'atk' ? '⚔' : '🛡'} Lv ${lv}/${max}`,
+          `${M.gearText(g.kind, lv)} → ${maxed ? '최대' : M.gearText(g.kind, lv + 1)}`, { done: maxed, progress: lv / max });
+        const b = el('button', '', maxed ? '최대' : `🎓 ${cost}`);
+        b.disabled = maxed || save.coins < cost;
+        b.onclick = () => { if (M.buyGear(save, g.id).ok) { Sfx.play('levelup'); commit(); rerender(); } };
+        row.appendChild(b); body.appendChild(row);
+      }
     }
   }
 
@@ -175,6 +206,13 @@
     /** 한 판 결과를 저장하고 요약({earned,total,newAch,missionsDone})을 돌려준다 */
     recordRun(run) { ensureDaily(); const r = M.recordRun(save, run, today()); commit(); return r; },
     tutorialDone() { return save.tutorial === true; },
+    cycle() { return save.cycle; },
+    /** 시작하려는 월드에 장비가 모자라면 {atk, def} 부족분, 충분하면 null */
+    gearShort(worldId) {
+      const rec = M.recommendedGear(worldId, save.cycle), gt = M.gearTotals(save);
+      const a = Math.max(0, rec.atk - gt.atk), d = Math.max(0, rec.def - gt.def);
+      return a || d ? { atk: a, def: d } : null;
+    },
     finishTutorial() { if (!save.tutorial) { save.tutorial = true; commit(); } },
     get save() { return save; },
     refresh,

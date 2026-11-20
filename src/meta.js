@@ -5,7 +5,7 @@
   'use strict';
 
   const Worlds = (typeof module !== 'undefined' && module.exports) ? require('./worlds.js') : root.EchoWorlds;
-  const WORLDS = Worlds.WORLDS, WORLD_ORDER = Worlds.ORDER;
+  const WORLDS = Worlds.WORLDS, WORLD_ORDER = Worlds.ORDER, GEAR = Worlds.GEAR;
 
   const SAVE_KEY = 'echo-meta-v1';
   const SAVE_VERSION = 1;
@@ -37,6 +37,35 @@
 
   function shopCost(id, level) { return Math.round(SHOP_BY_ID[id].base * Math.pow(1.7, level)); }
 
+  /* ---------- 월드 매점 장비 ----------
+   * 월드마다 ⚔ 공격 장비(팀 공격력 x1.06/레벨, 에코 포함) 1개 + 🛡 방어 장비(받는 피해 ÷1.05/레벨) 1개.
+   * 그 월드에 도착하면(해금되면) 살 수 있고, 최대 레벨은 회차마다 +3 (1회차 5).
+   * 뒤 월드일수록 적이 강해지므로(worlds.js stageMul) 장비를 사 모아야 끝까지 갈 수 있다. */
+  const GEAR_ITEMS = [];
+  for (const w of WORLD_ORDER) {
+    for (const kind of ['atk', 'def']) {
+      const g = WORLDS[w].gear[kind];
+      GEAR_ITEMS.push({ id: w + ':' + kind, world: w, kind, icon: g.icon, name: g.name });
+    }
+  }
+  const GEAR_BY_ID = {}; GEAR_ITEMS.forEach((g) => { GEAR_BY_ID[g.id] = g; });
+  function gearLevel(save, id) { return save.gear[id] || 0; }
+  function gearMax(save) { return Worlds.gearMaxLevel(save.cycle); }
+  function gearCost(id, level) { return Worlds.gearCost(GEAR_BY_ID[id].world, level); }
+  /** 장비 레벨 합계 {atk, def} */
+  function gearTotals(save) {
+    const t = { atk: 0, def: 0 };
+    for (const g of GEAR_ITEMS) t[g.kind] += gearLevel(save, g.id);
+    return t;
+  }
+  /** 그 월드의 장비를 살 수 있는가: 이번 회차에 열린 월드이거나, 이미 한 바퀴 돈 뒤(2회차~)면 모두 */
+  function gearAvailable(save, worldId) { return save.cycle > 0 || worldUnlocked(save, worldId); }
+  function gearText(kind, lv) {
+    return kind === 'atk'
+      ? `팀 공격력 x${Math.pow(GEAR.atkPer, lv).toFixed(2)}`
+      : `받는 피해 x${Math.pow(1 / GEAR.defPer, lv).toFixed(2)}`;
+  }
+
   /* ---------- 도전 과제 ---------- */
   // test(stats, run): stats는 이번 판 반영 후 누적 통계
   const ACHIEVEMENTS = [
@@ -53,6 +82,12 @@
     { id: 'clear_academy', icon: '☀️', name: '슬럼프 탈출',     desc: '학원 월드의 “슬럼프”를 극복',       reward: 300, test: (s, run, sv) => !!sv && (sv.worlds.clears.academy || 0) >= 1 },
     { id: 'clear_office',  icon: '🌿', name: '번아웃 극복',          desc: '회사 월드의 “번아웃”을 극복',   reward: 500, test: (s, run, sv) => !!sv && (sv.worlds.clears.office || 0) >= 1 },
     { id: 'clear_subway',  icon: '🏠', name: '퇴근 성공!',    desc: '지하철 월드에서 “급행열차”를 피해 무사히 퇴근', reward: 800, test: (s, run, sv) => !!sv && (sv.worlds.clears.subway || 0) >= 1 },
+    { id: 'clear_home',    icon: '🌙', name: '꿀잠',          desc: '집 월드의 “불면증”을 극복',            reward: 1000, test: (s, run, sv) => !!sv && (sv.worlds.clears.home || 0) >= 1 },
+    { id: 'clear_beach',   icon: '🌤️', name: '태풍이 지나간 뒤', desc: '바닷가 월드의 “태풍”을 극복',      reward: 1500, test: (s, run, sv) => !!sv && (sv.worlds.clears.beach || 0) >= 1 },
+    { id: 'clear_stage',   icon: '🌟', name: '꿈의 무대',     desc: '마지막 월드 “꿈의 무대”에서 무대 공포증을 극복', reward: 3000, test: (s, run, sv) => !!sv && (sv.worlds.clears.stage || 0) >= 1 },
+    { id: 'cycle_2',       icon: '🔁', name: '두 번째 여정',  desc: '12개 월드를 모두 극복하고 2회차 시작',  reward: 2000, test: (s, run, sv) => !!sv && sv.cycle >= 1 },
+    { id: 'cycle_3',       icon: '♾️', name: '끝없는 성장',   desc: '3회차 시작',                           reward: 5000, test: (s, run, sv) => !!sv && sv.cycle >= 2 },
+    { id: 'gear_20',       icon: '🧰', name: '든든한 장비',   desc: '매점 장비 레벨 합계 20',               reward: 300,  test: (s, run, sv) => !!sv && sv.gear && Object.values(sv.gear).reduce((a, b) => a + b, 0) >= 20 },
     { id: 'help_1',     icon: '🙋', name: '도움 요청하기', desc: '선생님·선배께 도움을 청해 조언 받기',  reward: 40,  test: (s) => s.helped >= 1 },
     { id: 'help_10',    icon: '💛', name: '든든한 인연',   desc: '도움을 청해 조언을 10번 받기',        reward: 150, test: (s) => s.helped >= 10 },
     { id: 'echo_5',     icon: '👻', name: '유령 친구들',   desc: '에코 5명과 함께 플레이',      reward: 80,  test: (s, run) => !!run && run.echoes >= 5 },
@@ -98,8 +133,10 @@
       stats: { runs: 0, kills: 0, gems: 0, clears: 0, bestTime: 0, bestLevel: 0, totalCoins: 0, helped: 0 },
       ach: {},                                    // id -> true
       daily: { date: '', missions: [] },
-      worlds: { selected: 'school', clears: {}, best: {} },   // 월드별 보스 격파 횟수 / 최장 생존(초)
+      worlds: { selected: 'school', clears: {}, best: {}, cycleClears: {} },   // 월드별 극복 횟수(전체) / 최장 생존(초) / 이번 회차 극복 횟수
       tutorial: false,                            // 튜토리얼(에코 10명과 함께하는 첫 판)을 마쳤거나 건너뛰었는지
+      gear: {},                                   // 월드 매점 장비 'world:atk|def' -> level
+      cycle: 0,                                   // 회차(0=1회차). 12개 월드를 모두 극복하면 +1, 학교부터 다시
     };
   }
 
@@ -131,10 +168,18 @@
         .slice(0, 3)
         .map((m) => ({ id: m.id, target: m.target, reward: m.reward, progress: isNum(m.progress) ? Math.max(0, m.progress) : 0, done: m.done === true }));
     }
+    if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(99, Math.floor(raw.cycle));
+    if (raw.gear && typeof raw.gear === 'object') {
+      const max = Worlds.gearMaxLevel(d.cycle);
+      for (const g of GEAR_ITEMS) { const lv = raw.gear[g.id]; if (isNum(lv) && lv > 0) d.gear[g.id] = Math.min(max, Math.floor(lv)); }
+    }
     if (raw.worlds && typeof raw.worlds === 'object') {
+      // 회차 기능 이전 저장에는 cycleClears가 없다 → 1회차 진행으로 clears를 그대로 쓴다
+      const cc = raw.worlds.cycleClears && typeof raw.worlds.cycleClears === 'object' ? raw.worlds.cycleClears : (d.cycle === 0 ? raw.worlds.clears : null);
       for (const id of WORLD_ORDER) {
         if (raw.worlds.clears && isNum(raw.worlds.clears[id]) && raw.worlds.clears[id] > 0) d.worlds.clears[id] = Math.floor(raw.worlds.clears[id]);
         if (raw.worlds.best && isNum(raw.worlds.best[id]) && raw.worlds.best[id] > 0) d.worlds.best[id] = raw.worlds.best[id];
+        if (cc && isNum(cc[id]) && cc[id] > 0) d.worlds.cycleClears[id] = Math.floor(cc[id]);
       }
       if (WORLDS[raw.worlds.selected] && worldUnlocked(d, raw.worlds.selected)) d.worlds.selected = raw.worlds.selected;
     }
@@ -144,12 +189,12 @@
   }
 
   /* ---------- 월드 ---------- */
-  /** 학교는 항상 열려 있고, 나머지는 바로 앞 월드의 보스를 한 번 이상 격파하면 열린다 */
+  /** 학교는 항상 열려 있고, 나머지는 "이번 회차에" 바로 앞 월드의 보스를 한 번 이상 극복하면 열린다 */
   function worldUnlocked(save, id) {
     const w = WORLDS[id];
     if (!w) return false;
     if (!w.unlock) return true;
-    return (save.worlds.clears[w.unlock.world] || 0) >= 1;
+    return ((save.worlds.cycleClears || {})[w.unlock.world] || 0) >= 1;
   }
   function selectWorld(save, id) {
     if (!worldUnlocked(save, id)) return false;
@@ -170,9 +215,13 @@
   function bonusFor(save) {
     const lv = (id) => shopLevel(save, id) * SHOP_BY_ID[id].per;
     const mods = (CHARACTERS[save.chars.selected] || CHARACTERS.student).mods;
+    const gt = gearTotals(save);
+    const teamMul = Math.pow(GEAR.atkPer, gt.atk);
     return {
       maxhp: lv('hp') + (mods.maxhp || 0),
-      dmgMul: (1 + lv('dmg')) * (mods.dmgMul || 1),
+      dmgMul: (1 + lv('dmg')) * (mods.dmgMul || 1) * teamMul,
+      teamMul,                                     // 에코에게도 같은 장비 공격력
+      takenMul: Math.pow(1 / GEAR.defPer, gt.def),
       speedMul: (1 + lv('speed')) * (mods.speedMul || 1),
       cooldownMul: mods.cooldownMul || 1,
       magnet: lv('magnet'),
@@ -183,6 +232,8 @@
     };
   }
   function coinMul(save) { return 1 + shopLevel(save, 'coin') * SHOP_BY_ID.coin.per; }
+  /** 회차가 높을수록 학점도 많이 (장비 최대 레벨이 오르는 만큼 살 수 있게) */
+  function cycleCoinMul(cycle) { return 1 + GEAR.loopCoin * Math.max(0, cycle | 0); }
 
   /* ---------- 에코 풀 ---------- */
   /** 에코는 쌓은 월드에서만 함께한다. 다른 월드에서 시작하면 빈 풀로 새로 시작한다.
@@ -214,6 +265,17 @@
     save.coins -= c.cost; save.chars.unlocked.push(id);
     return { ok: true, cost: c.cost };
   }
+  function buyGear(save, id) {
+    const g = GEAR_BY_ID[id];
+    if (!g) return { ok: false, reason: 'unknown' };
+    if (!gearAvailable(save, g.world)) return { ok: false, reason: 'locked' };
+    const lv = gearLevel(save, id);
+    if (lv >= gearMax(save)) return { ok: false, reason: 'max' };
+    const cost = gearCost(id, lv);
+    if (save.coins < cost) return { ok: false, reason: 'coins', cost };
+    save.coins -= cost; save.gear[id] = lv + 1;
+    return { ok: true, cost, level: lv + 1 };
+  }
   function selectCharacter(save, id) {
     if (save.chars.unlocked.indexOf(id) < 0) return false;
     save.chars.selected = id; return true;
@@ -221,7 +283,8 @@
 
   /* ---------- 한 판 결과 반영 ---------- */
   /** run: {kills, seconds, level, result:'dead'|'survive'|'clear', gems, echoes, world, helped}
-   *  @returns {{earned:number, base:number, total:number, newAch:Array, missionsDone:Array, newWorld:string|null}} */
+   *  @returns {{earned:number, base:number, total:number, newAch:Array, missionsDone:Array, newWorld:string|null, newCycle:number|null}}
+   *  newCycle: 마지막 월드를 극복해 다음 회차로 넘어갔으면 새 회차 번호(0부터) */
   function recordRun(save, run, today) {
     // 날짜가 바뀌면 오늘의 미션 갱신
     if (save.daily.date !== today) save.daily = { date: today, missions: dailyMissions(today) };
@@ -233,12 +296,15 @@
     if (run.result === 'clear') st.clears += 1;
     st.bestTime = Math.max(st.bestTime, run.seconds);
     st.bestLevel = Math.max(st.bestLevel, run.level);
-    if (run.result === 'clear') save.worlds.clears[worldId] = (save.worlds.clears[worldId] || 0) + 1;
+    if (run.result === 'clear') {
+      save.worlds.clears[worldId] = (save.worlds.clears[worldId] || 0) + 1;
+      save.worlds.cycleClears[worldId] = (save.worlds.cycleClears[worldId] || 0) + 1;
+    }
     save.worlds.best[worldId] = Math.max(save.worlds.best[worldId] || 0, run.seconds);
 
     // 기본 보상
     const base = Math.floor(run.kills * 0.4 + run.seconds * 0.5 + run.level * 3 + (run.result === 'clear' ? 100 : run.seconds >= 120 ? 40 : 0));
-    const earned = Math.round(base * coinMul(save) * WORLDS[worldId].coinMul);
+    const earned = Math.round(base * coinMul(save) * WORLDS[worldId].coinMul * cycleCoinMul(save.cycle));
     let total = earned;
 
     // 도전 과제
@@ -258,8 +324,19 @@
     }
 
     save.coins += total; st.totalCoins += total;
-    const newWorld = WORLD_ORDER.find((w) => worldUnlocked(save, w) && unlockedBefore.indexOf(w) < 0) || null;
-    return { earned, base, total, newAch, missionsDone, newWorld };
+    let newWorld = WORLD_ORDER.find((w) => worldUnlocked(save, w) && unlockedBefore.indexOf(w) < 0) || null;
+    // 마지막 월드까지 극복하면 다음 회차: 학교부터 다시, 적은 더 강하고 장비 최대 레벨이 오른다
+    let newCycle = null;
+    if (run.result === 'clear' && worldId === WORLD_ORDER[WORLD_ORDER.length - 1]) {
+      save.cycle = Math.min(99, save.cycle + 1);
+      save.worlds.cycleClears = {};
+      save.worlds.selected = WORLD_ORDER[0];
+      newCycle = save.cycle; newWorld = null;
+      for (const a of ACHIEVEMENTS) {      // 회차 과제는 넘어간 직후에 판정
+        if (!save.ach[a.id] && a.test(st, run, save)) { save.ach[a.id] = true; newAch.push(a); save.coins += a.reward; st.totalCoins += a.reward; total += a.reward; }
+      }
+    }
+    return { earned, base, total, newAch, missionsDone, newWorld, newCycle };
   }
 
   /* ---------- 백업 코드 (서버 저장 전까지 기기 이전용) ---------- */
@@ -386,6 +463,8 @@
 
   const api = {
     SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld, echoesForWorld,
+    GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, cycleCoinMul,
+    recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };
