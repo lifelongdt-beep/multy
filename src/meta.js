@@ -99,6 +99,7 @@
       ach: {},                                    // id -> true
       daily: { date: '', missions: [] },
       worlds: { selected: 'school', clears: {}, best: {} },   // 월드별 보스 격파 횟수 / 최장 생존(초)
+      tutorial: false,                            // 튜토리얼(에코 10명과 함께하는 첫 판)을 마쳤거나 건너뛰었는지
     };
   }
 
@@ -137,6 +138,8 @@
       }
       if (WORLDS[raw.worlds.selected] && worldUnlocked(d, raw.worlds.selected)) d.worlds.selected = raw.worlds.selected;
     }
+    // 튜토리얼 기능 이전부터 플레이하던 사람은 이미 게임을 아는 것으로 본다
+    d.tutorial = raw.tutorial === true || d.stats.runs > 0;
     return d;
   }
 
@@ -268,22 +271,123 @@
     if (typeof Buffer !== 'undefined') return Buffer.from(str, 'base64').toString('utf8');
     return decodeURIComponent(escape(atob(str)));
   }
-  function exportCode(save) { return 'ECHO1:' + b64enc(JSON.stringify(save)); }
-  /** @returns {object|null} 정리된 저장 객체. 형식이 틀리면 null */
-  function importCode(code) {
+  /* ---------- 에코 백업 압축 ----------
+   * 에코 경로는 매 틱 (x,y)라 그대로 넣으면 한 명에 수십 KB가 된다.
+   * 백업 코드에는 ECHO_STEP 틱마다 한 점만, 직전 점과의 차이(0.5px 단위, -127..127)를 1바이트로 저장하고
+   * 불러올 때 사이를 직선으로 채운다. 차이는 '복원된 위치' 기준으로 계산해 오차가 쌓이지 않는다.
+   * 한 명 약 7KB(3분 기준), 10명이어도 백업 코드가 약 70KB 안팎. */
+  const ECHO_STEP = 4;
+  const ECHO_UNIT = 0.5;
+  const ECHO_MAX = 10;                 // 에코 정원 (sim.js의 MAX_ECHOES와 같다)
+  const ECHO_MAX_TICKS = 60 * 60 * 10; // 비정상적으로 긴 기록 거부 (10분)
+  const ECHO_UP_IDS = ['rate', 'multi', 'dmg', 'speed', 'magnet', 'pierce', 'crit', 'nova', 'orbit', 'regen', 'echo', 'heal'];
+
+  function bytesToB64(u8) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(u8.buffer, u8.byteOffset, u8.byteLength).toString('base64');
+    let bin = '';
+    for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 8192));
+    return btoa(bin);
+  }
+  function b64ToBytes(str) {
+    if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(str, 'base64'));
+    const bin = atob(str); const u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return u;
+  }
+
+  /** 에코 1명 → 백업용 압축 객체 */
+  function packEcho(e) {
+    const n = Math.floor(e.path.length / 2);
+    const idx = [];
+    for (let t = 0; t < n; t += ECHO_STEP) idx.push(t);
+    if (n > 0 && idx[idx.length - 1] !== n - 1) idx.push(n - 1);   // 마지막 위치는 꼭 남긴다
+    const d = new Int8Array(Math.max(0, idx.length - 1) * 2);
+    const x0 = n ? Math.round(e.path[0] / ECHO_UNIT) : 0, y0 = n ? Math.round(e.path[1] / ECHO_UNIT) : 0;
+    let cx = x0, cy = y0;
+    for (let k = 1; k < idx.length; k++) {
+      const t = idx[k];
+      const dx = Math.max(-127, Math.min(127, Math.round(e.path[t * 2] / ECHO_UNIT) - cx));
+      const dy = Math.max(-127, Math.min(127, Math.round(e.path[t * 2 + 1] / ECHO_UNIT) - cy));
+      d[(k - 1) * 2] = dx; d[(k - 1) * 2 + 1] = dy; cx += dx; cy += dy;
+    }
+    return {
+      n, x: x0, y: y0, d: bytesToB64(new Uint8Array(d.buffer)),
+      u: (e.ups || []).map((up) => [up.t, up.id]),
+      k: e.kills || 0, t: e.ticks || n,
+    };
+  }
+
+  /** 백업용 압축 객체 → 에코 1명. 형식이 틀리면 null */
+  function unpackEcho(o) {
+    if (!o || typeof o !== 'object') return null;
+    const n = o.n;
+    if (!Number.isInteger(n) || n < 1 || n > ECHO_MAX_TICKS || !isNum(o.x) || !isNum(o.y) || typeof o.d !== 'string') return null;
+    const idx = [];
+    for (let t = 0; t < n; t += ECHO_STEP) idx.push(t);
+    if (idx[idx.length - 1] !== n - 1) idx.push(n - 1);
+    const raw = b64ToBytes(o.d);
+    if (raw.length !== (idx.length - 1) * 2) return null;
+    const d = new Int8Array(raw.buffer, raw.byteOffset, raw.length);
+    const pts = new Array(idx.length * 2);
+    let cx = o.x, cy = o.y;
+    pts[0] = cx * ECHO_UNIT; pts[1] = cy * ECHO_UNIT;
+    for (let k = 1; k < idx.length; k++) { cx += d[(k - 1) * 2]; cy += d[(k - 1) * 2 + 1]; pts[k * 2] = cx * ECHO_UNIT; pts[k * 2 + 1] = cy * ECHO_UNIT; }
+    const path = new Array(n * 2);
+    for (let k = 0; k < idx.length; k++) {
+      const a = idx[k], b = k + 1 < idx.length ? idx[k + 1] : a;
+      for (let t = a; t <= b; t++) {
+        const f = b > a ? (t - a) / (b - a) : 0;
+        const nx = k + 1 < idx.length ? pts[(k + 1) * 2] : pts[k * 2], ny = k + 1 < idx.length ? pts[(k + 1) * 2 + 1] : pts[k * 2 + 1];
+        path[t * 2] = Math.round((pts[k * 2] + (nx - pts[k * 2]) * f) * 10) / 10;
+        path[t * 2 + 1] = Math.round((pts[k * 2 + 1] + (ny - pts[k * 2 + 1]) * f) * 10) / 10;
+      }
+    }
+    const ups = Array.isArray(o.u)
+      ? o.u.filter((u) => Array.isArray(u) && Number.isInteger(u[0]) && u[0] >= 0 && ECHO_UP_IDS.indexOf(u[1]) >= 0).slice(0, 200).map((u) => ({ t: u[0], id: u[1] }))
+      : [];
+    return { path, ups, kills: isNum(o.k) && o.k >= 0 ? Math.floor(o.k) : 0, ticks: isNum(o.t) && o.t > 0 ? Math.floor(o.t) : n };
+  }
+
+  /* ---------- 백업 코드 (서버 저장 전까지 기기 이전용) ----------
+   * ECHO1: 진행 데이터만 (이전 버전, 계속 불러올 수 있음)
+   * ECHO2: 진행 데이터 + 에코 풀 {world, echoes} */
+  /** @param pool 에코 풀 {world, echoes:[{path,ups,kills,ticks}]} (없으면 ECHO1 형식) */
+  function exportCode(save, pool) {
+    if (!pool) return 'ECHO1:' + b64enc(JSON.stringify(save));
+    const list = (Array.isArray(pool.echoes) ? pool.echoes : []).slice(-ECHO_MAX);
+    return 'ECHO2:' + b64enc(JSON.stringify({ save, ep: { w: pool.world, e: list.map(packEcho) } }));
+  }
+  /** @returns {{save:object, pool:({world:string, echoes:Array}|null)}|null} 형식이 틀리면 null */
+  function importBackup(code) {
     try {
       const c = String(code || '').trim();
-      if (c.indexOf('ECHO1:') !== 0) return null;
+      const ver = c.slice(0, 6);
+      if (ver !== 'ECHO1:' && ver !== 'ECHO2:') return null;
       const raw = JSON.parse(b64dec(c.slice(6)));
-      if (!raw || typeof raw !== 'object' || raw.v !== SAVE_VERSION) return null;
-      return sanitize(raw);
+      if (!raw || typeof raw !== 'object') return null;
+      const s = ver === 'ECHO1:' ? raw : raw.save;
+      if (!s || typeof s !== 'object' || s.v !== SAVE_VERSION) return null;
+      let pool = null;
+      if (ver === 'ECHO2:') {
+        const ep = raw.ep;
+        if (!ep || typeof ep !== 'object' || !Array.isArray(ep.e)) return null;
+        const echoes = ep.e.slice(-ECHO_MAX).map(unpackEcho);
+        if (echoes.some((e) => !e)) return null;
+        pool = { world: WORLDS[ep.w] ? ep.w : 'school', echoes };
+      }
+      return { save: sanitize(s), pool };
     } catch (e) { return null; }
+  }
+  /** 진행 데이터만 필요할 때 (ECHO1/ECHO2 모두) */
+  function importCode(code) {
+    const r = importBackup(code);
+    return r ? r.save : null;
   }
 
   const api = {
     SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld, echoesForWorld,
     shopCost, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
-    bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode,
+    bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Meta = api;

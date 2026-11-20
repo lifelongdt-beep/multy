@@ -43,6 +43,10 @@
     count() { return echoes.length; },
     world() { return echoWorld; },
     reset(worldId) { echoes = []; echoWorld = worldId || echoWorld; save(); },
+    /** 백업 코드용: 지금 에코 풀 */
+    pool() { return { world: echoWorld, echoes: echoes.slice() }; },
+    /** 백업 코드 불러오기: 에코 풀을 통째로 바꾼다 */
+    replace(pool) { echoes = (pool.echoes || []).slice(-MAX_ECHOES); echoWorld = pool.world || 'school'; save(); },
   };
 
   /* ---------- 입력: 상대 드래그 + 키보드 ---------- */
@@ -62,7 +66,11 @@
   });
   const endDrag = () => { drag = null; input.dx = 0; input.dy = 0; };
   cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
-  addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+  addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'escape' || k === 'p') { if (state === 'play') pauseGame(); else if (state === 'paused') resumeGame(); return; }
+    keys[k] = true;
+  });
   addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
   function currentInput() {
     if (drag) return input;
@@ -112,7 +120,9 @@
 
   /* ---------- 게임 상태 ---------- */
   let playerEmoji = '🧑‍🎓';
-  let sim = null, state = 'menu';   // menu | play | levelup | end
+  let sim = null, state = 'menu';   // menu | play | paused | levelup | end
+  let tutorial = false;             // 지금 판이 튜토리얼(에코 10명과 함께하는 체험)인지
+  let tipIdx = 0;
   let acc = 0, last = 0;
 
   function resize() {
@@ -123,19 +133,65 @@
   }
   addEventListener('resize', resize); resize();
 
-  function startRun() {
+  /** @param opts {tutorial?:boolean}  튜토리얼은 미리 만든 에코 10명과 학교 월드에서 한다. 내 에코 기록·학점에는 반영하지 않는다. */
+  function startRun(opts) {
     Sfx.unlock(); Sfx.play('click');
-    runCount += 1;
-    const clearedEchoes = syncEchoes(GameUI.worldId());
-    sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId() });
+    tutorial = !!(opts && opts.tutorial === true);
+    tipIdx = 0;
+    let clearedEchoes = 0;
+    if (tutorial) {
+      const seed = (Date.now() ^ 0x9e3779b9) >>> 0;
+      sim = new Sim({ seed, echoes: EchoTutorial.makeTutorialEchoes(seed), bonus: GameUI.bonus(), world: EchoTutorial.TUTORIAL_WORLD });
+    } else {
+      runCount += 1;
+      clearedEchoes = syncEchoes(GameUI.worldId());
+      sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId() });
+    }
     playerEmoji = GameUI.emoji();
     state = 'play'; acc = 0; last = performance.now();
     shake = 0; hurtFlash = 0; floats = [];
     const needE = sim.world.boss.needEchoes;
-    if (echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
+    if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
-    ['start', 'levelup', 'end'].forEach((id) => $(id).classList.add('hidden'));
+    ['start', 'levelup', 'end', 'tutorial', 'pause'].forEach((id) => $(id).classList.add('hidden'));
+    $('again').textContent = '한 판만 더';
+    if (tutorial) banner = { text: '📘 튜토리얼 · 과거의 나 10명과 함께!', t: 150 };
   }
+
+  /** 튜토리얼 안내 문구를 시간에 맞춰 띄운다 */
+  function tutorialTips() {
+    const tips = EchoTutorial.TIPS;
+    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { toast = { text: tips[tipIdx].text, t: 300 }; tipIdx++; }
+  }
+
+  /* ---------- 일시정지 ---------- */
+  function pauseGame() {
+    if (state !== 'play') return;
+    state = 'paused'; endDrag(); for (const k in keys) keys[k] = false;
+    $('pauseInfo').textContent = tutorial ? '튜토리얼 중이에요' : `${sim.world.emoji} ${sim.world.name} · ${Math.floor(sim.tick / TICK)}초 · Lv ${sim.player.level}`;
+    $('quit').textContent = '🏳️ 그만하고 메뉴로'; quitArmed = false;
+    $('pause').classList.remove('hidden');
+  }
+  function resumeGame() {
+    if (state !== 'paused') return;
+    $('pause').classList.add('hidden');
+    state = 'play'; last = performance.now(); acc = 0;
+  }
+  let quitArmed = false;
+  function quitRun() {
+    // 한 번 더 눌러야 그만둔다 (실수 방지). 그만둔 판은 에코·학점에 반영되지 않는다.
+    if (!quitArmed) { quitArmed = true; $('quit').textContent = '⚠ 한 번 더 누르면 이번 판은 기록되지 않아요'; return; }
+    quitArmed = false;
+    if (tutorial) GameUI.finishTutorial();
+    tutorial = false; sim = null; state = 'menu';
+    $('pause').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh();
+  }
+  $('pauseBtn').onclick = () => { Sfx.play('click'); pauseGame(); };
+  $('resume').onclick = () => { Sfx.play('click'); quitArmed = false; resumeGame(); };
+  $('quit').onclick = () => { Sfx.play('click'); quitRun(); };
+  // 앱을 내리거나 다른 창으로 가면 자동으로 일시정지 (전화·알림 등)
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+  addEventListener('blur', () => pauseGame());
 
   function showLevelUp() {
     state = 'levelup';
@@ -161,7 +217,28 @@
     return pick(['넘어져도 괜찮아요. 방금의 나는 에코가 되어 다음 판을 도와요 👻', '실패는 배움의 일부예요. 조금씩 나아지고 있어요 🌱', '선생님께 도움을 청해 보는 건 어때요? 🙋']);
   }
 
+  /** 튜토리얼 결과 화면: 에코·학점에 반영하지 않고, 이제 내 에코를 0명부터 쌓는다는 걸 알려준다 */
+  function showTutorialEnd() {
+    state = 'end';
+    GameUI.finishTutorial();
+    tutorial = false;
+    Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
+    $('endTitle').textContent = sim.result === 'clear' ? `${sim.world.boss.name} 극복! 🎉` : '튜토리얼 끝!';
+    $('endEchoes').textContent = '👻 에코 10명';
+    $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}`;
+    $('reward').innerHTML = '';
+    [
+      '방금 함께 싸운 10명은 연습용 "과거의 나"였어요.',
+      '이제부터는 진짜 내 에코를 0명부터 쌓아요.',
+      '한 판이 끝날 때마다 그 판의 내가 에코가 되어 다음 판을 도와요.',
+    ].forEach((t) => { const d = document.createElement('div'); d.textContent = t; $('reward').appendChild(d); });
+    $('cheer').textContent = `👻 ${sim.world.name}의 큰 도전은 에코 ${sim.world.boss.needEchoes}명쯤 모이면 넘을 수 있어요. 차근차근 쌓아 봐요!`;
+    $('again').textContent = '이제 진짜 시작! ▶';
+    $('end').classList.remove('hidden');
+  }
+
   function showEnd() {
+    if (tutorial) { showTutorialEnd(); return; }
     state = 'end';
     const out = sim.exportEcho();
     const res = addEcho(echoes, out, MAX_ECHOES);
@@ -192,7 +269,12 @@
     $('end').classList.remove('hidden');
   }
 
-  $('go').onclick = startRun; $('again').onclick = startRun;
+  $('go').onclick = () => startRun(); $('again').onclick = () => startRun();
+  $('bTutorial').onclick = () => startRun({ tutorial: true });
+  $('tStart').onclick = () => startRun({ tutorial: true });
+  $('tSkip').onclick = () => { Sfx.unlock(); Sfx.play('click'); GameUI.finishTutorial(); $('tutorial').classList.add('hidden'); $('start').classList.remove('hidden'); };
+  // 처음 실행이면 튜토리얼 안내부터
+  if (!GameUI.tutorialDone()) { $('start').classList.add('hidden'); $('tutorial').classList.remove('hidden'); }
   $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; };
   $('reset').onclick = () => { echoes = []; runCount = 0; save(); $('reset').textContent = '초기화됨'; };
   $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); $('mute').textContent = Sfx.isMuted() ? '🔇' : '🔊'; };
@@ -428,6 +510,7 @@
   }
 
   /* ---------- 메인 루프 (고정 60Hz) ---------- */
+  let pauseShown = true;
   function frame(now) {
     if (state === 'play') {
       acc += Math.min(100, now - last); last = now;
@@ -435,10 +518,14 @@
       while (acc >= dt && state === 'play') {
         acc -= dt; sim.step(currentInput());
         handleEvents();
+        if (tutorial) tutorialTips();
         if (sim.choices) { showLevelUp(); break; }
         if (sim.over) { showEnd(); break; }
       }
     }
+    const showPause = state === 'play';
+    if (showPause !== pauseShown) { pauseShown = showPause; $('pauseBtn').style.display = showPause ? '' : 'none'; }
+    if (state === 'paused') { render(); requestAnimationFrame(frame); return; }   // 멈춘 동안 연출도 멈춘다
     if (shake > 0) shake = Math.max(0, shake - 0.4);
     if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - 0.06);
     for (const f of floats) f.t -= 1;
@@ -451,5 +538,5 @@
   requestAnimationFrame(frame);
 
   // 테스트/디버그용 훅
-  window.__echo = { get sim() { return sim; }, get state() { return state; }, get echoes() { return echoes; } };
+  window.__echo = { get sim() { return sim; }, get state() { return state; }, get echoes() { return echoes; }, get tutorial() { return tutorial; } };
 })();

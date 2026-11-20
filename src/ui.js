@@ -127,8 +127,9 @@
   /* ---------- 백업 ---------- */
   function renderBackup() {
     const body = $('pbody'); body.innerHTML = '';
-    body.appendChild(el('div', 'msg', '서버 저장이 생기기 전까지, 기기를 바꿀 때 이 코드를 옮겨 주세요. (학점·강화·캐릭터·과제 기록. 에코 기록은 포함되지 않습니다)'));
-    const out = el('textarea'); out.readOnly = true; out.value = M.exportCode(save);
+    const pool = GameEchoes.pool();
+    body.appendChild(el('div', 'msg', `서버 저장이 생기기 전까지, 기기를 바꿀 때 이 코드를 옮겨 주세요. (학점·강화·캐릭터·과제 기록 + 👻 ${M.WORLDS[pool.world] ? M.WORLDS[pool.world].name : ''} 에코 ${pool.echoes.length}명)`));
+    const out = el('textarea'); out.readOnly = true; out.value = M.exportCode(save, pool);
     body.appendChild(out);
     const msg = el('div', 'msg');
     const copy = el('button', 'sub', '📋 코드 복사');
@@ -146,10 +147,12 @@
     let armed = false;
     const load = el('button', 'sub', '📥 불러오기');
     load.onclick = () => {
-      const data = M.importCode(inp.value);
-      if (!data) { msg.textContent = '올바른 백업 코드가 아니에요.'; armed = false; load.textContent = '📥 불러오기'; return; }
-      if (!armed) { armed = true; load.textContent = '⚠ 한 번 더 눌러 덮어쓰기'; msg.textContent = `코드 확인됨: 🎓 ${data.coins} 학점. 현재 데이터가 사라집니다.`; return; }
-      save = data; commit(); armed = false; load.textContent = '📥 불러오기'; rerender();
+      const r = M.importBackup(inp.value);
+      if (!r) { msg.textContent = '올바른 백업 코드가 아니에요.'; armed = false; load.textContent = '📥 불러오기'; return; }
+      const echoNote = r.pool ? ` · 👻 ${M.WORLDS[r.pool.world].name} 에코 ${r.pool.echoes.length}명` : ' · (에코 없는 옛 코드: 지금 에코는 그대로 둬요)';
+      if (!armed) { armed = true; load.textContent = '⚠ 한 번 더 눌러 덮어쓰기'; msg.textContent = `코드 확인됨: 🎓 ${r.save.coins} 학점${echoNote}. 현재 데이터가 사라집니다.`; return; }
+      save = r.save; if (r.pool) GameEchoes.replace(r.pool);
+      commit(); armed = false; load.textContent = '📥 불러오기'; rerender();
       $('pbody').appendChild(el('div', 'msg', '불러오기 완료!'));
     };
     body.appendChild(load);
@@ -171,6 +174,8 @@
     emoji() { return (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji; },
     /** 한 판 결과를 저장하고 요약({earned,total,newAch,missionsDone})을 돌려준다 */
     recordRun(run) { ensureDaily(); const r = M.recordRun(save, run, today()); commit(); return r; },
+    tutorialDone() { return save.tutorial === true; },
+    finishTutorial() { if (!save.tutorial) { save.tutorial = true; commit(); } },
     get save() { return save; },
     refresh,
   };
