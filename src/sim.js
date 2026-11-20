@@ -27,8 +27,17 @@
     echoAgeDecay: 0.05,      // 한 세대 오래될수록 공격력 -5%
     echoMinPower: 0.6,       // 최저 배율
     echoHpScale: 0.12,       // 에코 1명당 일반 적 체력 +12% (에코 화력 증가를 따라가도록, 10명이면 +120%)
-    bossLevelScale: 0.06,    // 플레이어 레벨 1당 보스 체력 +6% (강하게 클수록 보스도 단단해짐)
-    echoBossScale: 0.25,     // 에코 1명당 보스 체력 +25% (에코 화력 증가를 따라가도록, 10명이면 +250%)
+    bossFloorMul: 0.5,       // 보스 최소 체력 = 정의 체력 x 0.5 (화력이 약해도 너무 물렁하지 않게)
+    bossLaterFight: 0.12,    // n번째 보스일수록 목표 전투 시간 +12%씩 (더 단단함)
+    bossLaterSpeed: 0.08,    // n번째 보스일수록 이동 +8%씩
+    bossHitFactor: 0.5,      // 화력 추정 시 실제 명중률 보정
+    enrageSec: 32,           // 보스전이 이 시간을 넘기면 보스가 거세짐 (피해 +40%, 이동 +25%)
+    bossAtkMul: 1.25,        // 보스전 중 받는 피해 배율 (팽팽한 승부)
+    bossAtkPerEcho: 0.06,    // 살아 있는 에코 1명당 보스전 피해 +6%
+    bossDmgExp: 0.8,         // 보스전 피해 배율 = (최대체력/130)^0.8 (체력이 높을수록 한 방이 더 아프다)
+    bossRegenMul: 0.4,       // 보스전 중 체력 재생 배율
+    bossBreatherHeal: 0.45,  // 보스 한 번 극복할 때마다 체력 회복 비율 (마지막 보스 제외)
+    bossGapSec: 6,           // 보스 극복 후 다음 보스가 나오기까지 최소 간격(초)
     hpGrowth: 1.6,           // 진행도에 따른 적 체력 증가
     healAmount: 50,
     // ---- 아이템(업그레이드) 1레벨당 효과 ----
@@ -165,7 +174,12 @@
       this.kills = 0;
       this.swarmIdx = 0;
       this.bossSpawned = false;
-      this.bossDead = false;
+      this.bossDead = false;        // 모든 보스를 극복했을 때 true
+      this.bossIdx = 0;             // 지금까지 등장시킨 보스 수
+      this.bossAlive = false;
+      this.bossDefeated = 0;
+      this.bossCount = this.world.boss.times.length;
+      this.lastBossDeath = 0;
       this.over = false;
       this.result = null;      // 'dead' | 'clear' | 'survive'
       this.choices = null;     // 레벨업 대기 중이면 3택1 배열
@@ -245,16 +259,39 @@
       return (1 + progress * TUNING.hpGrowth) * (1 + TUNING.echoHpScale * this.echoes.length) * (this.world.rules.hpMul || 1);
     }
 
-    _make(type, x, y) {
+    /** 한 스탯 조합의 초당 피해 추정 (보스 체력 산정용) */
+    _fp(stats, bonus, pm) {
+      const d = derive(stats, bonus);
+      const shots = d.shots * d.dmg * (60 / d.cooldown) * (1 + d.crit * (d.critMul - 1)) * (1 + Math.min(d.pierce, 3) * 0.15) * TUNING.bossHitFactor;
+      const nova = d.novaInt ? d.novaDmg * (60 / d.novaInt) * 0.4 : 0;
+      const orb = d.orbN * d.orbDmg * 5 * 0.3;
+      return (shots + nova + orb) * pm;
+    }
+
+    /** 지금 플레이어 + 살아 있는 에코들의 화력 합 */
+    _firepower() {
+      const p = this.player;
+      let sum = this._fp(p.stats, this.bonus, 1);
+      const boost = (1 + TUNING.echoBoostPer * p.stats.echo) * (1 + this.bonus.echoPower);
+      for (const ec of this.echoes) if (ec.alive) sum += this._fp(ec.stats, NO_BONUS, ec.power * boost);
+      return sum;
+    }
+
+    /** 보스 체력 = 화력 x 목표 전투 시간. 강해질수록 보스도 단단해져서 "한 번에 쉽게 이기는" 일이 없다. */
+    _bossHp(def, idx) {
+      const target = def.fightSec * (1 + TUNING.bossLaterFight * idx);
+      return Math.max(def.hp * TUNING.bossFloorMul * (1 + TUNING.bossLaterFight * idx), this._firepower() * target);
+    }
+
+    _make(type, x, y, idx) {
       const b = this._def(type);
       const progress = this.tick / RUN_TICKS;
-      const hp = type === 'boss'
-        ? b.hp * (1 + TUNING.echoBossScale * this.echoes.length) * (1 + TUNING.bossLevelScale * (this.player.level - 1))
-        : b.hp * this._hpScale();
+      const hp = type === 'boss' ? this._bossHp(b, idx || 0) : b.hp * this._hpScale();
       const cdBase = b.fireCd || b.dashCd || 150;
       this.enemies.push({
-        type, def: b, emoji: b.emoji, name: b.name,
-        x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * TUNING.enemySpeedGrowth) * (this.world.rules.speedMul || 1), dmg: b.dmg, xp: b.xp,
+        type, def: b, emoji: b.emoji, name: b.name, idx: idx || 0,
+        label: type === 'boss' && this.bossCount > 1 ? `${b.name} ${(idx || 0) + 1}/${this.bossCount}` : b.name,
+        x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * TUNING.enemySpeedGrowth) * (this.world.rules.speedMul || 1) * (type === 'boss' ? 1 + TUNING.bossLaterSpeed * (idx || 0) : 1), dmg: b.dmg, xp: b.xp,
         flash: 0, ocd: 0, cd: Math.round(cdBase * (0.4 + 0.6 * this.rng())), dashT: 0, dvx: 0, dvy: 0, warn: false,
         phase: 1, t: 0, cst: 0, cw: 0,
       });
@@ -302,15 +339,24 @@
       const waves = w.waves;
       const wave = waves.find((x) => sec >= x.from && sec < x.to) || waves[waves.length - 1];
       let interval = Math.max(8, Math.round(wave.interval / (rules.spawnMul || 1)));
-      if (t >= BOSS_TICK) interval *= 2;   // 보스전 중에는 졸개 스폰을 절반으로
+      if (this.bossIdx > 0) interval *= 2;   // 보스전이 시작되면 졸개 스폰을 절반으로
       if (t % interval === 0) for (let i = 0; i < wave.n; i++) this._spawn(wave);
       while (this.swarmIdx < w.swarms.length && t >= w.swarms[this.swarmIdx].t * TICK) this._ring(w.swarms[this.swarmIdx++]);
       if (t === w.helper.t * TICK) this._spawnHelper();
-      if (t === BOSS_TICK - 180) this._ev({ k: 'banner', text: w.boss.warnText });
-      if (t === BOSS_TICK && !this.bossSpawned) { this._make('boss', W / 2, -30); this.bossSpawned = true; this._ev({ k: 'boss', text: w.boss.startText }); }
+      // 큰 도전(보스): 월드가 높을수록 여러 번. 앞 보스를 극복하면 숨 돌린 뒤 다음 보스가 등장
+      const times = w.boss.times;
+      if (this.bossIdx < times.length && !this.bossAlive) {
+        const due = Math.max(times[this.bossIdx] * TICK, this.bossIdx > 0 ? this.lastBossDeath + TUNING.bossGapSec * TICK : 0);
+        if (t === due - 180) this._ev({ k: 'banner', text: w.boss.warnText });
+        if (t >= due) {
+          this._make('boss', W / 2, -30, this.bossIdx);
+          this.bossIdx += 1; this.bossAlive = true; this.bossSpawned = true;
+          this._ev({ k: 'boss', text: w.boss.startText + (this.bossCount > 1 ? ` (${this.bossIdx}/${this.bossCount})` : '') });
+        }
+      }
       // 월드 고유 규칙: 지하철 열차 (보스 등장 전까지)
       const tr = rules.trains;
-      if (tr && t >= tr.first * TICK && t < BOSS_TICK - 240 && (t - tr.first * TICK) % (tr.every * TICK) === 0) {
+      if (tr && t >= tr.first * TICK && t < w.boss.times[0] * TICK - 240 && (t - tr.first * TICK) % (tr.every * TICK) === 0) {
         const p = this.player;
         this._spawnTrain(Math.max(50, Math.min(H - 60, p.y + (this.rng() - 0.5) * 160)), this.rng() < 0.5 ? 1 : -1);
       }
@@ -354,11 +400,19 @@
       this.ebullets.push({ x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, dmg, life: 320, r: 4 });
     }
 
+    /** 보스전 중에는 받는 피해가 내 최대 체력에 (일부) 비례해서 커진다 → 체력 강화만으로 보스전이 시시해지지 않는다 */
+    _bossDmgScale() {
+      if (!this.bossAlive) return 1;
+      const helpers = this.echoes.filter((e) => e.alive).length;      // 함께 싸우는 에코가 많을수록 보스도 더 거세게 몰아친다
+      return TUNING.bossAtkMul * (1 + TUNING.bossAtkPerEcho * helpers) * Math.max(1, Math.pow(this.player.maxhp / 130, TUNING.bossDmgExp));
+    }
+
     _hurtPlayer(dmg) {
       const p = this.player;
-      p.hp -= dmg * TUNING.damageTaken; p.inv = TUNING.hurtInvTicks;
+      const taken = dmg * TUNING.damageTaken * this._bossDmgScale();
+      p.hp -= taken; p.inv = TUNING.hurtInvTicks;
       this.fx.push({ x: p.x, y: p.y, t: 10, kind: 'hurt' });
-      this._ev({ k: 'hurt', dmg: dmg * TUNING.damageTaken });
+      this._ev({ k: 'hurt', dmg: taken });
     }
 
     /** 충격파·형광펜 (플레이어/에코 공용) */
@@ -410,6 +464,11 @@
     _bossAI(e, ux, uy, dist) {
       const phase = this._bossPhase(e);
       e.t += 1;
+      if (!e.enraged && e.t >= TUNING.enrageSec * TICK) {   // 오래 끌면 거세진다 → 시간에 쫓기는 긴장감
+        e.enraged = true; e.dmg *= 1.4; e.speed *= 1.25;
+        this._ev({ k: 'banner', text: '💢 점점 거세져요! 서둘러요' });
+        this.fx.push({ x: e.x, y: e.y, t: 24, kind: 'nova', r: 140 });
+      }
       const p = this.player;
       const summon = e.def.summon;
       switch (e.def.pattern) {
@@ -466,15 +525,19 @@
           return { x: ux * sp, y: uy * sp };
         }
         default: {         // 학교 보스: 탄막 + 졸개 소환 + 조준 3연발
-          if (e.t % 200 === 0) {
-            const n = phase === 1 ? 6 : 9;
-            const off = (e.t / 200) * 0.3;
-            for (let i = 0; i < n; i++) this._ebullet(e.x, e.y, off + (i / n) * Math.PI * 2, 1.6, 5);
+          if (e.t % 150 === 0) {                                  // 사방으로 퍼지는 불안 (틈이 있어 피할 수 있음)
+            const n = phase === 1 ? 8 : 11;
+            const off = (e.t / 150) * 0.3;
+            for (let i = 0; i < n; i++) this._ebullet(e.x, e.y, off + (i / n) * Math.PI * 2, 1.7, 6);
           }
-          if (phase >= 2 && e.t % 420 === 0) this._summon(e, summon || 'hw', 4);
-          if (phase === 3 && e.t % 110 === 0) {
+          if (phase >= 2 && e.t % 240 === 0) {                    // 나를 노리는 걱정 3연발
             const base = Math.atan2(p.y - e.y, p.x - e.x);
-            for (let i = -1; i <= 1; i++) this._ebullet(e.x, e.y, base + i * 0.2, 2.3, 5);
+            for (let i = -1; i <= 1; i++) this._ebullet(e.x, e.y, base + i * 0.2, 2.2, 6);
+          }
+          if (phase >= 2 && e.t % 360 === 0) this._summon(e, summon || 'hw', 4);
+          if (phase === 3 && e.t % 90 === 0) {
+            const base = Math.atan2(p.y - e.y, p.x - e.x);
+            for (let i = -2; i <= 2; i++) this._ebullet(e.x, e.y, base + i * 0.2, 2.4, 6);
           }
           const sp = e.speed * (phase === 3 ? 1.4 : 1);
           return { x: ux * sp, y: uy * sp };
@@ -551,7 +614,16 @@
       for (let g = 0; g < big; g++) this.gems.push({ x: e.x + (this.rng() - 0.5) * 14, y: e.y + (this.rng() - 0.5) * 14, v });
       this.fx.push({ x: e.x, y: e.y, t: 14, kind: 'pop' });
       this._ev({ k: 'kill' });
-      if (e.type === 'boss') this.bossDead = true;
+      if (e.type === 'boss') {
+        this.bossDefeated += 1; this.bossAlive = false; this.lastBossDeath = this.tick;
+        if (this.bossDefeated >= this.bossCount) this.bossDead = true;
+        else {
+          const p = this.player;
+          p.hp = Math.min(p.maxhp, p.hp + p.maxhp * TUNING.bossBreatherHeal);
+          this._ev({ k: 'heal' });
+          this._ev({ k: 'banner', text: `💛 한 고비 넘었어요! (${this.bossDefeated}/${this.bossCount}) 숨 돌리세요` });
+        }
+      }
       // 월드 규칙: 가끔 커피(체력 회복)
       const cc = this.world.rules.coffeeChance;
       if (cc && e.type !== 'boss' && this.rng() < cc) this.gems.push({ x: e.x, y: e.y, v: 15, kind: 'coffee' });
@@ -585,7 +657,7 @@
       p.cd -= 1;
       if (p.cd <= 0 && this._fire(p.x, p.y, d, 'player', 1)) p.cd = d.cooldown;
       this._skills(p, d, 1, t, 'player');
-      if (d.regen && p.hp < p.maxhp) p.hp = Math.min(p.maxhp, p.hp + d.regen);
+      if (d.regen && p.hp < p.maxhp) p.hp = Math.min(p.maxhp, p.hp + d.regen * (this.bossAlive ? TUNING.bossRegenMul : 1));
 
       // 에코 재생
       const boost = 1 + TUNING.echoBoostPer * p.stats.echo;
@@ -713,7 +785,7 @@
 
       if (p.hp <= 0) { this.over = true; this.result = 'dead'; }
       else if (this.bossDead) { this.over = true; this.result = 'clear'; }
-      else if (this.tick >= RUN_TICKS && (!this.bossSpawned || this.tick >= RUN_TICKS + OVERTIME_TICKS)) { this.over = true; this.result = 'survive'; }
+      else if (this.tick >= RUN_TICKS && (!(this.bossIdx < this.bossCount || this.bossAlive) || this.tick >= RUN_TICKS + OVERTIME_TICKS + (this.bossCount - 1) * 30 * TICK)) { this.over = true; this.result = 'survive'; }
     }
 
     /** 이번 판을 다음 판의 에코로 내보낸다. */

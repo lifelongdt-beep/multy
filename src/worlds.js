@@ -11,6 +11,8 @@
  *
  * 월드마다 다른 것: 배경(theme) · 적 · 웨이브 · 포위 이벤트 · 도우미(helper) · 보스(boss+패턴) · 고유 규칙(rules)
  * 보스의 타입 id는 항상 'boss' (월드별로 정의만 다름)
+ * boss.times: 보스 등장 시각(초) 목록 = 한 판에서 극복할 큰 도전의 횟수 (월드가 높을수록 많음)
+ * boss.fightSec: 한 보스를 상대하는 목표 시간(초). 보스 체력은 이 시간에 맞춰 플레이어+에코의 화력에서 계산된다 (아슬아슬한 승부)
  *
  * enemies 필드: hp, speed, r(반지름), dmg(접촉 피해), xp, ai
  *   ai: chase | zig(지그재그) | dash(돌진) | shoot(원거리) | boss
@@ -44,7 +46,7 @@
         leaveText: '선생님은 언제나 기다리고 계세요',
         boons: { heal: '따뜻한 격려', power: '오답 노트 정리', focus: '집중하는 법', team: '친구와 함께' },
       },
-      boss: { name: '시험 불안', emoji: '😱', hp: 750, speed: 0.4, r: 30, dmg: 12, xp: 30, ai: 'boss', pattern: 'exam', warnText: '⚠ 기말고사 D-DAY, 불안이 밀려와요 ⚠', startText: '😱 시험 불안, 극복해 봐요!', summon: 'hw' },
+      boss: { name: '시험 불안', emoji: '😱', hp: 750, times: [90], fightSec: 40, speed: 0.4, r: 30, dmg: 12, xp: 30, ai: 'boss', pattern: 'exam', warnText: '⚠ 기말고사 D-DAY, 불안이 밀려와요 ⚠', startText: '😱 시험 불안, 극복해 봐요!', summon: 'hw' },
       waves: [
         { from: 0,  to: 20,  interval: 52, n: 1, w: { hw: 6, test: 3 } },
         { from: 20, to: 45,  interval: 40, n: 2, w: { hw: 5, test: 4, alarm: 1, late: 2 } },
@@ -80,7 +82,7 @@
         leaveText: '질문은 언제든 환영이에요',
         boons: { heal: '마음 다독이기', power: '개념 완성', focus: '시간 관리법', team: '스터디 그룹' },
       },
-      boss:  { name: '슬럼프', emoji: '🌧️', hp: 850, speed: 0.35, r: 30, dmg: 12, xp: 34, ai: 'boss', pattern: 'spiral', warnText: '⚠ 슬럼프가 찾아와요 ⚠', startText: '🌧️ 슬럼프, 함께 이겨내요!', summon: 'memo' },
+      boss:  { name: '슬럼프', emoji: '🌧️', hp: 850, times: [70, 105], fightSec: 34, speed: 0.35, r: 30, dmg: 12, xp: 34, ai: 'boss', pattern: 'spiral', warnText: '⚠ 슬럼프가 찾아와요 ⚠', startText: '🌧️ 슬럼프, 함께 이겨내요!', summon: 'memo' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { book: 6, quiz: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { book: 5, quiz: 4, memo: 2, ox: 1 } },
@@ -116,7 +118,7 @@
         leaveText: '궁금한 건 언제든 물어보세요',
         boons: { heal: '숨 돌리기', power: '업무 노하우', focus: '우선순위 정리', team: '동료와 협업' },
       },
-      boss:  { name: '번아웃', emoji: '🥵', hp: 1000, speed: 0.35, r: 30, dmg: 14, xp: 38, ai: 'boss', pattern: 'charge', warnText: '⚠ 번아웃이 다가와요 ⚠', startText: '🥵 번아웃, 쉬어가며 극복해요!', summon: 'mail' },
+      boss:  { name: '번아웃', emoji: '🥵', hp: 1000, times: [60, 90, 120], fightSec: 33, speed: 0.35, r: 30, dmg: 14, xp: 38, ai: 'boss', pattern: 'charge', warnText: '⚠ 번아웃이 다가와요 ⚠', startText: '🥵 번아웃, 쉬어가며 극복해요!', summon: 'mail' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { doc: 6, mail: 4 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { doc: 5, mail: 4, call: 2, meeting: 1 } },
@@ -152,7 +154,7 @@
         leaveText: '도움이 필요하면 언제든 말씀하세요',
         boons: { heal: '잠깐 쉬어가기', power: '빠른 환승 길', focus: '졸음 깨우기', team: '함께 가는 길' },
       },
-      boss:  { name: '급행열차', emoji: '🚆', hp: 950, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'lane', warnText: '⚠ 급행열차가 들어와요 ⚠', startText: '🚆 급행열차를 피해 집으로!', summon: 'sleepy' },
+      boss:  { name: '급행열차', emoji: '🚆', hp: 950, times: [55, 85, 115, 145], fightSec: 30, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'lane', warnText: '⚠ 급행열차가 들어와요 ⚠', startText: '🚆 급행열차를 피해 집으로!', summon: 'sleepy' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { sleepy: 7, bag: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { sleepy: 5, bag: 3, phone: 2, ad: 1 } },

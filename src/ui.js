@@ -53,7 +53,7 @@
       const clears = save.worlds.clears[id] || 0, best = Math.floor(save.worlds.best[id] || 0);
       const prev = w.unlock ? M.WORLDS[w.unlock.world] : null;
       const desc = open
-        ? `${w.desc}\n✨ ${w.ruleText}\n🎓 학점 x${w.coinMul} · 보스 극복 ${clears}회 · 최장 ${best}초`
+        ? `${w.desc}\n✨ ${w.ruleText}\n🏁 큰 도전 ${w.boss.times.length}번 · 🎓 학점 x${w.coinMul} · 극복 ${clears}회 · 최장 ${best}초`
         : `🔒 ${prev.emoji} ${prev.name}의 큰 도전 "${prev.boss.name}"을(를) 극복하면 열립니다`;
       const row = item(open ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
       row.querySelector('small').style.whiteSpace = 'pre-line';

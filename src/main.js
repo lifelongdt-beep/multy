@@ -171,7 +171,7 @@
     $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;
     $('cheer').textContent = cheerMessage(sim.result, sim.helped, sim.echoes.length);
     const alive = sim.echoes.filter((e) => e.alive).length;
-    $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}` + (sim.helped ? ` · 도움 ${sim.helped}회` : '') + '<br>' +
+    $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}` + (sim.helped ? ` · 도움 ${sim.helped}회` : '') + (sim.bossCount > 1 ? ` · 큰 도전 ${sim.bossDefeated}/${sim.bossCount}` : '') + '<br>' +
       (sim.echoes.length ? `이번 판 에코 ${alive}/${sim.echoes.length}명 생존<br>` : '') +
       (res.removed.length
         ? `가장 일찍 쓰러진 에코(${(res.removed[0].ticks / TICK).toFixed(0)}초)가 퇴장했습니다<br>`
@@ -297,7 +297,7 @@
       if (e.type === 'boss') {
         ctx.fillStyle = '#000a'; ctx.fillRect(40, 54, W - 80, 7);
         ctx.fillStyle = '#ff5d73'; ctx.fillRect(40, 54, (W - 80) * Math.max(0, e.hp / e.maxhp), 7);
-        ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText(`${e.name} · ${e.phase}/3`, W / 2, 48);
+        ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText(`${e.label} · ${e.phase}/3`, W / 2, 48);
       }
     }
 
@@ -373,6 +373,10 @@
     ctx.font = 'bold 16px sans-serif';
     if (sim.tick >= RUN_TICKS) { ctx.fillStyle = '#ff9aa8'; ctx.fillText('연장전', W / 2, 16); ctx.fillStyle = '#fff'; }
     else ctx.fillText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`, W / 2, 16);
+    if (sim.bossCount > 1 && (sim.bossIdx > 0 || sim.tick > 60 * 30)) {     // 큰 도전이 여러 번인 월드: 극복한 수 표시
+      ctx.textAlign = 'center'; ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#ffe58a';
+      ctx.fillText('🏁 ' + '●'.repeat(sim.bossDefeated) + '○'.repeat(sim.bossCount - sim.bossDefeated), W / 2, 29); ctx.fillStyle = '#fff';
+    }
     ctx.textAlign = 'right'; ctx.font = '12px sans-serif';
     const alive = sim.echoes.filter((e) => e.alive).length;
     ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
