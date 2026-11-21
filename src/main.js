@@ -58,12 +58,13 @@
     return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
   }
   cv.addEventListener('pointerdown', (ev) => { cv.setPointerCapture(ev.pointerId); const p = toLogical(ev); drag = { ax: p.x, ay: p.y, px: p.x, py: p.y }; });
-  cv.addEventListener('pointermove', (ev) => {
+  cv.addEventListener('pointermove', (ev) => dragMove(ev));
+  function dragMove(ev) {
     if (!drag) return; const p = toLogical(ev); drag.px = p.x; drag.py = p.y;
     let vx = p.x - drag.ax, vy = p.y - drag.ay; const len = Math.hypot(vx, vy);
     if (len > 46) { drag.ax += vx / len * (len - 46); drag.ay += vy / len * (len - 46); vx = p.x - drag.ax; vy = p.y - drag.ay; }
     input.dx = vx / 46; input.dy = vy / 46;
-  });
+  }
   const endDrag = () => { drag = null; input.dx = 0; input.dy = 0; };
   cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
   addEventListener('keydown', (e) => {
@@ -213,7 +214,7 @@
       if (ch) {
         const stats = sim.player.stats;
         const title = document.createElement('div'); title.className = 'ctitle';
-        title.textContent = sim.choiceKind === 'helper' ? `${sim.world.helper.emoji} ${sim.world.helper.name}의 조언 · 하나 고르기` : '🌱 성장! 하나 고르기 (안 고르면 자동)';
+        title.textContent = sim.choiceKind === 'helper' ? `${sim.world.helper.emoji} ${sim.world.helper.name}의 조언 · 톡 눌러 고르기` : '🌱 성장! 톡 눌러 고르기 (안 고르면 자동)';
         box.appendChild(title);
         const row = document.createElement('div'); row.className = 'crow';
         ch.forEach((u, i) => {
@@ -222,9 +223,33 @@
           const lv = (u.instant || !(u.id in stats) || !stats[u.id]) ? '' : `Lv${stats[u.id]}→${stats[u.id] + 1}`;
           const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = u.icon;
           const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = u.name;
-          const ds = document.createElement('small'); ds.textContent = lv || u.desc;
-          b.append(ic, nm, ds);
-          b.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); pickCard(i); });
+          b.title = u.desc;
+          b.append(ic, nm);
+          if (lv) { const ds = document.createElement('small'); ds.textContent = lv; b.appendChild(ds); }
+          // 카드는 조작 영역에 있으므로: 톡 누르고 떼면 선택, 누른 채 움직이면(12px 이상) 선택하지 않고 이동(드래그)으로 바꾼다
+          let press = null;
+          b.addEventListener('pointerdown', (ev) => {
+            ev.stopPropagation(); ev.preventDefault();
+            if (drag) { pickCard(i); return; }            // 다른 손가락으로 이동 중이면 바로 선택
+            try { b.setPointerCapture(ev.pointerId); } catch (e) { /* 무시 */ }
+            press = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, moved: false };
+          });
+          b.addEventListener('pointermove', (ev) => {
+            if (!press || ev.pointerId !== press.id) return;
+            if (!press.moved && Math.hypot(ev.clientX - press.x, ev.clientY - press.y) > 12) {
+              press.moved = true;
+              const st = toLogical({ clientX: press.x, clientY: press.y });
+              drag = { ax: st.x, ay: st.y, px: st.x, py: st.y };
+            }
+            if (press.moved) dragMove(ev);
+          });
+          const release = (ev, ok) => {
+            if (!press || ev.pointerId !== press.id) return;
+            const wasDrag = press.moved; press = null;
+            if (wasDrag) endDrag(); else if (ok) pickCard(i);
+          };
+          b.addEventListener('pointerup', (ev) => release(ev, true));
+          b.addEventListener('pointercancel', (ev) => release(ev, false));
           row.appendChild(b);
         });
         box.appendChild(row);
@@ -537,8 +562,8 @@
     const alive = sim.echoes.filter((e) => e.alive).length;
     ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
 
-    // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림)
-    if (!drag) {
+    // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림). 카드가 떠 있으면 안내는 숨김
+    if (!drag && !sim.choices) {
       ctx.globalAlpha = 0.35 + 0.2 * Math.sin(performance.now() / 350);
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
       ctx.fillText('👆 여기서 드래그하면 캐릭터가 안 가려져요', W / 2, PLAY_BOTTOM + 76);
