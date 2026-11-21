@@ -126,6 +126,7 @@
     },
     chalk: { // 졸음: 꾸벅꾸벅 베개 유령 (원거리)
       color: '#c9b8ff',
+      noFlip: true,
       draw(g, r) {
         rrect(g, -r * 1.0, -r * 0.8, r * 2.0, r * 1.6, r * 0.65); fillStroke(g, '#c9b8ff', 2);
         rrect(g, -r * 0.7, -r * 0.6, r * 0.7, r * 0.35, r * 0.15); g.fillStyle = 'rgba(255,255,255,.45)'; g.fill();
@@ -219,8 +220,18 @@
     g.beginPath(); g.arc(0, -1.3, 1.8, 0.1 * Math.PI, 0.9 * Math.PI); g.lineWidth = 1.2; g.stroke();
   };
 
-  /* ---------- 배경: 해 질 녘 교실 ---------- */
-  function background(W, H) {
+  /* ---------- 배경 (월드별) ---------- */
+  const BG = {};        // worldId -> (g, W, H) 그리기 함수 (art-worlds.js가 채움)
+  const HELPER = {};    // worldId -> (g) 도우미 그리기 함수
+  function vignette(g, W, H) {
+    const vg = g.createRadialGradient(W / 2, H * 0.48, H * 0.25, W / 2, H * 0.5, H * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(5,6,16,.55)');
+    g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  }
+  function background(W, H, worldId) {
+    if (worldId && worldId !== 'school' && BG[worldId]) {
+      return sprite(`bg:${worldId}:${W}x${H}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); vignette(g, W, H); });
+    }
     return sprite(`bg:school:${W}x${H}`, W, H, (g) => {
       g.translate(-W / 2, -H / 2);
       g.fillStyle = '#1f2539'; g.fillRect(0, 0, W, H);
@@ -269,11 +280,11 @@
 
   const Art = {
     /** 이 월드에 새 그림체가 있는가 (시안: 학교만) */
-    supports(world) { return !!world && world.id === 'school'; },
+    supports(world) { return !!world && (world.id === 'school' || !!BG[world.id]); },
     hasEnemy(e) { return e.type === 'boss' ? !!BOSS[e.name] || !!BOSS[e.def && e.def.name] : !!ENEMY[e.type]; },
     enemyColor(type, name) { return type === 'boss' ? ((BOSS[name] || {}).color || '#ffffff') : ((ENEMY[type] || {}).color || '#ffffff'); },
 
-    drawBackground(ctx, W, H) { blit(ctx, background(W, H), W / 2, H / 2); },
+    drawBackground(ctx, W, H, worldId) { blit(ctx, background(W, H, worldId), W / 2, H / 2); },
 
     drawGem(ctx, g, now) {
       const bob = Math.sin(now / 220 + g.x * 0.1) * 1.2;
@@ -306,7 +317,7 @@
       const k = boss ? 1.1 : K_EN, fy = e.y + r * 0.95 * k;
       this.shadow(ctx, e.x, fy, r * 0.85 * k);
       this.groundMark(ctx, e.x, fy, r * 1.05 * k, '#ff4d6d', boss ? 0.8 : 0.6);
-      const flip = e.x > px;   // 주인공 쪽을 바라봄
+      const flip = !spec.noFlip && e.x > px;   // 주인공 쪽을 바라봄 (글자가 있는 그림은 뒤집지 않음)
       blit(ctx, base, e.x, e.y - hop, sx * k, sy * k, flip);
       if (e.flash > 0) { ctx.globalAlpha = 0.7; blit(ctx, tinted(`enW:${boss ? e.def.name : e.type}:${r}`, base, '#ffffff'), e.x, e.y - hop, sx * k, sy * k, flip); ctx.globalAlpha = 1; }
     },
@@ -332,8 +343,10 @@
       ctx.globalAlpha = 1;
     },
 
-    drawTeacher(ctx, x, y) {
-      const c = sprite('teacher', 24, 42, (g) => { g.translate(0, 2); TEACHER(g); });
+    drawTeacher(ctx, x, y) { this.drawHelper(ctx, 'school', x, y); },
+    drawHelper(ctx, worldId, x, y) {
+      const fn = HELPER[worldId] || TEACHER;
+      const c = sprite('helper:' + (HELPER[worldId] ? worldId : 'school'), 24, 42, (g) => { g.translate(0, 2); fn(g); });
       this.shadow(ctx, x, y + 19 * K_KID, 9 * K_KID);
       blit(ctx, c, x, y, K_KID, K_KID);
     },
@@ -369,6 +382,8 @@
       parts = parts.filter((q) => q.t > 0);
     },
     clearParticles() { parts = []; },
+    // art-worlds.js가 나머지 월드의 그림을 등록할 때 쓰는 도구
+    _kit: { ENEMY, BOSS, BG, HELPER, OL, circle, oval, rrect, fillStroke, eye },
   };
 
   root.Art = Art;

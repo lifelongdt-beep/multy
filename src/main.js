@@ -364,7 +364,7 @@
     ctx.setTransform(sc, 0, 0, cv.height / H, sx * sc, sy * sc);
     const th = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).theme;
     const useArt = artOn();
-    if (useArt) Art.drawBackground(ctx, W, H); else {
+    if (useArt) Art.drawBackground(ctx, W, H, (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).id); else {
     ctx.fillStyle = th.bg; ctx.fillRect(-20, -20, W + 40, H + 40);
     ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
     if (th.deco === 'ruled') {            // 학원: 공책 줄무늬
@@ -457,7 +457,7 @@
         ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r - 5, -Math.PI / 2, -Math.PI / 2 + (hp.prog / hp.need) * Math.PI * 2); ctx.stroke();
       }
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      if (useArt) Art.drawTeacher(ctx, hp.x, hp.y + bob); else emoji(hp.emoji, hp.x, hp.y + bob, 34);
+      if (useArt) Art.drawHelper(ctx, sim.world.id, hp.x, hp.y + bob); else emoji(hp.emoji, hp.x, hp.y + bob, 34);
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
       ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
       if (tutorial) ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
