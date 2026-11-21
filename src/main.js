@@ -568,7 +568,7 @@
       } else {
         let size = 13, gap = 7;
         const total = (sz, g) => { ctx.font = `${sz}px sans-serif`; return owned.reduce((a, t) => a + ctx.measureText(t).width + g, 0); };
-        while (size > 9 && total(size, gap) > W - 16) { size -= 1; gap = Math.max(3, gap - 1); }
+        while (size > 9 && total(size, gap) > W - 96) { size -= 1; gap = Math.max(3, gap - 1); }   // 오른쪽은 ⏸·🔊 버튼 자리
         ctx.font = `${size}px sans-serif`; ctx.fillStyle = '#fff';
         let ux = 8;
         for (const t of owned) { ctx.fillText(t, ux, 43); ux += ctx.measureText(t).width + gap; }
