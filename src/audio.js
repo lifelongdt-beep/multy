@@ -54,16 +54,33 @@
     o.start(t); o.stop(t + dur + 0.02);
   }
 
-  // 구슬을 연달아 먹으면 음이 한 칸씩 올라간다 (펜타토닉: 도 레 미 솔 라 …)
-  const GEM_SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
-  let gemCombo = 0, gemLast = 0;
+  // 구슬을 연달아 먹으면 짧은 선율을 따라 오르내린다 (도 레 미 솔 라 솔 미 레 → 반복)
+  // 계속 올라가기만 하면 높은 음이 쌓여 소음이 되므로, 가운데 음역에서 물결처럼 돈다
+  const GEM_MELODY = [0, 2, 4, 7, 9, 7, 4, 2];
+  let gemStep = 0, gemLast = 0;
   function gemSound() {
     const now = (root.performance || Date).now();
-    gemCombo = now - gemLast < 450 ? Math.min(GEM_SCALE.length - 1, gemCombo + 1) : 0;
+    gemStep = now - gemLast < 450 ? (gemStep + 1) % GEM_MELODY.length : 0;
     gemLast = now;
-    const f = 880 * Math.pow(2, GEM_SCALE[gemCombo] / 12);
-    soft(f, 0.14, 'sine', 0.13);                 // 맑은 몸통
-    soft(f * 2, 0.09, 'triangle', 0.035, 0.03);  // 반짝이는 윗소리
+    const f = 784 * Math.pow(2, GEM_MELODY[gemStep] / 12);   // 솔(784Hz)에서 시작
+    soft(f, 0.12, 'sine', 0.075);                // 맑은 몸통 (이전보다 작게)
+    soft(f * 2, 0.07, 'triangle', 0.018, 0.025); // 살짝 반짝이는 윗소리
+  }
+
+  // 적 처치: 거친 잡음 대신 "톡" 터지는 방울 + 맑은 한 음 (펜타토닉에서 무작위라 반복돼도 덜 지루함)
+  const POP_NOTES = [523, 587, 659, 784, 880];
+  function killSound() {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(520, t);
+    o.frequency.exponentialRampToValueAtTime(180, t + 0.08);   // 방울이 톡 터지는 느낌
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.11, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.12);
+    soft(POP_NOTES[Math.floor(Math.random() * POP_NOTES.length)] * 2, 0.1, 'triangle', 0.045, 0.01);
   }
 
   function noise(dur, vol) {
@@ -80,8 +97,8 @@
   const DEF = {
     shoot:    { gap: 110, fn: () => tone(700, 420, 0.05, 'square', 0.025) },
     hit:      { gap: 60,  fn: () => tone(220, 130, 0.04, 'sawtooth', 0.02) },
-    kill:     { gap: 30,  fn: () => { tone(320, 90, 0.13, 'square', 0.12); tone(700, 1050, 0.09, 'triangle', 0.1); noise(0.07, 0.1); } },
-    gem:      { gap: 35,  fn: gemSound },
+    kill:     { gap: 45,  fn: killSound },
+    gem:      { gap: 55,  fn: gemSound },   // 한꺼번에 빨아들여도 소리가 겹쳐 시끄럽지 않게
     levelup:  { gap: 0,   fn: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.14, 'triangle', 0.07, i * 0.07)) },
     hurt:     { gap: 80,  fn: () => { tone(160, 60, 0.2, 'sawtooth', 0.1); noise(0.12, 0.06); } },
     nova:     { gap: 100, fn: () => { tone(300, 80, 0.3, 'sine', 0.1); noise(0.15, 0.04); } },
