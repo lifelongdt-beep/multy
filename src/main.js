@@ -99,7 +99,7 @@
       switch (ev.k) {
         case 'shoot': Sfx.play('shoot'); break;
         case 'dmg':
-          if (ev.owner !== 'echo' || ev.crit) { if (floats.length < 40) floats.push({ x: ev.x, y: ev.y, v: ev.v, crit: ev.crit, t: 40 }); }
+          // 데미지 숫자는 표시하지 않음 (화면을 깔끔하게)
           Sfx.play('hit'); break;
         case 'kill': Sfx.play('kill'); break;
         case 'gem': Sfx.play('gem'); break;
