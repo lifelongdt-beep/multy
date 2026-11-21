@@ -142,8 +142,11 @@ test('매점 장비: 월드마다 ⚔·🛡 하나씩, 도착한 월드만 살 �
   assert.strictEqual(M.buyGear(s, 'nope').reason, 'unknown');
   s.worlds.cycleClears.school = 1;
   assert.strictEqual(M.buyGear(s, 'academy:atk').ok, true, '학원이 열리면 학원 장비 입고');
-  assert.ok(M.gearCost('academy:atk', 1) > M.gearCost('academy:atk', 0));
-  assert.ok(M.gearCost('stage:atk', 0) > M.gearCost('school:atk', 0), '뒤 월드 장비일수록 비싸다');
+  const before = M.gearCost(s, 'stage:atk');
+  M.buyGear(s, 'academy:atk');
+  assert.ok(M.gearCost(s, 'stage:atk') > before, '⚔를 살수록 다음 ⚔가 비싸진다 (어느 월드 장비든 같은 값)');
+  assert.strictEqual(M.gearCost(s, 'stage:atk'), M.gearCost(s, 'school:atk'));
+  assert.strictEqual(M.gearCost(s, 'school:def'), M.GEAR.costBase, '🛡은 🛡 산 만큼만 영향');
   const poor = M.defaultSave();
   assert.strictEqual(M.buyGear(poor, 'school:def').reason, 'coins');
 });
@@ -159,7 +162,7 @@ test('장비는 보너스로 전달된다: 팀 공격력(나+에코)과 받는 �
 
 const clearRun = (world) => ({ kills: 300, seconds: 160, level: 15, result: 'clear', gems: 100, echoes: 10, world, helped: 0 });
 
-test('회차: 12번째 월드를 극복하면 2회차 — 학교부터 다시, 장비 최대 레벨 +3, 모든 매점 열림', () => {
+test('회차: 12번째 월드를 극복하면 2회차 — 학교부터 다시, 장비 최대 레벨 +5, 모든 매점 열림', () => {
   const s = M.defaultSave();
   for (let i = 0; i < ORDER.length - 1; i++) {
     const r = M.recordRun(s, clearRun(ORDER[i]), '2026-11-20');
@@ -174,7 +177,7 @@ test('회차: 12번째 월드를 극복하면 2회차 — 학교부터 다시, �
   assert.strictEqual(M.worldUnlocked(s, 'academy'), false, '2회차는 다시 학교부터 차례로');
   assert.strictEqual(s.worlds.clears.stage, 1, '전체 기록은 남는다');
   assert.ok(r.newAch.some((a) => a.id === 'cycle_2') && r.newAch.some((a) => a.id === 'clear_stage'));
-  assert.strictEqual(M.gearMax(s), 8);
+  assert.strictEqual(M.gearMax(s), 10);
   assert.strictEqual(M.gearAvailable(s, 'stage'), true, '한 바퀴 돈 뒤에는 모든 월드 장비를 살 수 있다');
 });
 
@@ -182,18 +185,46 @@ test('회차가 높을수록 학점을 더 받는다', () => {
   const a = M.defaultSave(), b = M.defaultSave(); b.cycle = 2;
   const run = { kills: 100, seconds: 60, level: 8, result: 'dead', gems: 10, echoes: 0, world: 'school', helped: 0 };
   const ea = M.recordRun(a, run, '2026-11-20').earned, eb = M.recordRun(b, run, '2026-11-20').earned;
-  assert.ok(Math.abs(eb / ea - M.cycleCoinMul(2)) < 0.02, `${ea} → ${eb}`);
+  assert.ok(Math.abs(eb / ea - M.rewardMul('school', 2)) < 0.02, `${ea} → ${eb}`);
 });
 
 test('저장 정리: 장비 레벨은 회차 최대치로 제한, 옛 저장은 기존 극복 기록으로 이번 회차 진행을 이어간다', () => {
   const s = M.sanitize({ cycle: 0, gear: { 'school:atk': 99, 'zzz:atk': 3, 'gym:def': -1, 'home:def': 2.7 } });
   assert.deepStrictEqual(s.gear, { 'school:atk': 5, 'home:def': 2 });
   const s2 = M.sanitize({ cycle: 1, gear: { 'school:atk': 99 } });
-  assert.strictEqual(s2.gear['school:atk'], 8);
+  assert.strictEqual(s2.gear['school:atk'], 10);
   const old = M.sanitize({ stats: { runs: 9 }, worlds: { selected: 'office', clears: { school: 3, academy: 1 } } });
   assert.deepStrictEqual(old.worlds.cycleClears, { school: 3, academy: 1 });
   assert.strictEqual(old.worlds.selected, 'office', '옛 저장도 열려 있던 월드는 그대로');
   assert.strictEqual(M.sanitize({ cycle: -3 }).cycle, 0);
   const back = M.importCode(M.exportCode(Object.assign(M.defaultSave(), { cycle: 2, gear: { 'stage:def': 7 } })));
   assert.strictEqual(back.cycle, 2); assert.strictEqual(back.gear['stage:def'], 7);
+});
+
+test('끝없는 회차: 몇 회차가 되어도 권장 장비를 살 수 있고, 장비값 대비 수입 비율이 일정하다', () => {
+  let prevRatio = null;
+  for (let c = 0; c <= 40; c++) {
+    for (const w of ['school', 'stage']) {
+      const rec = Wd.recommendedGear(w, c);
+      const cap = 12 * Wd.gearMaxLevel(c);
+      assert.ok(rec.atk <= cap * 0.9 && rec.def <= cap * 0.9, `c${c} ${w}: 권장 ${rec.atk}/${rec.def} ≤ 최대 ${cap}의 90%`);
+      // 이 단계에 필요한 다음 장비 한 레벨 값 ÷ 이 단계 한 판 수입(같은 성적 기준)
+      const cost = Wd.gearCost('atk', rec.atk) + Wd.gearCost('def', rec.def);
+      const income = 200 * Wd.rewardMul(w, c);
+      const ratio = cost / income;
+      assert.ok(Number.isFinite(ratio) && ratio > 0.3 && ratio < 3, `c${c} ${w}: 장비값/수입 ${ratio.toFixed(2)}`);
+      if (prevRatio !== null) assert.ok(Math.abs(ratio / prevRatio - 1) < 0.6, '비율이 갑자기 튀지 않음');
+      prevRatio = ratio;
+    }
+  }
+  // 적은 계속 강해지고(체력·피해), 장비로 산 총알 위력도 계속 커진다
+  assert.ok(Wd.stageMul('stage', 40).hp > Wd.stageMul('stage', 20).hp * 100);
+  assert.ok(Math.pow(GEAR.atkPer, Wd.recommendedGear('stage', 40).atk) >= Wd.stageMul('stage', 40).hp * 0.99);
+});
+
+test('큰 숫자는 짧게 표시된다 (만·억·조)', () => {
+  assert.strictEqual(M.fmtNum(9999), '9999');
+  assert.strictEqual(M.fmtNum(12345), '1.2만');
+  assert.strictEqual(M.fmtNum(300000000), '3억');
+  assert.strictEqual(M.fmtNum(4.5e12), '4.5조');
 });

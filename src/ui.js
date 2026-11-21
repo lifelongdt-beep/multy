@@ -15,7 +15,7 @@
   }
   function commit() { M.persist(window.localStorage, save); refresh(); }
   function refresh() {
-      $('coins').textContent = save.coins; $('pcoins').textContent = save.coins;
+      $('coins').textContent = M.fmtNum(save.coins); $('pcoins').textContent = M.fmtNum(save.coins);
       const w = M.WORLDS[save.worlds.selected] || M.WORLDS.school;
       $('bWorld').textContent = `🗺️ 월드: ${w.emoji} ${w.name}` + (save.cycle > 0 ? ` · 🔁 ${save.cycle + 1}회차` : '');
     }
@@ -56,7 +56,7 @@
       const gearLine = rec.atk + rec.def === 0 ? '🧰 장비 없이도 OK'
         : `🧰 권장 장비 ⚔${rec.atk} 🛡${rec.def} (내 장비 ⚔${gt.atk} 🛡${gt.def})` + (gt.atk < rec.atk || gt.def < rec.def ? ' ⚠ 매점에서 장비를 더 사야 해요' : ' ✅');
       const desc = open
-        ? `${w.desc}\n✨ ${w.ruleText}\n🏁 큰 도전 ${w.boss.times.length}번${save.cycle > 0 ? ' (🎲 무작위)' : ''} · 👻 권장 에코 ${w.boss.needEchoes}명+ · 🎓 학점 x${(w.coinMul * M.cycleCoinMul(save.cycle)).toFixed(1)} · 극복 ${clears}회 · 최장 ${best}초\n${gearLine}`
+        ? `${w.desc}\n✨ ${w.ruleText}\n🏁 큰 도전 ${w.boss.times.length}번${save.cycle > 0 ? ' (🎲 무작위)' : ''} · 👻 권장 에코 ${w.boss.needEchoes}명+ · 🎓 학점 x${(() => { const rm = M.rewardMul(id, save.cycle); return rm >= 1000 ? M.fmtNum(rm) : rm.toFixed(1); })()} · 극복 ${clears}회 · 최장 ${best}초\n${gearLine}`
         : `🔒 ${prev.emoji} ${prev.name}의 큰 도전 "${prev.boss.name}"을(를) 극복하면 열립니다`;
       const row = item(open ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
       row.querySelector('small').style.whiteSpace = 'pre-line';
@@ -106,10 +106,10 @@
       }
       for (const g of M.GEAR_ITEMS.filter((x) => x.world === wid)) {
         const lv = M.gearLevel(save, g.id), maxed = lv >= max;
-        const cost = maxed ? 0 : M.gearCost(g.id, lv);
+        const cost = maxed ? 0 : M.gearCost(save, g.id);
         const row = item(g.icon, `${w.emoji} ${g.name}  ${g.kind === 'atk' ? '⚔' : '🛡'} Lv ${lv}/${max}`,
           `${M.gearText(g.kind, lv)} → ${maxed ? '최대' : M.gearText(g.kind, lv + 1)}`, { done: maxed, progress: lv / max });
-        const b = el('button', '', maxed ? '최대' : `🎓 ${cost}`);
+        const b = el('button', '', maxed ? '최대' : `🎓 ${M.fmtNum(cost)}`);
         b.disabled = maxed || save.coins < cost;
         b.onclick = () => { if (M.buyGear(save, g.id).ok) { Sfx.play('levelup'); commit(); rerender(); } };
         row.appendChild(b); body.appendChild(row);

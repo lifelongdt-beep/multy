@@ -51,7 +51,16 @@
   const GEAR_BY_ID = {}; GEAR_ITEMS.forEach((g) => { GEAR_BY_ID[g.id] = g; });
   function gearLevel(save, id) { return save.gear[id] || 0; }
   function gearMax(save) { return Worlds.gearMaxLevel(save.cycle); }
-  function gearCost(id, level) { return Worlds.gearCost(GEAR_BY_ID[id].world, level); }
+  /** 다음 1레벨 가격 (같은 종류는 어느 월드 장비든 같은 값, 많이 살수록 비싸짐) */
+  function gearCost(save, id) { const k = GEAR_BY_ID[id].kind; return Worlds.gearCost(k, gearTotals(save)[k]); }
+  /** 큰 숫자를 짧게: 12,345 → 1.2만, 3억 … (끝없는 회차에서 학점이 커지므로) */
+  function fmtNum(n) {
+    n = Math.floor(n || 0);
+    if (n < 10000) return String(n);
+    const units = [[1e16, '경'], [1e12, '조'], [1e8, '억'], [1e4, '만']];
+    for (const [v, u] of units) if (n >= v) { const x = n / v; return (x >= 100 ? Math.floor(x) : x.toFixed(1).replace(/\.0$/, '')) + u; }
+    return String(n);
+  }
   /** 장비 레벨 합계 {atk, def} */
   function gearTotals(save) {
     const t = { atk: 0, def: 0 };
@@ -62,7 +71,7 @@
   function gearAvailable(save, worldId) { return save.cycle > 0 || worldUnlocked(save, worldId); }
   function gearText(kind, lv) {
     return kind === 'atk'
-      ? `팀 공격력 x${Math.pow(GEAR.atkPer, lv).toFixed(2)}`
+      ? `총알 위력 x${Math.pow(GEAR.atkPer, lv).toFixed(2)}`
       : `받는 피해 x${Math.pow(1 / GEAR.defPer, lv).toFixed(2)}`;
   }
 
@@ -168,7 +177,7 @@
         .slice(0, 3)
         .map((m) => ({ id: m.id, target: m.target, reward: m.reward, progress: isNum(m.progress) ? Math.max(0, m.progress) : 0, done: m.done === true }));
     }
-    if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(99, Math.floor(raw.cycle));
+    if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(9999, Math.floor(raw.cycle));
     if (raw.gear && typeof raw.gear === 'object') {
       const max = Worlds.gearMaxLevel(d.cycle);
       for (const g of GEAR_ITEMS) { const lv = raw.gear[g.id]; if (isNum(lv) && lv > 0) d.gear[g.id] = Math.min(max, Math.floor(lv)); }
@@ -232,8 +241,8 @@
     };
   }
   function coinMul(save) { return 1 + shopLevel(save, 'coin') * SHOP_BY_ID.coin.per; }
-  /** 회차가 높을수록 학점도 많이 (장비 최대 레벨이 오르는 만큼 살 수 있게) */
-  function cycleCoinMul(cycle) { return 1 + GEAR.loopCoin * Math.max(0, cycle | 0); }
+  /** 이 월드·회차에서의 학점 배율 (적이 강할수록 많이) */
+  function rewardMul(worldId, cycle) { return Worlds.rewardMul(worldId, cycle); }
 
   /* ---------- 에코 풀 ---------- */
   /** 에코는 쌓은 월드에서만 함께한다. 다른 월드에서 시작하면 빈 풀로 새로 시작한다.
@@ -271,7 +280,7 @@
     if (!gearAvailable(save, g.world)) return { ok: false, reason: 'locked' };
     const lv = gearLevel(save, id);
     if (lv >= gearMax(save)) return { ok: false, reason: 'max' };
-    const cost = gearCost(id, lv);
+    const cost = gearCost(save, id);
     if (save.coins < cost) return { ok: false, reason: 'coins', cost };
     save.coins -= cost; save.gear[id] = lv + 1;
     return { ok: true, cost, level: lv + 1 };
@@ -304,7 +313,7 @@
 
     // 기본 보상
     const base = Math.floor(run.kills * 0.4 + run.seconds * 0.5 + run.level * 3 + (run.result === 'clear' ? 100 : run.seconds >= 120 ? 40 : 0));
-    const earned = Math.round(base * coinMul(save) * WORLDS[worldId].coinMul * cycleCoinMul(save.cycle));
+    const earned = Math.round(base * coinMul(save) * rewardMul(worldId, save.cycle));
     let total = earned;
 
     // 도전 과제
@@ -328,7 +337,7 @@
     // 마지막 월드까지 극복하면 다음 회차: 학교부터 다시, 적은 더 강하고 장비 최대 레벨이 오른다
     let newCycle = null;
     if (run.result === 'clear' && worldId === WORLD_ORDER[WORLD_ORDER.length - 1]) {
-      save.cycle = Math.min(99, save.cycle + 1);
+      save.cycle = Math.min(9999, save.cycle + 1);
       save.worlds.cycleClears = {};
       save.worlds.selected = WORLD_ORDER[0];
       newCycle = save.cycle; newWorld = null;
@@ -463,7 +472,7 @@
 
   const api = {
     SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld, echoesForWorld,
-    GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, cycleCoinMul,
+    GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,

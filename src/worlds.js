@@ -488,20 +488,24 @@
    * 매점 장비(월드마다 ⚔ 공격 1개 + 🛡 방어 1개)는 레벨 1당 팀(나+에코) 공격력 x atkPer, 받는 피해 ÷ defPer.
    * → "단계당 ⚔ levelsPerStage레벨 + 🛡 levelsPerStage레벨"을 사면 적이 강해진 만큼 정확히 상쇄된다(권장 장비).
    *   장비가 모자라면 적이 단단하고 아파서 큰 도전을 넘기 어렵고, 넉넉하면 수월하다.
-   * 회차가 오를 때마다: 적 체력 x loopHp 추가, 이동 +loopSpeed, 스폰 +loopSpawn, 학점 +loopCoin, 장비 최대 레벨 +maxPerLoop.
+   * 회차가 오를 때마다: 적 체력 x loopHp 추가, 이동 +loopSpeed, 스폰 +loopSpawn, 장비 최대 레벨 +maxPerLoop.
+   *
+   * 끝없이 이어지는 성장(무한 회차)을 위한 경제:
+   *   - 장비 가격 = costBase x atkPer^(지금까지 산 ⚔ 레벨 합) (🛡은 defPer) → 내가 강해지는 만큼 비싸진다
+   *   - 학점 = 기본 보상 x 이 단계의 적 체력 배율(rewardMul) → 적이 강해지는 만큼 많이 번다
+   *   - 단계 1당 필요한 장비(⚔3+🛡3)의 값과 한 판 수입이 같은 비율로 커지므로, 몇 회차가 되어도
+   *     "몇 판 벌어서 장비 사고 다음 단계로" 리듬이 똑같이 유지된다. 최대 레벨도 회차마다 넉넉히 늘어난다.
    */
   const GEAR = {
     atkPer: 1.06,          // 공격 장비 1레벨 = 팀 공격력 x1.06
     defPer: 1.05,          // 방어 장비 1레벨 = 받는 피해 ÷1.05
     levelsPerStage: 3,     // 단계 1당 필요한 장비 레벨 (⚔, 🛡 각각)
-    maxBase: 5,            // 1회차 장비 최대 레벨
-    maxPerLoop: 3,         // 회차마다 최대 레벨 +3
-    costBase: 150,         // 장비 가격 = costBase x 월드 학점 배율 x costGrowth^레벨
-    costGrowth: 1.45,
+    maxBase: 5,            // 1회차 장비 최대 레벨 (월드 장비 하나당)
+    maxPerLoop: 5,         // 회차마다 최대 레벨 +5 (필요한 장비보다 항상 넉넉하게)
+    costBase: 90,          // 장비 가격 = costBase x atkPer^(산 ⚔ 레벨 합) — 🛡은 defPer^(산 🛡 레벨 합)
     loopHp: 1.1,           // 회차마다 적 체력 추가 x1.1 ("조금씩 더 어렵게")
     loopSpeed: 0.05,       // 회차마다 적 이동 +5%
     loopSpawn: 0.08,       // 회차마다 적 스폰 +8%
-    loopCoin: 0.6,         // 회차마다 학점 +60%
   };
 
   function worldIndex(id) { const i = ORDER.indexOf(id); return i < 0 ? 0 : i; }
@@ -526,7 +530,10 @@
     };
   }
   function gearMaxLevel(cycle) { return GEAR.maxBase + GEAR.maxPerLoop * Math.max(0, cycle | 0); }
-  function gearCost(worldId, level) { return Math.round(GEAR.costBase * WORLDS[worldId].coinMul * Math.pow(GEAR.costGrowth, level)); }
+  /** 다음 장비 1레벨의 가격: 그 종류(atk/def)를 지금까지 몇 레벨 샀는지로 정해진다 (어느 월드 장비든 같은 값) */
+  function gearCost(kind, ownedTotal) { return Math.round(GEAR.costBase * Math.pow(kind === 'def' ? GEAR.defPer : GEAR.atkPer, Math.max(0, ownedTotal | 0))); }
+  /** 학점 배율: 적이 강한 단계일수록 많이 번다 (= 적 체력 배율) */
+  function rewardMul(worldId, cycle) { return stageMul(worldId, cycle).hp; }
 
   /** 도우미가 주는 조언 카드 (공통 효과, 이름만 월드별) */
   const BOONS = {
@@ -536,7 +543,7 @@
     team:  { icon: '🤝', desc: '에코 응원 Lv +1' },
   };
 
-  const api = { WORLDS, ORDER, BOONS, GEAR, worldIndex, stageOf, stageMul, recommendedGear, gearMaxLevel, gearCost };
+  const api = { WORLDS, ORDER, BOONS, GEAR, worldIndex, stageOf, stageMul, recommendedGear, gearMaxLevel, gearCost, rewardMul };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoWorlds = api;
 })(typeof window !== 'undefined' ? window : globalThis);

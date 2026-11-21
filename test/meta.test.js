@@ -253,7 +253,7 @@ test('월드 보상 배율: 뒤 월드일수록 같은 성적에 학점을 더 �
   for (let i = 1; i < e.length; i++) assert.ok(e[i] > e[i - 1], e.join());
   const base = Math.floor(50 * 0.4 + 60 * 0.5 + 8 * 3);
   assert.strictEqual(e[0], base);
-  assert.strictEqual(e[3], Math.round(base * M.WORLDS.subway.coinMul));
+  assert.strictEqual(e[3], Math.round(base * M.rewardMul('subway', 0)), '보상 배율 = 그 단계의 적 체력 배율');
 });
 
 test('월드별 최장 기록과 격파 횟수가 따로 저장된다', () => {

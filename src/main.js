@@ -332,7 +332,7 @@
     $('stats').textContent = `⏱ ${(sim.tick / TICK).toFixed(0)}초 · ☠ ${sim.kills} · Lv ${sim.player.level}` + (sim.bossCount > 1 ? ` · 🏁 ${sim.bossDefeated}/${sim.bossCount}` : '');
     // 학점 · 도전 과제 · 일일 미션
     const sum = GameUI.recordRun({ kills: sim.kills, seconds: Math.floor(sim.tick / TICK), level: sim.player.level, result: sim.result, gems: sim.gemCount, echoes: sim.echoes.length, world: sim.world.id, helped: sim.helped });
-    const lines = [`🎓 학점 +${sum.earned}`];
+    const lines = [`🎓 학점 +${Meta.fmtNum(sum.earned)}`];
     for (const a of sum.newAch) lines.push(`🏆 ${a.name} +${a.reward}`);
     for (const m of sum.missionsDone) lines.push(`🎯 +${m.reward}`);
     if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 ${w.emoji} ${w.name}`); }
