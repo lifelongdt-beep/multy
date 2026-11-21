@@ -368,11 +368,12 @@
     // 에코 = 내 편: 파란 원 + 파란 테두리 유령 (적은 빨간 테두리라 한눈에 구분)
     for (const ec of sim.echoes) {
       if (!ec.alive) continue;
-      ctx.globalAlpha = 0.30;
+      // 흐리게: 내 캐릭터·적보다 눈에 덜 띄도록 (파란 테두리는 남겨 적과 구분)
+      ctx.globalAlpha = 0.12;
       ctx.fillStyle = '#3fb8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.fill();
-      ctx.globalAlpha = 0.9;
-      ctx.strokeStyle = '#6fd6ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.stroke();
-      ctx.globalAlpha = 0.8; emoji('👻', ec.x, ec.y + 1, 16);
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = '#6fd6ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.stroke();
+      ctx.globalAlpha = 0.35; emoji('👻', ec.x, ec.y + 1, 16);
       ctx.globalAlpha = 1;
     }
 
