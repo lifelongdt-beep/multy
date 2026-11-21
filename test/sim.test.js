@@ -235,3 +235,39 @@ test('연장전은 최대 60초에서 끝난다', () => {
   assert.strictEqual(s.result, 'survive');
   assert.ok(s.tick <= RUN_TICKS + E.OVERTIME_TICKS + 1);
 });
+
+test('레벨업 카드: 게임을 멈추지 않고, 4초 안에 안 고르면 자동으로 고른다', () => {
+  const s = new Sim({ seed: 77 });
+  s.player.xp = s.player.need; s.player.hp = 1e9;
+  s.step({ dx: 0, dy: 0 });
+  assert.ok(s.choices && s.choices.length === 3, '카드 3장');
+  const t0 = s.tick, lv0 = Object.values(s.player.stats).reduce((a, b) => a + b, 0);
+  for (let i = 0; i < 60; i++) { s.player.hp = 1e9; s.step({ dx: 1, dy: 0 }); }
+  assert.strictEqual(s.tick, t0 + 60, '카드가 떠 있어도 시간이 흐른다');
+  assert.ok(s.choices, '1초 뒤엔 아직 고르는 중');
+  let auto = null;
+  for (let i = 0; i < E.TUNING.choiceAutoSec * 60; i++) { s.player.hp = 1e9; s.step({ dx: 0, dy: 0 }); for (const ev of s.drainEvents()) if (ev.k === 'autoPick') auto = ev; if (auto) break; }
+  assert.ok(auto && auto.name, '자동 선택 이벤트');
+  const lv1 = Object.values(s.player.stats).reduce((a, b) => a + b, 0);
+  assert.ok(lv1 > lv0 || s.player.hp > 0, '자동으로 고른 카드가 적용됨');
+  // 손으로 고르면 그 카드가 적용되고, 지금 카드에 없는 id는 무시
+  s.player.xp = s.player.need; s.step({ dx: 0, dy: 0 });
+  const pick = s.choices.find((c) => !c.instant) || s.choices[0];
+  const before = s.player.stats[pick.id] || 0;
+  s.choose('nope'); assert.ok(s.choices, '없는 카드는 무시');
+  s.choose(pick.id);
+  assert.strictEqual(s.choices, null);
+  if (!pick.instant) assert.strictEqual(s.player.stats[pick.id], before + 1);
+});
+
+test('조언 카드가 오면, 떠 있던 레벨업 카드는 먼저 자동으로 골라 준다 (겹치지 않음)', () => {
+  const s = new Sim({ seed: 78 });
+  s.player.xp = s.player.need; s.player.hp = 1e9; s.step({ dx: 0, dy: 0 });
+  assert.strictEqual(s.choiceKind, 'levelup');
+  s._spawnHelper(); s.player.x = s.helper.x; s.player.y = s.helper.y;
+  let autos = 0;
+  for (let i = 0; i < 120 && s.choiceKind !== 'helper'; i++) { s.player.hp = 1e9; s.step({ dx: 0, dy: 0 }); for (const ev of s.drainEvents()) if (ev.k === 'autoPick') autos++; }
+  assert.strictEqual(s.choiceKind, 'helper');
+  assert.ok(s.choices.every((c) => c.boon), '조언 카드만');
+  assert.ok(autos >= 1, '레벨업 카드는 자동 선택됨');
+});

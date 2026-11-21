@@ -67,6 +67,7 @@
     helperNeed: 70,          // 곁에 이만큼(틱, 60=1초) 머물면 조언 카드 (이전 150틱=2.5초 → 약 1.2초)
     helperDecay: 1,          // 곁을 벗어나면 게이지가 틱당 이만큼 줄어듦 (이전 2: 잠깐 벗어나도 덜 깎임)
     helperStay: 15,          // 도우미가 기다려 주는 시간(초)
+    choiceAutoSec: 4,        // 레벨업·조언 카드는 게임을 멈추지 않고, 이 시간 안에 안 고르면 자동으로 골라 준다
   };
 
   function mulberry32(a) {
@@ -202,7 +203,8 @@
       this.bossRage = 1;            // 보스전이 길어질수록 커지는 피해 배율
       this.over = false;
       this.result = null;      // 'dead' | 'clear' | 'survive'
-      this.choices = null;     // 레벨업 대기 중이면 3택1 배열
+      this.choices = null;     // 고를 카드(3택1). 게임은 멈추지 않고 계속 진행된다
+      this.choiceT = 0;        // 카드가 뜬 뒤 지난 틱 (choiceAutoSec이 지나면 자동 선택)
       this.rec = { path: [], ups: [] };
       // 캐릭터의 시작 아이템: 에코도 똑같이 갖도록 t=0 업그레이드로 기록한다
       for (const id in (this.bonus.startStats || {})) {
@@ -239,6 +241,7 @@
         this.choices = null; this.choiceKind = 'levelup';
         return;
       }
+      if (!this.choices.some((c) => c.id === id)) return;
       const up = UPGRADES.find((u) => u.id === id);
       if (up && up.instant) {
         p.hp = Math.min(p.maxhp, p.hp + TUNING.healAmount);
@@ -262,9 +265,25 @@
       });
       const picks = [];
       for (let i = 0; i < 3 && pool.length; i++) picks.push(pool.splice(Math.floor(this.rng() * pool.length), 1)[0]);
-      this.choices = picks;
-      this.choiceKind = 'levelup';
+      this._offer(picks, 'levelup');
       this._ev({ k: 'levelup' });
+    }
+
+    /** 카드를 띄운다. 이미 떠 있는 카드가 있으면 먼저 자동으로 골라 준다(카드가 겹치지 않게) */
+    _offer(list, kind) {
+      if (this.choices) this._autoChoose();
+      if (!list.length) return;
+      this.choices = list; this.choiceKind = kind; this.choiceT = 0;
+    }
+
+    /** 시간 안에 안 고르면: 조언 카드는 체력이 절반 아래면 회복, 아니면 첫 카드. 레벨업은 첫 카드 */
+    _autoChoose() {
+      const c = this.choices;
+      if (!c || !c.length) { this.choices = null; return; }
+      let pick = c[0];
+      if (this.choiceKind === 'helper' && this.player.hp < this.player.maxhp * 0.5) pick = c.find((x) => x.id === 'boon_heal') || pick;
+      this.choose(pick.id);
+      this._ev({ k: 'autoPick', icon: pick.icon, name: pick.name });
     }
 
     /* ---------- 스폰 ---------- */
@@ -603,8 +622,7 @@
           hp.state = 'done'; hp.fade = 150; this.helped += 1;
           const w = this.world.helper;
           const ids = ['heal', 'power', this.echoes.length > 0 ? 'team' : 'focus'];
-          this.choices = ids.map((id) => ({ id: 'boon_' + id, icon: Worlds.BOONS[id].icon, name: w.boons[id], desc: Worlds.BOONS[id].desc, instant: true, boon: true }));
-          this.choiceKind = 'helper';
+          this._offer(ids.map((id) => ({ id: 'boon_' + id, icon: Worlds.BOONS[id].icon, name: w.boons[id], desc: Worlds.BOONS[id].desc, instant: true, boon: true })), 'helper');
           this._ev({ k: 'banner', text: w.thanksText });
           this._ev({ k: 'helped' });
         } else if (hp.t >= hp.stay) {
@@ -664,9 +682,11 @@
       }
     }
 
-    /** input: {dx,dy} (각 -1..1, 길이 ≤ 1). 레벨업 대기·종료 시 진행하지 않는다. */
+    /** input: {dx,dy} (각 -1..1, 길이 ≤ 1). 종료 시 진행하지 않는다. 카드(레벨업·조언)가 떠 있어도 계속 진행된다. */
     step(input) {
-      if (this.over || this.choices) return;
+      if (this.over) return;
+      // 카드가 떠 있어도 게임은 계속된다. 시간이 지나면 자동 선택
+      if (this.choices && ++this.choiceT >= TUNING.choiceAutoSec * TICK) this._autoChoose();
       const p = this.player;
       const t = this.tick;
       this.orbs.length = 0;

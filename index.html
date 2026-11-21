@@ -36,8 +36,20 @@
   .bar>i{display:block;height:100%;background:#7dffb2}
   textarea{width:100%;box-sizing:border-box;height:84px;background:#0d0f1a;color:#fff;border:2px solid #3a4272;border-radius:8px;font-size:11px;padding:6px;user-select:text;-webkit-user-select:text;touch-action:auto}
   .msg{font-size:13px;color:#ffd34d;min-height:18px}
-  #mute{position:absolute;right:6px;top:84px;z-index:5;background:#0008;font-size:14px;padding:4px 8px;min-width:0;border-radius:8px}
-  #pauseBtn{position:absolute;right:46px;top:84px;z-index:5;background:#0008;font-size:14px;padding:4px 8px;min-width:0;border-radius:8px}
+  #mute{position:absolute;right:6px;top:154px;z-index:5;background:#0008;font-size:14px;padding:4px 8px;min-width:0;border-radius:8px}
+  /* 레벨업·조언 카드: 게임을 멈추지 않는 작은 카드 (화면 위). 빈 곳은 터치가 그대로 게임으로 간다 */
+  #cards{position:absolute;left:6px;right:6px;top:8.6%;z-index:6;pointer-events:none;display:flex;flex-direction:column;gap:3px}
+  #cards.hidden{display:none}
+  #cards .ctitle{font-size:11px;text-align:center;color:#ffe58a;text-shadow:0 1px 2px #000}
+  #cards .crow{display:flex;gap:5px}
+  #cards .mini{pointer-events:auto;flex:1;min-width:0;padding:5px 4px;border-radius:10px;background:rgba(34,40,69,.92);border:2px solid #6c8cff;color:#fff;font-size:12px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.15;touch-action:none}
+  #cards .mini.boon{border-color:#ffd34d}
+  #cards .mini .ic{font-size:20px}
+  #cards .mini .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #cards .mini small{font-size:10px;font-weight:400;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #cards .ctime{height:3px;background:#0008;border-radius:2px;overflow:hidden}
+  #cards .ctime>i{display:block;height:100%;background:#ffd34d}
+  #pauseBtn{position:absolute;right:46px;top:154px;z-index:5;background:#0008;font-size:14px;padding:4px 8px;min-width:0;border-radius:8px}
 </style>
 </head>
 <body>
@@ -83,10 +95,8 @@
     <button id="pback" class="sub">← 돌아가기</button>
   </div>
 
-  <div id="levelup" class="overlay hidden">
-    <h2 id="lvTitle">성장했어요! 🌱</h2>
-    <div id="choices"></div>
-  </div>
+  <div id="levelup" class="overlay hidden"><div id="choices"></div></div>
+  <div id="cards" class="hidden"></div>
 
   <div id="end" class="overlay hidden">
     <h2 id="endTitle"></h2>

@@ -68,6 +68,7 @@
   cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
   addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
+    if (k === '1' || k === '2' || k === '3') { pickCard(+k - 1); return; }
     if (k === 'escape' || k === 'p') { if (state === 'play') pauseGame(); else if (state === 'paused') resumeGame(); return; }
     keys[k] = true;
   });
@@ -112,6 +113,7 @@
         case 'helped': Sfx.play('levelup'); break;
         case 'train': Sfx.play('train'); banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
+        case 'autoPick': toast = { text: `✨ 자동 선택: ${ev.icon} ${ev.name}`, t: 110 }; break;
         case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
         default: break;
       }
@@ -196,20 +198,44 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
   addEventListener('blur', () => pauseGame());
 
-  function showLevelUp() {
-    state = 'levelup';
-    const box = $('choices'); box.innerHTML = '';
-    const stats = sim.player.stats;
-    $('lvTitle').textContent = sim.choiceKind === 'helper' ? `${sim.world.helper.emoji} ${sim.world.helper.name}의 조언` : '성장했어요! 🌱';
-    sim.choices.forEach((u) => {
-      const b = document.createElement('button'); b.className = 'card' + (u.boon ? ' syn' : '');
-      const lv = (u.instant || !(u.id in stats)) ? '' : `Lv ${stats[u.id]} → ${stats[u.id] + 1}/${MAX_LEVEL} · `;
-      b.innerHTML = `${u.icon} ${u.name}<small>${lv}${u.desc}</small>`;
-      b.onclick = () => { Sfx.play('click'); sim.choose(u.id); handleEvents(); $('levelup').classList.add('hidden'); state = 'play'; last = performance.now(); acc = 0; };
-      box.appendChild(b);
-    });
-    $('levelup').classList.remove('hidden');
+  /* ---------- 레벨업·조언 카드: 게임을 멈추지 않는 작은 카드 (화면 위) ---------- */
+  let shownChoices = null;
+  function pickCard(i) {
+    if (!sim || !sim.choices || !sim.choices[i] || state !== 'play') return;
+    Sfx.play('click'); sim.choose(sim.choices[i].id); handleEvents(); updateCards();
   }
+  function updateCards() {
+    const box = $('cards');
+    const ch = state === 'play' || state === 'paused' ? (sim && sim.choices) : null;
+    if (ch !== shownChoices) {
+      shownChoices = ch;
+      box.innerHTML = '';
+      if (ch) {
+        const stats = sim.player.stats;
+        const title = document.createElement('div'); title.className = 'ctitle';
+        title.textContent = sim.choiceKind === 'helper' ? `${sim.world.helper.emoji} ${sim.world.helper.name}의 조언 · 하나 고르기` : '🌱 성장! 하나 고르기 (안 고르면 자동)';
+        box.appendChild(title);
+        const row = document.createElement('div'); row.className = 'crow';
+        ch.forEach((u, i) => {
+          const b = document.createElement('button'); b.className = 'mini' + (u.boon ? ' boon' : '');
+          // 처음 얻는 아이템은 무슨 효과인지, 가진 아이템은 레벨 변화를 보여 준다
+          const lv = (u.instant || !(u.id in stats) || !stats[u.id]) ? '' : `Lv${stats[u.id]}→${stats[u.id] + 1}`;
+          const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = u.icon;
+          const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = u.name;
+          const ds = document.createElement('small'); ds.textContent = lv || u.desc;
+          b.append(ic, nm, ds);
+          b.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); pickCard(i); });
+          row.appendChild(b);
+        });
+        box.appendChild(row);
+        const bar = document.createElement('div'); bar.className = 'ctime'; bar.appendChild(document.createElement('i'));
+        box.appendChild(bar);
+      }
+      box.classList.toggle('hidden', !ch);
+    }
+    if (ch) box.querySelector('.ctime > i').style.width = Math.max(0, 100 - sim.choiceT / (EchoSim.TUNING.choiceAutoSec * TICK) * 100) + '%';
+  }
+
 
   /** 결과 화면의 따뜻한 한마디 (실패해도 괜찮고, 도움을 청하는 건 좋은 일) */
   function cheerMessage(result, helped, echoCount) {
@@ -570,11 +596,11 @@
         acc -= dt; sim.step(currentInput());
         handleEvents();
         if (tutorial) tutorialTips();
-        if (sim.choices) { showLevelUp(); break; }
         if (sim.over) { showEnd(); break; }
       }
     }
     // 보스가 나오면 긴장감 있는 곡으로. 여러 번 나오는 월드는 사이 쉬는 시간에도 유지하고, 모두 극복하면 원래 곡으로
+    updateCards();
     if (state === 'play' && sim) Music.setBoss(sim.bossAlive || (sim.bossIdx > 0 && sim.bossIdx < sim.bossCount));
     const showPause = state === 'play';
     if (showPause !== pauseShown) { pauseShown = showPause; $('pauseBtn').style.display = showPause ? '' : 'none'; }
