@@ -178,34 +178,164 @@
   };
 
   /* ---------- 주인공 / 에코 / 선생님 ---------- */
-  const OUTFIT = {   // 캐릭터별 옷 색 (이모지 → 그림체)
-    '🧑‍🎓': { body: '#4561d6', trim: '#2c3f9a', pack: '#e2574c' },
-    '🏃':   { body: '#e2574c', trim: '#ffffff', pack: '#2e3a59' },
-    '🤓':   { body: '#2fa86b', trim: '#1d6e46', pack: '#f2c14e', glasses: true },
-    '🧑‍⚕️': { body: '#f2f4f8', trim: '#e2574c', pack: '#7fb3ff', cross: true },
-  };
+  /* ---------- 주인공 복장 (회차마다 바뀜: worlds.js outfitOf) ---------- */
+  // 캐릭터 고유 표시 (복장 위에 얹힘)
+  const CHAR = { '🤓': { glasses: true }, '🧑‍⚕️': { cross: true } };
+  // 복장 20종: 몸·장식 색, 무늬, ★2 모자 · ★3 목 장식 · ★4 겉옷
+  const STYLES = [
+    { body: '#4561d6', trim: '#2c3f9a', pack: '#e2574c', pat: 'vneck',   head: 'cap',      hc: '#2c3f9a', neck: 'tie',    nc: '#e53935', outer: 'bag',     oc: '#e2574c' },   // 교복
+    { body: '#e2574c', trim: '#ffffff', pack: '#2e3a59', pat: 'stripe',  head: 'headband', hc: '#ffffff', neck: 'medal',  nc: '#ffd54f', outer: 'bag',     oc: '#2e3a59' },   // 체육복
+    { body: '#8e7cc3', trim: '#6a5aa5', pack: '#26a69a', pat: 'pocket',  head: 'hood',     hc: '#8e7cc3', neck: 'scarf',  nc: '#ffca28', outer: 'bag',     oc: '#26a69a' },   // 후드티
+    { body: '#37474f', trim: '#eceff1', pack: '#212121', pat: 'lapel',   head: 'tophat',   hc: '#212121', neck: 'bow',    nc: '#e53935', outer: 'cape',    oc: '#212121' },   // 정장
+    { body: '#f48fb1', trim: '#4fc3f7', pack: '#7e57c2', pat: 'hanbok',  head: 'gat',      hc: '#212121', neck: 'bow',    nc: '#7e57c2', outer: 'cape',    oc: '#81d4fa' },   // 한복
+    { body: '#eceff1', trim: '#ff7043', pack: '#90a4ae', pat: 'belt',    head: 'space',    hc: '#b3e5fc', neck: 'collar', nc: '#ff7043', outer: 'jetpack', oc: '#90a4ae' },   // 우주복
+    { body: '#8d6e63', trim: '#5d4037', pack: '#6d4c41', pat: 'lapel',   head: 'detective',hc: '#795548', neck: 'scarf',  nc: '#c62828', outer: 'cape',    oc: '#6d4c41' },   // 탐정
+    { body: '#5e35b1', trim: '#ffd54f', pack: '#311b92', pat: 'stars',   head: 'wizard',   hc: '#4527a0', neck: 'bow',    nc: '#ffd54f', outer: 'cape',    oc: '#311b92' },   // 마법사
+    { body: '#b0bec5', trim: '#ffd54f', pack: '#78909c', pat: 'plate',   head: 'knight',   hc: '#90a4ae', neck: 'medal',  nc: '#ffd54f', outer: 'cape',    oc: '#c62828' },   // 기사
+    { body: '#fafafa', trim: '#c62828', pack: '#5d4037', pat: 'stripe',  head: 'pirate',   hc: '#212121', neck: 'scarf',  nc: '#c62828', outer: 'sword',   oc: '#cfd8dc' },   // 해적
+    { body: '#ffffff', trim: '#e0e0e0', pack: '#ef5350', pat: 'buttons', head: 'chef',     hc: '#ffffff', neck: 'scarf',  nc: '#e53935', outer: 'apron',   oc: '#ffecb3' },   // 요리사
+    { body: '#ffcc80', trim: '#8d6e63', pack: '#42a5f5', pat: 'none',    head: 'beret',    hc: '#c62828', neck: 'scarf',  nc: '#42a5f5', outer: 'apron',   oc: '#ffffff' },   // 화가
+    { body: '#a1887f', trim: '#5d4037', pack: '#795548', pat: 'pocket',  head: 'explorer', hc: '#d7ccc8', neck: 'scarf',  nc: '#ff7043', outer: 'bag',     oc: '#795548' },   // 탐험가
+    { body: '#ec407a', trim: '#ffffff', pack: '#7b1fa2', pat: 'stars',   head: 'headset',  hc: '#212121', neck: 'bow',    nc: '#ffffff', outer: 'jacket',  oc: '#7b1fa2' },   // 아이돌
+    { body: '#263238', trim: '#c62828', pack: '#37474f', pat: 'belt',    head: 'ninja',    hc: '#c62828', neck: 'scarf',  nc: '#c62828', outer: 'sword',   oc: '#b0bec5' },   // 닌자
+    { body: '#ffffff', trim: '#4fc3f7', pack: '#4fc3f7', pat: 'lapel',   head: 'goggles',  hc: '#4fc3f7', neck: 'tie',    nc: '#1e88e5', outer: 'tank',    oc: '#81c784' },   // 과학자
+    { body: '#455a64', trim: '#ffd54f', pack: '#37474f', pat: 'pocket',  head: 'pilot',    hc: '#6d4c41', neck: 'scarf',  nc: '#ffffff', outer: 'wings',   oc: '#eceff1' },   // 파일럿
+    { body: '#ff7043', trim: '#ffeb3b', pack: '#455a64', pat: 'stripe',  head: 'fire',     hc: '#d32f2f', neck: 'collar', nc: '#ffeb3b', outer: 'tank',    oc: '#e53935' },   // 소방관
+    { body: '#d32f2f', trim: '#ffffff', pack: '#8d6e63', pat: 'belt',    head: 'santa',    hc: '#d32f2f', neck: 'collar', nc: '#ffffff', outer: 'sack',    oc: '#8d6e63' },   // 산타
+    { body: '#7b1fa2', trim: '#ffd54f', pack: '#4a148c', pat: 'buttons', head: 'crown',    hc: '#ffd54f', neck: 'medal',  nc: '#ffd54f', outer: 'cape',    oc: '#c62828' },   // 왕실
+  ];
+
+  /** 색을 살짝 바꾼다 (100회차 뒤 색 변형): 색상 회전 + 밝기 */
+  function variantColor(hex, v) {
+    if (!v || !/^#[0-9a-f]{6}$/i.test(hex)) return hex;
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) / 255, g2 = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g2, b), mn = Math.min(r, g2, b); let h = 0, sat = 0; const l = (mx + mn) / 2;
+    if (mx !== mn) { const d = mx - mn; sat = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g2 - b) / d + (g2 < b ? 6 : 0) : mx === g2 ? (b - r) / d + 2 : (r - g2) / d + 4; h /= 6; }
+    h = (h + v * 0.1) % 1;                                        // 변형마다 색상 36°씩
+    const l2 = Math.min(0.92, Math.max(0.12, l + (v % 2 ? 0.05 : -0.04)));
+    const q = l2 < 0.5 ? l2 * (1 + sat) : l2 + sat - l2 * sat, p2 = 2 * l2 - q;
+    const f = (t) => { t = (t + 1) % 1; return t < 1 / 6 ? p2 + (q - p2) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p2 + (q - p2) * (2 / 3 - t) * 6 : p2; };
+    const to = (x) => Math.round(x * 255).toString(16).padStart(2, '0');
+    return '#' + to(sat ? f(h + 1 / 3) : l2) + to(sat ? f(h) : l2) + to(sat ? f(h - 1 / 3) : l2);
+  }
+  function lineK(g, pts, lw, col) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.lineWidth = lw; g.strokeStyle = col || OL; g.stroke(); }
+  function star5(g, x, y, r1, r2) { g.beginPath(); for (let i = 0; i <= 10; i++) { const a = (i / 10) * Math.PI * 2 - Math.PI / 2, rr = i % 2 ? r2 : r1; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); }
+
+  // ★4 겉옷: 몸 뒤에 그리는 것
+  function outerBack(g, o) {
+    switch (o.outer) {
+      case 'cape': g.beginPath(); g.moveTo(-6, 0.5); g.quadraticCurveTo(-11, 9, -9, 15); g.lineTo(9, 15); g.quadraticCurveTo(11, 9, 6, 0.5); g.closePath(); fillStroke(g, o.oc, 1.6); break;
+      case 'wings': for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 4, 3); g.quadraticCurveTo(s * 15, -4, s * 14.5, 6); g.quadraticCurveTo(s * 12, 7, s * 13, 10); g.quadraticCurveTo(s * 8, 9, s * 4, 8); g.closePath(); fillStroke(g, o.oc, 1.4); } break;
+      case 'jetpack': case 'tank': for (const s of [-1, 1]) { rrect(g, s * 4.5 - 2.5, -0.5, 5, 11, 2.2); fillStroke(g, o.oc, 1.4); } if (o.outer === 'jetpack') { g.fillStyle = '#ffb74d'; g.beginPath(); g.moveTo(-4.5, 10.5); g.lineTo(-2.5, 14); g.lineTo(-6.5, 14); g.closePath(); g.fill(); g.beginPath(); g.moveTo(4.5, 10.5); g.lineTo(6.5, 14); g.lineTo(2.5, 14); g.closePath(); g.fill(); } break;
+      case 'sword': lineK(g, [-9, -1, 7, 14], 2.6, OL); lineK(g, [-9, -1, 7, 14], 1.4, o.oc); lineK(g, [-10.5, 1.5, -6.5, -2.5], 2.2, '#8d6e63'); break;
+      case 'sack': circle(g, -8.5, 4, 5.5); fillStroke(g, o.oc, 1.6); lineK(g, [-10, -0.5, -7, -1.5], 1.4); break;
+      default: break;
+    }
+  }
+  // ★4 겉옷: 몸 앞에 그리는 것
+  function outerFront(g, o) {
+    switch (o.outer) {
+      case 'apron': rrect(g, -4, 3, 8, 8.5, 2); fillStroke(g, o.oc, 1.2); if (o.pat === 'none') { for (const [x, y, c] of [[-1.5, 6, '#e53935'], [1.5, 8, '#42a5f5'], [-0.5, 9.5, '#ffca28']]) { circle(g, x, y, 0.9); g.fillStyle = c; g.fill(); } } break;
+      case 'jacket': for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 5.8, 0.5); g.lineTo(s * 1.8, 0.5); g.lineTo(s * 2.5, 11.5); g.lineTo(s * 5.8, 11.5); g.closePath(); fillStroke(g, o.oc, 1.2); } break;
+      default: break;
+    }
+  }
+  function neckItem(g, o) {
+    switch (o.neck) {
+      case 'tie': g.beginPath(); g.moveTo(0, 1); g.lineTo(1.4, 3); g.lineTo(0.6, 8); g.lineTo(0, 9); g.lineTo(-0.6, 8); g.lineTo(-1.4, 3); g.closePath(); fillStroke(g, o.nc, 0.9); break;
+      case 'bow': for (const s of [-1, 1]) { g.beginPath(); g.moveTo(0, 1.6); g.lineTo(s * 3, 0); g.lineTo(s * 3, 3.2); g.closePath(); fillStroke(g, o.nc, 0.9); } circle(g, 0, 1.6, 0.8); g.fillStyle = OL; g.fill(); break;
+      case 'scarf': rrect(g, -5, -0.6, 10, 2.8, 1.3); fillStroke(g, o.nc, 1); rrect(g, 1.5, 1.5, 2.4, 5.5, 1); fillStroke(g, o.nc, 1); break;
+      case 'medal': lineK(g, [-2.5, 0.5, 0, 4.5, 2.5, 0.5], 1.4, '#1e88e5'); circle(g, 0, 5.6, 1.9); fillStroke(g, o.nc, 0.9); break;
+      case 'collar': rrect(g, -6, -0.8, 12, 2.6, 1.3); fillStroke(g, o.nc, 1); break;
+      default: break;
+    }
+  }
+  function bodyPattern(g, o) {
+    g.save(); rrect(g, -5.8, 0, 11.6, 11.5, 4); g.clip();
+    switch (o.pat) {
+      case 'vneck': lineK(g, [-2.5, 0.8, 0, 4, 2.5, 0.8], 1.4, o.trim); break;
+      case 'stripe': g.fillStyle = o.trim; g.fillRect(-6, 4, 12, 1.6); g.fillRect(-6, 7.5, 12, 1.6); break;
+      case 'pocket': rrect(g, -3.5, 6, 7, 4, 1.5); g.lineWidth = 1; g.strokeStyle = o.trim; g.stroke(); break;
+      case 'lapel': g.fillStyle = o.trim; g.beginPath(); g.moveTo(-1.5, 0); g.lineTo(0, 5); g.lineTo(1.5, 0); g.closePath(); g.fill(); lineK(g, [-1.5, 0, -3, 6], 1, o.trim); lineK(g, [1.5, 0, 3, 6], 1, o.trim); break;
+      case 'hanbok': g.fillStyle = o.trim; g.fillRect(-6, 6.5, 12, 6); lineK(g, [-4, 0.5, 1.5, 5], 1.4, '#ffffff'); break;
+      case 'belt': g.fillStyle = o.trim; g.fillRect(-6, 7, 12, 1.8); g.fillStyle = '#ffd54f'; g.fillRect(-1, 6.8, 2, 2.2); break;
+      case 'stars': g.fillStyle = o.trim; for (const [x, y] of [[-3, 4], [2.5, 6], [-1, 9]]) { star5(g, x, y, 1.3, 0.55); g.fill(); } break;
+      case 'plate': g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-4, 1.5, 3, 4); lineK(g, [-5.8, 6, 5.8, 6], 1, '#78909c'); break;
+      case 'buttons': g.fillStyle = o.trim; for (const y of [3, 6, 9]) { circle(g, 0, y, 0.8); g.fill(); } break;
+      default: break;
+    }
+    g.restore();
+  }
+  function hoodBack(g, o) { circle(g, 0, -6, 9.4); fillStroke(g, o.hc, 1.6); }
+  function headwear(g, o) {
+    const hc = o.hc;
+    switch (o.head) {
+      case 'cap': g.beginPath(); g.arc(0, -8, 7.8, Math.PI, 0); g.closePath(); fillStroke(g, hc, 1.4); rrect(g, -1, -9.2, 10.5, 2.6, 1.3); fillStroke(g, hc, 1.2); break;
+      case 'headband': rrect(g, -7.8, -10.5, 15.6, 2.6, 1.2); fillStroke(g, hc, 1.1); lineK(g, [6.5, -9.5, 10, -7, 9, -11], 1.3, hc); break;
+      case 'hood': g.beginPath(); g.arc(0, -6, 9.4, Math.PI * 1.08, Math.PI * 1.92); g.lineWidth = 2.6; g.strokeStyle = variantColor(o.trim, 0); g.stroke(); break;
+      case 'tophat': rrect(g, -9, -12.5, 18, 2.4, 1.2); fillStroke(g, hc, 1.3); rrect(g, -5.5, -23, 11, 11, 1.5); fillStroke(g, hc, 1.4); g.fillStyle = '#e53935'; g.fillRect(-5.5, -15, 11, 2); break;
+      case 'gat': g.globalAlpha = 0.85; oval(g, 0, -12, 13, 2.6); fillStroke(g, hc, 1.2); rrect(g, -4.5, -19, 9, 7.5, 2); fillStroke(g, hc, 1.2); g.globalAlpha = 1; lineK(g, [-6, -11, -5, -2], 0.8, '#212121'); break;
+      case 'space': circle(g, 0, -6.5, 10.5); g.fillStyle = 'rgba(180,230,255,.22)'; g.fill(); g.lineWidth = 1.6; g.strokeStyle = OL; g.stroke(); lineK(g, [-5, -13, -2, -15], 1.4, 'rgba(255,255,255,.8)'); circle(g, 0, -18, 1.4); g.fillStyle = '#ff7043'; g.fill(); lineK(g, [0, -17, 0, -16.6], 1); break;
+      case 'detective': g.beginPath(); g.arc(0, -8.5, 7.9, Math.PI, 0); g.closePath(); fillStroke(g, hc, 1.4); g.beginPath(); g.ellipse(6.5, -8.6, 4, 1.6, 0, 0, Math.PI * 2); fillStroke(g, hc, 1.1); g.beginPath(); g.ellipse(-6.5, -8.6, 4, 1.6, 0, 0, Math.PI * 2); fillStroke(g, hc, 1.1); lineK(g, [-5, -12, 5, -12], 0.8, '#5d4037'); break;
+      case 'wizard': g.beginPath(); g.moveTo(-9, -11); g.quadraticCurveTo(0, -13.5, 9, -11); g.lineTo(2, -14); g.quadraticCurveTo(4, -22, 7, -27); g.quadraticCurveTo(-2, -22, -3, -14); g.closePath(); fillStroke(g, hc, 1.4); star5(g, 0.5, -17.5, 2.2, 0.9); g.fillStyle = '#ffd54f'; g.fill(); break;
+      case 'knight': g.beginPath(); g.arc(0, -7.5, 8.3, Math.PI, 0); g.closePath(); fillStroke(g, hc, 1.5); g.beginPath(); g.moveTo(0, -15.5); g.quadraticCurveTo(-6, -22, -9, -15); g.quadraticCurveTo(-4, -18, 0, -15.5); fillStroke(g, '#e53935', 1.1); lineK(g, [0, -15.5, 0, -8], 1, '#78909c'); break;
+      case 'pirate': g.beginPath(); g.moveTo(-10, -9.5); g.quadraticCurveTo(-6, -18, 0, -15.5); g.quadraticCurveTo(6, -18, 10, -9.5); g.quadraticCurveTo(0, -12, -10, -9.5); fillStroke(g, hc, 1.4); circle(g, 0, -12.5, 1.4); g.fillStyle = '#fff'; g.fill(); break;
+      case 'chef': for (const [x, y, r] of [[-4, -16, 4], [0, -18.5, 4.5], [4, -16, 4]]) { circle(g, x, y, r); fillStroke(g, hc, 1.2); } rrect(g, -6, -15, 12, 5, 1.5); fillStroke(g, hc, 1.2); break;
+      case 'beret': g.save(); g.rotate(-0.2); oval(g, 0, -12.2, 8.5, 3.2); fillStroke(g, hc, 1.3); lineK(g, [0, -15.4, 0.5, -17], 1.4); g.restore(); break;
+      case 'explorer': g.beginPath(); g.arc(0, -9, 7.5, Math.PI, 0); g.closePath(); fillStroke(g, hc, 1.4); oval(g, 0, -9, 11, 2.2); fillStroke(g, hc, 1.2); g.fillStyle = '#8d6e63'; g.fillRect(-7.4, -11.2, 14.8, 1.6); break;
+      case 'headset': g.beginPath(); g.arc(0, -6.5, 9, Math.PI * 1.05, Math.PI * 1.95); g.lineWidth = 1.8; g.strokeStyle = OL; g.stroke(); rrect(g, -10, -8, 3, 5, 1.2); fillStroke(g, '#ec407a', 1); lineK(g, [-8.5, -3, -4.5, 0], 1.1); circle(g, -4, 0.2, 1.1); g.fillStyle = OL; g.fill(); break;
+      case 'ninja': rrect(g, -7.8, -10.5, 15.6, 2.6, 1.2); fillStroke(g, hc, 1.1); lineK(g, [7, -9.5, 11, -7, 10.5, -10], 1.4, hc); g.save(); g.beginPath(); g.arc(0, -6.5, 7.6, 0.05 * Math.PI, 0.95 * Math.PI); g.lineTo(-7.5, -3.5); g.lineTo(7.5, -3.5); g.closePath(); g.fillStyle = '#263238'; g.fill(); g.restore(); break;
+      case 'goggles': rrect(g, -7.8, -11.5, 15.6, 2, 1); g.fillStyle = OL; g.fill(); for (const x of [-3, 3]) { circle(g, x, -11, 2.6); fillStroke(g, hc, 1.2); circle(g, x - 0.6, -11.6, 0.8); g.fillStyle = '#fff'; g.fill(); } break;
+      case 'pilot': g.beginPath(); g.arc(0, -7.2, 8, Math.PI, 0); g.closePath(); fillStroke(g, hc, 1.4); for (const x of [-3, 3]) { circle(g, x, -11.3, 2.3); fillStroke(g, '#80deea', 1.1); } break;
+      case 'fire': g.beginPath(); g.arc(0, -8, 8.4, Math.PI, 0); g.closePath(); fillStroke(g, hc, 1.5); oval(g, 0, -8, 11, 2); fillStroke(g, hc, 1.2); rrect(g, -2, -15, 4, 5, 1); fillStroke(g, '#ffd54f', 1); break;
+      case 'santa': g.beginPath(); g.moveTo(-8, -10); g.quadraticCurveTo(0, -22, 9, -17); g.quadraticCurveTo(4, -15, 8, -10); g.closePath(); fillStroke(g, hc, 1.4); rrect(g, -8.5, -11.5, 17, 3.2, 1.6); fillStroke(g, '#ffffff', 1.1); circle(g, 9.5, -17, 2); fillStroke(g, '#ffffff', 1); break;
+      case 'crown': g.beginPath(); g.moveTo(-6, -11); g.lineTo(-6.5, -17); g.lineTo(-3, -13.5); g.lineTo(0, -18.5); g.lineTo(3, -13.5); g.lineTo(6.5, -17); g.lineTo(6, -11); g.closePath(); fillStroke(g, hc, 1.3); for (const [x, c] of [[-3.5, '#e53935'], [0, '#42a5f5'], [3.5, '#66bb6a']]) { circle(g, x, -12.3, 0.9); g.fillStyle = c; g.fill(); } break;
+      default: break;
+    }
+  }
   function drawKid(g, o, step) {
-    // 발 (걷기: step = -1..1)
+    if (o.aura) {   // ★5 오라: 뒤에 은은한 금빛
+      const gl = g.createRadialGradient(0, -2, 2, 0, -2, 15); gl.addColorStop(0, 'rgba(255,230,120,.45)'); gl.addColorStop(1, 'rgba(255,230,120,0)');
+      g.fillStyle = gl; g.fillRect(-15, -18, 30, 32);
+    }
+    if (o.outer) outerBack(g, o);
     oval(g, -3.2 + step * 1.2, 12, 2.6, 1.8); fillStroke(g, '#2a2440', 1.4);
     oval(g, 3.2 - step * 1.2, 12, 2.6, 1.8); fillStroke(g, '#2a2440', 1.4);
-    // 가방
-    rrect(g, -8.5, -0.5, 4.5, 9, 1.8); fillStroke(g, o.pack, 1.6);
-    // 몸
+    if (o.outer === 'bag') { rrect(g, -9.5, -1, 5.5, 10.5, 2); fillStroke(g, o.oc, 1.6); g.fillStyle = '#ffd54f'; g.fillRect(-8.2, 3, 3, 1.4); }
+    else if (!o.outer || o.outer === 'apron' || o.outer === 'jacket') { rrect(g, -8.5, -0.5, 4.5, 9, 1.8); fillStroke(g, o.pack, 1.6); }
     rrect(g, -5.8, 0, 11.6, 11.5, 4); fillStroke(g, o.body, 1.8);
-    g.beginPath(); g.moveTo(-2.5, 0.8); g.lineTo(0, 4); g.lineTo(2.5, 0.8); g.lineWidth = 1.4; g.strokeStyle = o.trim; g.stroke();
+    bodyPattern(g, o);
+    if (o.gold) { g.fillStyle = '#ffd54f'; g.fillRect(-5, 10, 10, 1.3); }
+    if (o.outer) outerFront(g, o);
     if (o.cross) { g.fillStyle = '#e2574c'; g.fillRect(-1, 5, 2, 5); g.fillRect(-2.5, 6.5, 5, 2); }
-    // 머리
+    if (o.neck) neckItem(g, o);
+    if (o.head === 'hood') hoodBack(g, o);
     circle(g, 0, -6.5, 7.6); fillStroke(g, '#ffd9b8', 1.8);
-    g.beginPath(); g.arc(0, -7.2, 7.7, Math.PI * 1.02, Math.PI * 1.98); g.quadraticCurveTo(3, -9.5, -1, -8.5); g.quadraticCurveTo(-4, -8, -7.6, -6.5); g.closePath();
-    fillStroke(g, '#3b2b25', 1.6);
+    const hidesHair = ['space'].indexOf(o.head) < 0 && ['cap', 'detective', 'knight', 'explorer', 'pilot', 'fire'].indexOf(o.head) >= 0;
+    if (!hidesHair) { g.beginPath(); g.arc(0, -7.2, 7.7, Math.PI * 1.02, Math.PI * 1.98); g.quadraticCurveTo(3, -9.5, -1, -8.5); g.quadraticCurveTo(-4, -8, -7.6, -6.5); g.closePath(); fillStroke(g, '#3b2b25', 1.6); }
     eye(g, -2.7, -4.6, 1.5, 'normal'); eye(g, 2.7, -4.6, 1.5, 'normal');
     if (o.glasses) { g.lineWidth = 1; g.strokeStyle = OL; circle(g, -2.7, -4.4, 2.3); g.stroke(); circle(g, 2.7, -4.4, 2.3); g.stroke(); g.beginPath(); g.moveTo(-0.4, -4.4); g.lineTo(0.4, -4.4); g.stroke(); }
     oval(g, -4.8, -2.2, 1.3, 0.8); g.fillStyle = 'rgba(255,120,120,.5)'; g.fill(); oval(g, 4.8, -2.2, 1.3, 0.8); g.fill();
-    g.beginPath(); g.arc(0, -2.2, 1.4, 0.15 * Math.PI, 0.85 * Math.PI); g.lineWidth = 1.1; g.strokeStyle = OL; g.stroke();
+    if (o.head !== 'ninja') { g.beginPath(); g.arc(0, -2.2, 1.4, 0.15 * Math.PI, 0.85 * Math.PI); g.lineWidth = 1.1; g.strokeStyle = OL; g.stroke(); }
+    if (o.head) headwear(g, o);
+    if (o.aura) { for (const [x, y, r] of [[-11, -10, 1.8], [11, -4, 1.5], [-10, 6, 1.3], [10, 9, 1.7]]) { star5(g, x, y, r, r * 0.42); fillStroke(g, '#fff59d', 0.8); } }
   }
-  function kidSprite(emo, step) {
-    const o = OUTFIT[emo] || OUTFIT['🧑‍🎓'];
-    return sprite(`kid:${emo}:${step}`, 22, 34, (g) => { g.translate(0, -1); drawKid(g, o, step); });
+  let outfit = { style: 0, tier: 0, variant: 0, key: '0.0.0' };
+  /** 지금 회차의 복장 + 캐릭터 고유 표시를 합친 그리기 옵션 */
+  function outfitOpts(emo, of) {
+    const st = STYLES[of.style] || STYLES[0], v = of.variant, t = of.tier;
+    const c = (x) => variantColor(x, v);
+    const o = { body: c(st.body), trim: c(st.trim), pack: c(st.pack), pat: st.pat };
+    if (t >= 1) { o.head = st.head; o.hc = c(st.hc); }
+    if (t >= 2) { o.neck = st.neck; o.nc = c(st.nc); }
+    if (t >= 3) { o.outer = st.outer; o.oc = c(st.oc); }
+    if (t >= 4) { o.aura = true; o.gold = true; }
+    return Object.assign(o, CHAR[emo] || {});
+  }
+  function kidSprite(emo, step, of) {
+    of = of || outfit;
+    return sprite(`kid:${emo}:${step}:${of.key}`, 32, 58, (g) => { g.translate(0, -1); drawKid(g, outfitOpts(emo, of), step); });
   }
   const TEACHER = (g) => {
     rrect(g, -7, 2, 14, 15, 5); fillStroke(g, '#3fae8a', 1.8);                         // 가디건
@@ -392,7 +522,7 @@
     /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 파란 유령 */
     drawEcho(ctx, ec, emo, now, alpha) {
       const base = kidSprite(emo, 0);
-      const ghost = tinted(`ghost:${emo}`, base, '#6fd3ff', 0.55);
+      const ghost = tinted(`ghost:${emo}:${outfit.key}`, base, '#6fd3ff', 0.55);
       const bob = Math.sin(now / 400 + ec.id) * 1.5;
       this.groundMark(ctx, ec.x, ec.y + 13 * K_KID, 9 * K_KID, '#6fd6ff', alpha * 1.4);
       ctx.globalAlpha = alpha * 1.25;
@@ -401,6 +531,13 @@
       ctx.globalAlpha = 1;
     },
 
+    /** 회차를 알려 주면 그 회차의 복장으로 주인공·에코를 그린다 */
+    setOutfit(cycle) { const W = root.EchoWorlds; outfit = W && W.outfitOf ? W.outfitOf(cycle) : outfit; return outfit; },
+    /** 메뉴 미리보기 등: 원하는 회차 복장으로 주인공을 그린다 */
+    drawKidPreview(ctx, x, y, emo, cycle, scale) {
+      const W = root.EchoWorlds, of = W.outfitOf(cycle);
+      blit(ctx, kidSprite(emo, 0, of), x, y, scale || 2, scale || 2);
+    },
     drawTeacher(ctx, x, y) { this.drawHelper(ctx, 'school', x, y); },
     drawHelper(ctx, worldId, x, y) {
       const fn = HELPER[worldId] || TEACHER;

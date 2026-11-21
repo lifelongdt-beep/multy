@@ -228,3 +228,18 @@ test('큰 숫자는 짧게 표시된다 (만·억·조)', () => {
   assert.strictEqual(M.fmtNum(300000000), '3억');
   assert.strictEqual(M.fmtNum(4.5e12), '4.5조');
 });
+
+test('회차별 복장: 5회차마다 새 복장(20종) · 그 사이엔 장식이 늘고 · 100회차 뒤 색 변형 · 1000회차 뒤 처음으로', () => {
+  assert.strictEqual(Wd.OUTFITS.length, 20);
+  const o = Wd.outfitOf;
+  assert.deepStrictEqual([0, 1, 2, 3, 4].map((c) => o(c).style), [0, 0, 0, 0, 0]);
+  assert.deepStrictEqual([0, 1, 2, 3, 4].map((c) => o(c).stars), [1, 2, 3, 4, 5], '같은 복장에 장식이 하나씩');
+  assert.strictEqual(o(5).style, 1); assert.strictEqual(o(5).stars, 1, '5회차마다 새 복장');
+  assert.strictEqual(o(99).style, 19); assert.strictEqual(o(99).variant, 0);
+  assert.strictEqual(o(100).style, 0); assert.strictEqual(o(100).variant, 1, '100회차 뒤에는 색만 바꿔 처음 복장부터');
+  assert.strictEqual(o(999).variant, 9);
+  assert.deepStrictEqual(o(1000), o(0), '1000회차 뒤에는 처음 복장으로');
+  assert.deepStrictEqual(o(2345), o(345));
+  const keys = new Set(); for (let c = 0; c < 1000; c++) keys.add(o(c).key);
+  assert.strictEqual(keys.size, 1000, '1000회차 동안 모두 다른 모습');
+});

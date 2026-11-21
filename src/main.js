@@ -176,6 +176,7 @@
       sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId(), cycle: GameUI.cycle() });
     }
     playerEmoji = GameUI.emoji();
+    if (window.Art) Art.setOutfit(GameUI.cycle());   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
     shake = 0; hurtFlash = 0; floats = []; bossFx = null; slowmo = 0; whiteFlash = 0;
     const needE = sim.world.boss.needEchoes;
@@ -338,6 +339,8 @@
     if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 ${w.emoji} ${w.name}`); }
     if (sum.newCycle !== null && sum.newCycle !== undefined) {
       lines.push(`🔁 ${sum.newCycle + 1}회차!`);
+      const of = EchoWorlds.outfitOf(sum.newCycle);
+      lines.push(of.tier === 0 ? `👕 새 복장: ${of.name}` : `👕 ${of.name} ${'★'.repeat(of.stars)} 장식 추가`);
     }
     if (sim.result !== 'clear') {
       const short = GameUI.gearShort(sim.world.id);

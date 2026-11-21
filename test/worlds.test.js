@@ -92,7 +92,8 @@ test('모든 월드: 전체 판 동안 NaN 없이 돌아가고 보스가 90초�
       }
     }
     // 첫 보스: 보통은 월드의 보스, 꿈의 무대는 lineup의 첫 보스(앞 월드의 큰 도전)
-    const first = WORLDS[id].boss.lineup ? WORLDS[WORLDS[id].boss.lineup[0]].boss.name : WORLDS[id].boss.name;
+    const B = WORLDS[id].boss;
+    const first = B.lineup ? WORLDS[B.lineup[0]].boss.name : (B.minis && B.minis.length ? B.minis[0].name : B.name);
     assert.strictEqual(bossName, first, `${id}: 첫 보스 이름`);
   }
 });
@@ -265,6 +266,10 @@ test('가치: 적과 보스는 사람이 아니고, 사람/숙제를 가리키�
     }
     for (const s of w.swarms) for (const bad of FORBIDDEN_WORDS) assert.ok(!s.text.includes(bad), `${id}: 포위 문구 "${s.text}"에 "${bad}" 금지`);
     for (const t of [w.boss.warnText, w.boss.startText]) for (const bad of FORBIDDEN_WORDS) assert.ok(!t.includes(bad), `${id}: 보스 문구 "${t}"`);
+    for (const m of w.boss.minis || []) {
+      assert.ok(!PERSON_EMOJI.test(m.emoji), `${id}.${m.name}: 사람 이모지 금지`);
+      for (const t of [m.name, m.warnText, m.startText]) for (const bad of FORBIDDEN_WORDS) assert.ok(!t.includes(bad), `${id}: 큰 도전 "${t}"에 "${bad}" 금지`);
+    }
   }
 });
 
@@ -686,4 +691,17 @@ test('2회차부터: 여러 월드의 보스가 무작위로 나온다 (같은 �
   const s = new Sim({ seed: 7, events: true, world: 'gym', cycle: 2 });
   while (!s.over && s.tick < 20000) { s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id); const b = s.enemies.find((e) => e.type === 'boss'); if (b) b.hp -= b.maxhp * 0.002; s.step({ dx: Math.sin(s.tick / 40) * 0.6, dy: 0 }); s.drainEvents(); }
   assert.strictEqual(s.result, 'clear');
+});
+
+test('월드마다 큰 도전이 여러 종류: 1회차도 같은 판 안에서 매번 다른 보스가 나오고, 마지막은 월드 보스', () => {
+  for (const id of ORDER) {
+    const s = new Sim({ seed: 3, events: false, world: id });
+    const names = s.bossLineup.map((b) => b.name);
+    assert.strictEqual(new Set(names).size, names.length, `${id}: ${names}`);
+    assert.strictEqual(names[names.length - 1], WORLDS[id].boss.name);
+    for (const b of s.bossLineup) assert.ok(['exam', 'spiral', 'charge', 'lane'].includes(b.pattern), `${id}.${b.name} 패턴`);
+  }
+  const pool = Sim.bossPool();
+  assert.ok(pool.length >= 39, `전체 큰 도전 ${pool.length}종`);
+  assert.strictEqual(new Set(pool.map((b) => b.name)).size, pool.length, '이름이 겹치지 않음');
 });

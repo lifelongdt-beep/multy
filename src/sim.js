@@ -320,34 +320,32 @@
       return type === 'boss' ? w.boss : (w.enemies[type] || ENEMY_TYPES[type]);
     }
 
-    /** 보스 순서: 1회차는 월드의 보스(lineup이 있으면 그 보스들 → 마지막에 월드 보스),
-     *  2회차부터는 12개 월드의 보스 중 무작위(바로 앞과 같은 보스는 피함). 난이도 값은 항상 이 월드 기준 */
+    /** 보스 순서: 1회차는 이 월드의 작은 큰 도전들(minis) → 마지막에 월드 보스 (꿈의 무대는 앞 월드 보스들 lineup → 무대 공포증),
+     *  2회차부터는 12개 월드의 모든 큰 도전(월드 보스 + minis) 중 무작위(바로 앞과 같은 것은 피함). 난이도 값은 항상 이 월드 기준 */
     _makeLineup(seed) {
       const w = this.world, n = w.boss.times.length;
-      let ids;
+      let defs;
       if (this.cycle > 0) {
+        const pool = Sim.bossPool();
         const r = mulberry32((seed ^ 0xB0551E5) >>> 0);   // 본 난수와 분리 (같은 시드면 같은 순서)
-        ids = [];
+        defs = [];
         for (let i = 0; i < n; i++) {
-          let id;
-          do { id = Worlds.ORDER[Math.floor(r() * Worlds.ORDER.length)]; } while (i > 0 && id === ids[i - 1]);
-          ids.push(id);
+          let d;
+          do { d = pool[Math.floor(r() * pool.length)]; } while (i > 0 && d.name === defs[i - 1].name);
+          defs.push(d);
         }
-      } else if (w.boss.lineup) ids = w.boss.lineup.slice(0, n - 1).concat([w.id]);
-      else ids = new Array(n).fill(w.id);
-      while (ids.length < n) ids.unshift(w.id);
-      return ids.map((id) => this._bossFrom(id));
+      } else if (w.boss.lineup) defs = w.boss.lineup.slice(0, n - 1).map((id) => WORLDS[id].boss).concat([w.boss]);
+      else defs = (w.boss.minis || []).slice(0, n - 1).concat([w.boss]);
+      while (defs.length < n) defs.unshift(w.boss);
+      return defs.map((d) => this._adaptBoss(d));
     }
-    /** 다른 월드의 보스를 이 월드에 맞춰 데려온다: 모습·패턴·문구는 그 보스, 체력·피해·소환 등은 이 월드 기준 */
-    _bossFrom(id) {
+    /** 다른 큰 도전을 이 월드에 맞춰 데려온다: 모습·패턴·문구는 그 보스, 체력·피해·소환 등은 이 월드 기준 */
+    _adaptBoss(d) {
       const own = this.world.boss;
-      if (id === this.world.id || !WORLDS[id]) return own;
-      const b = WORLDS[id].boss;
-      return Object.assign({}, b, {
-        hp: own.hp, times: own.times, needEchoes: own.needEchoes, fightSec: own.fightSec, refMul: own.refMul,
-        speed: own.speed, dmg: own.dmg, xp: own.xp, summon: own.summon, lineup: undefined, origin: id,
-      });
+      if (d === own) return own;
+      return Object.assign({}, own, { name: d.name, emoji: d.emoji, pattern: d.pattern, warnText: d.warnText, startText: d.startText, r: d.r || own.r, lineup: undefined, minis: undefined, origin: d.origin || d.name });
     }
+    _bossFrom(id) { return WORLDS[id] ? this._adaptBoss(WORLDS[id].boss) : this.world.boss; }
     _bossAt(idx) { return this.bossLineup[Math.max(0, Math.min(this.bossLineup.length - 1, idx | 0))]; }
 
     _hpScale() {
@@ -931,6 +929,18 @@
     exportEcho() { return { path: this.rec.path.slice(), ups: this.rec.ups.slice(), kills: this.kills, ticks: this.tick }; }
   }
 
+  /** 모든 월드의 큰 도전 목록 (월드 보스 + minis) — 2회차부터 무작위 등장 */
+  Sim.bossPool = function () {
+    if (!Sim._pool) {
+      Sim._pool = [];
+      for (const id of Worlds.ORDER) {
+        const b = WORLDS[id].boss;
+        Sim._pool.push(Object.assign({ origin: id }, b));
+        for (const m of b.minis || []) Sim._pool.push(Object.assign({ origin: id + ':' + m.name }, m));
+      }
+    }
+    return Sim._pool;
+  };
   const api = { Sim, addEcho, mulberry32, derive, NO_BONUS, WORLDS, WORLD_ORDER: Worlds.ORDER, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, MAX_ECHOES, MAX_LEVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoSim = api;

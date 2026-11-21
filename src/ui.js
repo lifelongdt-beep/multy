@@ -18,8 +18,18 @@
       $('coins').textContent = M.fmtNum(save.coins); $('pcoins').textContent = M.fmtNum(save.coins);
       const w = M.WORLDS[save.worlds.selected] || M.WORLDS.school;
       $('bWorld').textContent = `🗺️ 월드: ${w.emoji} ${w.name}` + (save.cycle > 0 ? ` · 🔁 ${save.cycle + 1}회차` : '');
+      drawOutfit();
     }
 
+  /** 시작 화면: 이번 회차 복장 미리보기 + 이름 (회차마다 장식이 늘고, 5회차마다 새 복장) */
+  function drawOutfit() {
+    const cv = $('outfitPv'); if (!cv || !window.Art || !window.EchoWorlds) return;
+    const of = EchoWorlds.outfitOf(save.cycle);
+    const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
+    const emo = (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji;
+    c.setTransform(2, 0, 0, 2, 0, 0); Art.drawKidPreview(c, 28, 38, emo, save.cycle, 1.15);
+    $('outfitName').textContent = `👕 ${of.name} ${'★'.repeat(of.stars)}${of.variant ? ` · 색 ${of.variant + 1}` : ''}`;
+  }
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
   function item(icon, title, desc, opts) {
     opts = opts || {};
