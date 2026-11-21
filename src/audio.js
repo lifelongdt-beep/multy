@@ -83,6 +83,17 @@
     soft(POP_NOTES[Math.floor(Math.random() * POP_NOTES.length)] * 2, 0.1, 'triangle', 0.045, 0.01);
   }
 
+  // 레벨업: 딱 소리 없이 시작하는 맑은 "띠리링" 상승 아르페지오 + 마지막 음은 살짝 반짝이며 길게
+  function levelupSound() {
+    const notes = [784, 988, 1175, 1568];   // 솔 시 레 솔 (밝은 장조)
+    notes.forEach((f, i) => {
+      const last = i === notes.length - 1;
+      soft(f, last ? 0.42 : 0.16, 'sine', last ? 0.07 : 0.06, i * 0.065);
+      soft(f * 2, last ? 0.3 : 0.08, 'triangle', 0.012, i * 0.065 + 0.01);   // 은은한 윗소리
+    });
+    soft(1568 * 1.005, 0.42, 'sine', 0.03, 3 * 0.065 + 0.02);   // 살짝 어긋난 음으로 반짝임(코러스)
+  }
+
   function noise(dur, vol) {
     const c = ac(); if (!c) return;
     const n = Math.floor(c.sampleRate * dur);
@@ -99,7 +110,7 @@
     hit:      { gap: 60,  fn: () => tone(220, 130, 0.04, 'sawtooth', 0.02) },
     kill:     { gap: 45,  fn: killSound },
     gem:      { gap: 55,  fn: gemSound },   // 한꺼번에 빨아들여도 소리가 겹쳐 시끄럽지 않게
-    levelup:  { gap: 0,   fn: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.14, 'triangle', 0.07, i * 0.07)) },
+    levelup:  { gap: 120, fn: levelupSound },
     hurt:     { gap: 80,  fn: () => { tone(160, 60, 0.2, 'sawtooth', 0.1); noise(0.12, 0.06); } },
     nova:     { gap: 100, fn: () => { tone(300, 80, 0.3, 'sine', 0.1); noise(0.15, 0.04); } },
     echoDown: { gap: 80,  fn: () => tone(600, 150, 0.25, 'sine', 0.06) },
