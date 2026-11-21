@@ -514,7 +514,7 @@
     _hurtPlayer(dmg, raw) {
       const p = this.player;
       // 단계가 높을수록 적이 아프게 때리고(mul.dmg), 매점 방어 장비가 줄여 준다(takenMul)
-      const taken = raw ? dmg : dmg * TUNING.damageTaken * this._bossDmgScale() * this.mul.dmg * this.bonus.takenMul;
+      const taken = raw ? dmg : dmg * TUNING.damageTaken * this._bossDmgScale() * this.mul.dmg * this.bonus.takenMul * (this.world.rules.atkMul || 1);
       p.hp -= taken; p.inv = TUNING.hurtInvTicks;
       this.fx.push({ x: p.x, y: p.y, t: 10, kind: 'hurt' });
       this._ev({ k: 'hurt', dmg: taken });
@@ -579,7 +579,7 @@
     _bossAI(e, ux, uy, dist) {
       const phase = this._bossPhase(e);
       e.t += 1;
-      this.bossRage = Math.min(TUNING.rageMax, 1 + TUNING.rageRamp * Math.max(0, e.t / TICK - TUNING.enrageSec));
+      this.bossRage = Math.min(TUNING.rageMax, 1 + TUNING.rageRamp * (this.world.rules.rageMul || 1) * Math.max(0, e.t / TICK - TUNING.enrageSec));
       if (!e.enraged && e.t >= TUNING.enrageSec * TICK) {   // 오래 끌면 거세진다 → 시간에 쫓기는 긴장감
         e.enraged = true; e.speed *= 1.25;
         this._ev({ k: 'banner', text: '💢 점점 거세져요! 서둘러요', hint: true });

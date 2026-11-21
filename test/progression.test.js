@@ -59,9 +59,10 @@ test('시뮬레이션: 단계 배율이 적 체력·이동·스폰과 받는 피
   assert.ok(Math.abs(hpOf('school', 1) / hpOf('school', 0) - Wd.stageMul('school', 1).hp) < 1e-9);
   const taken = (world, cycle, bonus) => { const s = new E.Sim({ seed: 2, events: false, world, cycle, bonus }); const hp0 = s.player.hp; s.player.inv = 0; s._hurtPlayer(10); return hp0 - s.player.hp; };
   const base = taken('school', 0);
-  assert.ok(Math.abs(taken('stage', 0) / base - Wd.stageMul('stage', 0).dmg) < 1e-9, '뒤 월드일수록 아프다');
+  const atk = (w) => WORLDS[w].rules.atkMul || 1;   // 월드별 받는 피해 배율(첫 월드는 쉽게)
+  assert.ok(Math.abs(taken('stage', 0) / base - Wd.stageMul('stage', 0).dmg * atk('stage') / atk('school')) < 1e-9, '뒤 월드일수록 아프다');
   const rec = Wd.recommendedGear('stage', 0);
-  assert.ok(Math.abs(taken('stage', 0, gearBonus(0, rec.def)) / base - 1) < 0.06, '권장 방어 장비면 학교 수준으로 상쇄');
+  assert.ok(Math.abs(taken('stage', 0, gearBonus(0, rec.def)) / base - atk('stage') / atk('school')) < 0.06 * atk('stage') / atk('school'), '권장 방어 장비면 단계 배율이 상쇄됨');
   // 열차(카트·조명)처럼 막을 수 없는 피해는 그대로
   const s = new E.Sim({ seed: 3, events: false, world: 'stage' }); const hp0 = s.player.hp; s._hurtPlayer(20, true);
   assert.strictEqual(hp0 - s.player.hp, 20);
@@ -86,7 +87,7 @@ test('장비 공격력은 에코에게도 적용되고, 권장 장비면 보스�
 });
 
 test('봇: 뒤 월드·다음 회차는 장비 없이 못 깨고, 권장 장비면 깬다 (에코 10명)', () => {
-  for (const [w, c] of [['beach', 0], ['school', 1]]) {
+  for (const [w, c] of [['beach', 0], ['academy', 1]]) {
     const r = Wd.recommendedGear(w, c);
     let bare = 0, geared = 0;
     for (let s = 1; s <= 2; s++) {

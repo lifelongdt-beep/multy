@@ -24,7 +24,7 @@
  *   dash : dashCd      onDeath: {type, n} 죽을 때 분열
  * helper 필드: name, emoji, t(등장 초), 문구들, boons(조언 카드 이름 heal/power/focus/team)
  * gear: 이 월드의 매점 장비 이름 {atk:{icon,name}, def:{icon,name}} (효과는 아래 GEAR 공통)
- * rules 추가 규칙: sight(자동 조준 거리, 기본 260) · wind{amp,period}(좌우 바람) · dropEmoji(회복 아이템 모양) · trains{first,every,emoji,text}
+ * rules 추가 규칙: atkMul(받는 피해 배율, 첫 월드를 쉽게) · rageMul(보스 격앙 피해 증가 배율) · sight(자동 조준 거리, 기본 260) · wind{amp,period}(좌우 바람) · dropEmoji(회복 아이템 모양) · trains{first,every,emoji,text}
  */
 (function (root) {
   'use strict';
@@ -36,7 +36,8 @@
       desc: '기본 월드. 기말고사 날, 미루는 마음과 걱정이 몰려옵니다. "시험 불안"을 극복해 보세요. 담임 선생님이 응원하러 와 주십니다.',
       ruleText: '특별한 규칙 없음 · 숙제는 미리미리! · 담임 선생님께 도움을 청할 수 있어요',
       theme: { bg: '#161a2e', grid: 'rgba(255,255,255,.04)', deco: 'none' },
-      rules: { hpMul: 1.0, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0 },
+      // 첫 월드는 쉽게: 방해 요소가 덜 아프고(atkMul), 조금 덜 단단하고, 덜 몰려온다. 큰 도전도 에코 2명이면 넘을 수 있게
+      rules: { hpMul: 0.85, xpMul: 1.0, speedMul: 0.95, spawnMul: 0.85, atkMul: 0.4, rageMul: 0.5 },
       enemies: {
         hw:     { name: '미루기',   emoji: '🐌', hp: 3,  speed: 0.7,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         test:   { name: '걱정',     emoji: '😰', hp: 2,  speed: 1.1,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -52,17 +53,17 @@
         leaveText: '선생님은 언제나 기다리고 계세요',
         boons: { heal: '따뜻한 격려', power: '오답 노트 정리', focus: '집중하는 법', team: '친구와 함께' },
       },
-      boss: { name: '시험 불안', emoji: '😱', hp: 750, times: [90], needEchoes: 7, fightSec: 50, refMul: 1.0, speed: 0.4, r: 30, dmg: 12, xp: 30, ai: 'boss', pattern: 'exam', warnText: '⚠ 기말고사 D-DAY, 불안이 밀려와요 ⚠', startText: '😱 시험 불안, 극복해 봐요!', summon: 'hw' },
+      boss: { name: '시험 불안', emoji: '😱', hp: 500, times: [90], needEchoes: 2, fightSec: 11, refMul: 0.6, speed: 0.35, r: 30, dmg: 9, xp: 30, ai: 'boss', pattern: 'exam', warnText: '⚠ 기말고사 D-DAY, 불안이 밀려와요 ⚠', startText: '😱 시험 불안, 극복해 봐요!', summon: 'hw' },
       waves: [
         { from: 0,  to: 20,  interval: 52, n: 1, w: { hw: 6, test: 3 } },
         { from: 20, to: 45,  interval: 40, n: 2, w: { hw: 5, test: 4, alarm: 1, late: 2 } },
-        { from: 45, to: 75,  interval: 30, n: 2, w: { hw: 4, test: 3, alarm: 2, late: 2, chalk: 2, group: 2 } },
-        { from: 75, to: 121, interval: 22, n: 3, w: { hw: 3, test: 3, alarm: 2, late: 2, chalk: 2, group: 2 } },
+        { from: 45, to: 75,  interval: 36, n: 2, w: { hw: 4, test: 3, alarm: 2, late: 2, chalk: 2, group: 2 } },
+        { from: 75, to: 121, interval: 30, n: 2, w: { hw: 4, test: 3, alarm: 2, late: 2, chalk: 1, group: 2 } },
       ],
       swarms: [
         { t: 30,  type: 'test', n: 10, text: '걱정이 몰려와요!' },
-        { t: 62,  type: 'late', n: 8,  text: '지각 러시!' },
-        { t: 100, type: 'hw',   n: 16, text: '미루기 폭탄!' },
+        { t: 62,  type: 'late', n: 6,  text: '지각 러시!' },
+        { t: 100, type: 'hw',   n: 10, text: '미루기 폭탄!' },
       ],
       gear: { atk: { icon: '✏️', name: '잘 깎인 연필' }, def: { icon: '🎒', name: '튼튼한 책가방' } },
     },
@@ -74,7 +75,7 @@
       ruleText: '빡센 진도: 경험치 +30% · 방해 요소가 더 단단하고 많이 나옴 · 원거리 적 多',
       unlock: { world: 'school' },
       theme: { bg: '#1d1530', grid: 'rgba(190,140,255,.07)', deco: 'ruled' },
-      rules: { hpMul: 1.05, xpMul: 1.3, speedMul: 1.0, spawnMul: 1.0 },
+      rules: { hpMul: 1.05, xpMul: 1.3, speedMul: 1.0, spawnMul: 1.0, atkMul: 0.45 },
       enemies: {
         book:  { name: '조급함',            emoji: '😖', hp: 4,  speed: 0.75, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         quiz:  { name: '불안',              emoji: '😟', hp: 3,  speed: 1.2,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -89,7 +90,7 @@
         leaveText: '질문은 언제든 환영이에요',
         boons: { heal: '마음 다독이기', power: '개념 완성', focus: '시간 관리법', team: '스터디 그룹' },
       },
-      boss:  { name: '슬럼프', emoji: '🌧️', hp: 850, times: [85, 125], needEchoes: 8, fightSec: 33, refMul: 1.3, speed: 0.35, r: 30, dmg: 12, xp: 34, ai: 'boss', pattern: 'spiral', warnText: '⚠ 슬럼프가 찾아와요 ⚠', startText: '🌧️ 슬럼프, 함께 이겨내요!', summon: 'memo' },
+      boss:  { name: '슬럼프', emoji: '🌧️', hp: 850, times: [85, 125], needEchoes: 4, fightSec: 21, refMul: 1.0, speed: 0.35, r: 30, dmg: 12, xp: 34, ai: 'boss', pattern: 'spiral', warnText: '⚠ 슬럼프가 찾아와요 ⚠', startText: '🌧️ 슬럼프, 함께 이겨내요!', summon: 'memo' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { book: 6, quiz: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { book: 5, quiz: 4, memo: 2, ox: 1 } },
@@ -111,7 +112,7 @@
       ruleText: '야근 커피: 방해 요소를 잡으면 가끔 ☕ 떨어짐(체력 +12) · 일이 몰려 방해가 많이 나옴 · 방해 요소가 더 단단함',
       unlock: { world: 'academy' },
       theme: { bg: '#172229', grid: 'rgba(140,200,220,.07)', deco: 'tiles' },
-      rules: { hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04 },
+      rules: { hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, atkMul: 0.5 },
       enemies: {
         doc:     { name: '스트레스',      emoji: '😫', hp: 4,  speed: 0.8,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         mail:    { name: '압박감',        emoji: '💢', hp: 2,  speed: 1.25, r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -126,7 +127,7 @@
         leaveText: '궁금한 건 언제든 물어보세요',
         boons: { heal: '숨 돌리기', power: '업무 노하우', focus: '우선순위 정리', team: '동료와 협업' },
       },
-      boss:  { name: '번아웃', emoji: '🥵', hp: 1000, times: [80, 115, 150], needEchoes: 9, fightSec: 30, refMul: 0.6, speed: 0.35, r: 30, dmg: 14, xp: 38, ai: 'boss', pattern: 'charge', warnText: '⚠ 번아웃이 다가와요 ⚠', startText: '🥵 번아웃, 쉬어가며 극복해요!', summon: 'mail' },
+      boss:  { name: '번아웃', emoji: '🥵', hp: 1000, times: [80, 115, 150], needEchoes: 5, fightSec: 16, refMul: 0.6, speed: 0.35, r: 30, dmg: 14, xp: 38, ai: 'boss', pattern: 'charge', warnText: '⚠ 번아웃이 다가와요 ⚠', startText: '🥵 번아웃, 쉬어가며 극복해요!', summon: 'mail' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { doc: 6, mail: 4 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { doc: 5, mail: 4, call: 2, meeting: 1 } },
@@ -148,7 +149,7 @@
       ruleText: '열차 습격: 경고 줄이 뜬 뒤 열차가 가로질러 지나감 (치이면 최대 체력의 40%가 깎임! 방해 요소는 즉사)',
       unlock: { world: 'office' },
       theme: { bg: '#10201f', grid: 'rgba(255,255,255,.03)', deco: 'rails' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, trains: { first: 24, every: 36 } },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, trains: { first: 24, every: 36}, atkMul: 0.62 },
       enemies: {
         sleepy:  { name: '졸음',          emoji: '😪', hp: 5,  speed: 0.9,  r: 9,  dmg: 6,  xp: 1, ai: 'zig' },
         bag:     { name: '무거운 가방',   emoji: '🎒', hp: 9,  speed: 0.6,  r: 11, dmg: 8,  xp: 2, ai: 'chase' },
@@ -163,7 +164,7 @@
         leaveText: '도움이 필요하면 언제든 말씀하세요',
         boons: { heal: '잠깐 쉬어가기', power: '빠른 환승 길', focus: '졸음 깨우기', team: '함께 가는 길' },
       },
-      boss:  { name: '급행열차', emoji: '🚆', hp: 950, times: [75, 110, 145, 180], needEchoes: 9, fightSec: 22, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'lane', warnText: '⚠ 급행열차가 들어와요 ⚠', startText: '🚆 급행열차를 피해 집으로!', summon: 'sleepy' },
+      boss:  { name: '급행열차', emoji: '🚆', hp: 950, times: [75, 110, 145, 180], needEchoes: 6, fightSec: 14, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'lane', warnText: '⚠ 급행열차가 들어와요 ⚠', startText: '🚆 급행열차를 피해 집으로!', summon: 'sleepy' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { sleepy: 7, bag: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { sleepy: 5, bag: 3, phone: 2, ad: 1 } },
@@ -185,7 +186,7 @@
       ruleText: '깊은 밤: 어두워서 조준 거리가 짧아짐(가까운 적만 자동 공격) · 방해 요소가 더 단단함',
       unlock: { world: 'subway' },
       theme: { bg: '#0f1224', grid: 'rgba(160,170,255,.05)', deco: 'stars' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, sight: 190 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, sight: 190, atkMul: 0.68 },
       enemies: {
         snack:  { name: '야식 유혹',     emoji: '🍜', hp: 5,  speed: 0.85, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         game:   { name: '게임 한 판만',  emoji: '🎮', hp: 6,  speed: 0.65, r: 9,  dmg: 8,  xp: 2, ai: 'dash', dashCd: 105 },
@@ -200,7 +201,7 @@
         leaveText: '힘들 땐 언제든 이야기해요',
         boons: { heal: '따뜻한 밥 한 끼', power: '든든한 응원', focus: '일찍 자기', team: '가족과 함께' },
       },
-      boss: { name: '불면증', emoji: '😵‍💫', hp: 1000, times: [75, 105, 135, 165], needEchoes: 9, fightSec: 28, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 40, ai: 'boss', pattern: 'spiral', warnText: '⚠ 잠이 오지 않아요… 불면증이 찾아와요 ⚠', startText: '😵‍💫 불면증, 천천히 숨 쉬며 극복해요!', summon: 'scroll' },
+      boss: { name: '불면증', emoji: '😵‍💫', hp: 1000, times: [75, 105, 135, 165], needEchoes: 6, fightSec: 18, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 40, ai: 'boss', pattern: 'spiral', warnText: '⚠ 잠이 오지 않아요… 불면증이 찾아와요 ⚠', startText: '😵‍💫 불면증, 천천히 숨 쉬며 극복해요!', summon: 'scroll' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { snack: 6, scroll: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { snack: 5, scroll: 4, game: 2, moon: 1 } },
@@ -222,7 +223,7 @@
       ruleText: '땀 흘린 만큼: 경험치 +15% · 방해 요소가 15% 더 자주 나옴',
       unlock: { world: 'home' },
       theme: { bg: '#22161a', grid: 'rgba(255,150,150,.06)', deco: 'tiles' },
-      rules: { hpMul: 1.15, xpMul: 1.15, speedMul: 1.0, spawnMul: 1.15 },
+      rules: { hpMul: 1.15, xpMul: 1.15, speedMul: 1.0, spawnMul: 1.15, atkMul: 0.72 },
       enemies: {
         lazy:   { name: '귀찮음',     emoji: '🫠', hp: 5,  speed: 0.8,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         ache:   { name: '근육통',     emoji: '💥', hp: 9,  speed: 0.6,  r: 11, dmg: 8,  xp: 2, ai: 'chase' },
@@ -238,7 +239,7 @@
         leaveText: '꾸준함이 최고의 비결이에요',
         boons: { heal: '물 한 모금', power: '바른 자세', focus: '호흡법', team: '운동 메이트' },
       },
-      boss: { name: '작심삼일', emoji: '🗓️', hp: 1050, times: [75, 105, 135, 165], needEchoes: 9, fightSec: 27, refMul: 0.55, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'charge', warnText: '⚠ 오늘만 쉴까…? 작심삼일이 다가와요 ⚠', startText: '🗓️ 작심삼일, 오늘도 해내요!', summon: 'lazy' },
+      boss: { name: '작심삼일', emoji: '🗓️', hp: 1050, times: [75, 105, 135, 165], needEchoes: 7, fightSec: 18, refMul: 0.55, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'charge', warnText: '⚠ 오늘만 쉴까…? 작심삼일이 다가와요 ⚠', startText: '🗓️ 작심삼일, 오늘도 해내요!', summon: 'lazy' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { lazy: 6, sweat: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { lazy: 5, sweat: 4, excuse: 2, ache: 1 } },
@@ -260,7 +261,7 @@
       ruleText: '조용한 집중: 경험치 +20% · 방해 요소를 잡으면 가끔 🍫(체력 +12) · 시야가 조금 좁음',
       unlock: { world: 'gym' },
       theme: { bg: '#1c1a12', grid: 'rgba(255,220,150,.06)', deco: 'ruled' },
-      rules: { hpMul: 1.15, xpMul: 1.2, speedMul: 1.0, spawnMul: 1.0, sight: 220, coffeeChance: 0.03, dropEmoji: '🍫' },
+      rules: { hpMul: 1.15, xpMul: 1.2, speedMul: 1.0, spawnMul: 1.0, sight: 220, coffeeChance: 0.03, dropEmoji: '🍫', atkMul: 0.76 },
       enemies: {
         nod:    { name: '꾸벅꾸벅',      emoji: '💤', hp: 5,  speed: 0.9,  r: 9,  dmg: 6,  xp: 1, ai: 'zig' },
         tempt:  { name: '스마트폰 유혹', emoji: '📲', hp: 6,  speed: 0.7,  r: 8,  dmg: 8,  xp: 2, ai: 'dash', dashCd: 100 },
@@ -276,7 +277,7 @@
         leaveText: '궁금한 건 언제든 물어보세요',
         boons: { heal: '잠깐 산책', power: '딱 맞는 참고서', focus: '뽀모도로 공부법', team: '스터디 친구' },
       },
-      boss: { name: '집중력 저하', emoji: '😵', hp: 1100, times: [75, 105, 135, 165], needEchoes: 9, fightSec: 26, refMul: 0.55, speed: 0.4, r: 30, dmg: 14, xp: 44, ai: 'boss', pattern: 'exam', warnText: '⚠ 글자가 눈에 안 들어와요… 집중력 저하 ⚠', startText: '😵 집중력 저하, 한 줄씩 차근차근!', summon: 'nod' },
+      boss: { name: '집중력 저하', emoji: '😵', hp: 1100, times: [75, 105, 135, 165], needEchoes: 7, fightSec: 17, refMul: 0.55, speed: 0.4, r: 30, dmg: 14, xp: 44, ai: 'boss', pattern: 'exam', warnText: '⚠ 글자가 눈에 안 들어와요… 집중력 저하 ⚠', startText: '😵 집중력 저하, 한 줄씩 차근차근!', summon: 'nod' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { nod: 6, hurry: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { nod: 5, hurry: 4, tempt: 2, compare: 1 } },
@@ -298,7 +299,7 @@
       ruleText: '바닷바람: 바람이 좌우로 번갈아 불어 캐릭터가 밀림 · 방해 요소가 더 단단함',
       unlock: { world: 'library' },
       theme: { bg: '#0f2230', grid: 'rgba(120,220,255,.06)', deco: 'waves' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.05, wind: { amp: 0.75, period: 5 } },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.05, wind: { amp: 0.75, period: 5}, atkMul: 0.8 },
       enemies: {
         sun:    { name: '뙤약볕',        emoji: '☀️', hp: 6,  speed: 0.75, r: 10, dmg: 6,  xp: 1, ai: 'chase' },
         mosq:   { name: '모기',          emoji: '🦟', hp: 3,  speed: 1.25, r: 7,  dmg: 5,  xp: 1, ai: 'zig' },
@@ -313,7 +314,7 @@
         leaveText: '안전한 물놀이 되세요',
         boons: { heal: '그늘에서 쉬기', power: '구명조끼', focus: '물 마시기', team: '함께 노는 친구' },
       },
-      boss: { name: '태풍', emoji: '⛈️', hp: 1150, times: [75, 105, 135, 165], needEchoes: 10, fightSec: 25, refMul: 0.55, speed: 0.35, r: 30, dmg: 15, xp: 46, ai: 'boss', pattern: 'spiral', warnText: '⚠ 하늘이 어두워져요… 태풍이 다가와요 ⚠', startText: '⛈️ 태풍, 함께 버텨내요!', summon: 'mosq' },
+      boss: { name: '태풍', emoji: '⛈️', hp: 1150, times: [75, 105, 135, 165], needEchoes: 8, fightSec: 16, refMul: 0.55, speed: 0.35, r: 30, dmg: 15, xp: 46, ai: 'boss', pattern: 'spiral', warnText: '⚠ 하늘이 어두워져요… 태풍이 다가와요 ⚠', startText: '⛈️ 태풍, 함께 버텨내요!', summon: 'mosq' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { sun: 5, mosq: 4 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { sun: 5, mosq: 4, jelly: 2, sand: 1 } },
@@ -335,7 +336,7 @@
       ruleText: '수하물 카트: 경고 줄이 뜬 뒤 카트가 가로질러 지나감 (치이면 최대 체력의 40%가 깎임! 방해 요소는 즉사)',
       unlock: { world: 'beach' },
       theme: { bg: '#18202c', grid: 'rgba(200,220,255,.06)', deco: 'tiles' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.05, trains: { first: 22, every: 32, emoji: '🛒', text: '🛒 수하물 카트 질주! 빨간 줄을 피하세요' } },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.05, trains: { first: 22, every: 32, emoji: '🛒', text: '🛒 수하물 카트 질주! 빨간 줄을 피하세요'}, atkMul: 0.84 },
       enemies: {
         jet:    { name: '시차 피로',  emoji: '🌗', hp: 6,  speed: 0.85, r: 9,  dmg: 6,  xp: 1, ai: 'zig' },
         lost:   { name: '분실 걱정',  emoji: '❓', hp: 4,  speed: 1.2,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -350,7 +351,7 @@
         leaveText: '즐거운 여행 되세요',
         boons: { heal: '라운지 휴식', power: '빠른 길 안내', focus: '탑승권 확인', team: '여행 동료' },
       },
-      boss: { name: '난기류', emoji: '🌪️', hp: 1200, times: [75, 105, 135, 165], needEchoes: 10, fightSec: 24, refMul: 0.5, speed: 0.35, r: 30, dmg: 15, xp: 48, ai: 'boss', pattern: 'lane', warnText: '⚠ 덜컹! 난기류 구간이에요 ⚠', startText: '🌪️ 난기류, 안전벨트 매고 극복해요!', summon: 'jet' },
+      boss: { name: '난기류', emoji: '🌪️', hp: 1200, times: [75, 105, 135, 165], needEchoes: 8, fightSec: 16, refMul: 0.5, speed: 0.35, r: 30, dmg: 15, xp: 48, ai: 'boss', pattern: 'lane', warnText: '⚠ 덜컹! 난기류 구간이에요 ⚠', startText: '🌪️ 난기류, 안전벨트 매고 극복해요!', summon: 'jet' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { jet: 6, lost: 4 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { jet: 5, lost: 4, rush: 2, delay: 1 } },
@@ -372,7 +373,7 @@
       ruleText: '회복의 힘: 방해 요소를 잡으면 가끔 💊(체력 +12) · 방해 요소가 5% 더 빠름',
       unlock: { world: 'airport' },
       theme: { bg: '#162628', grid: 'rgba(160,255,230,.06)', deco: 'tiles' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.05, spawnMul: 1.05, coffeeChance: 0.05, dropEmoji: '💊' },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.05, spawnMul: 1.05, coffeeChance: 0.05, dropEmoji: '💊', atkMul: 0.88 },
       enemies: {
         germ:   { name: '감기 기운',     emoji: '🦠', hp: 5,  speed: 0.95, r: 8,  dmg: 6,  xp: 1, ai: 'zig' },
         cough:  { name: '콜록콜록',      emoji: '🤧', hp: 7,  speed: 0.7,  r: 9,  dmg: 6,  xp: 2, ai: 'chase' },
@@ -388,7 +389,7 @@
         leaveText: '건강이 제일 중요해요',
         boons: { heal: '푹 쉬기', power: '영양 가득 식단', focus: '규칙적인 생활', team: '함께하는 산책' },
       },
-      boss: { name: '독감', emoji: '🤒', hp: 1250, times: [75, 105, 135, 165], needEchoes: 10, fightSec: 24, refMul: 0.5, speed: 0.4, r: 30, dmg: 15, xp: 50, ai: 'boss', pattern: 'exam', warnText: '⚠ 으슬으슬… 독감이 찾아와요 ⚠', startText: '🤒 독감, 푹 쉬며 이겨내요!', summon: 'germ' },
+      boss: { name: '독감', emoji: '🤒', hp: 1250, times: [75, 105, 135, 165], needEchoes: 9, fightSec: 16, refMul: 0.5, speed: 0.4, r: 30, dmg: 15, xp: 50, ai: 'boss', pattern: 'exam', warnText: '⚠ 으슬으슬… 독감이 찾아와요 ⚠', startText: '🤒 독감, 푹 쉬며 이겨내요!', summon: 'germ' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { germ: 6, cough: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { germ: 5, cough: 4, over: 2, xray: 1 } },
@@ -410,7 +411,7 @@
       ruleText: '산바람 + 안개: 바람이 세게 불어 캐릭터가 밀리고, 시야가 좁아 가까운 적만 조준',
       unlock: { world: 'hospital' },
       theme: { bg: '#1a2420', grid: 'rgba(200,255,200,.05)', deco: 'diag' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, wind: { amp: 0.95, period: 4 }, sight: 210 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, wind: { amp: 0.95, period: 4}, atkMul: 0.92, sight: 210 },
       enemies: {
         slope:  { name: '가파른 오르막',       emoji: '⛰️', hp: 16, speed: 0.45, r: 13, dmg: 9,  xp: 3, ai: 'chase' },
         rock:   { name: '굴러오는 돌',         emoji: '🪨', hp: 7,  speed: 0.7,  r: 9,  dmg: 9,  xp: 2, ai: 'dash', dashCd: 90 },
@@ -425,7 +426,7 @@
         leaveText: '천천히, 안전하게 올라가요',
         boons: { heal: '따뜻한 차 한 잔', power: '등산 스틱', focus: '페이스 조절', team: '함께 오르는 길' },
       },
-      boss: { name: '눈보라', emoji: '🌨️', hp: 1300, times: [75, 105, 135, 165], needEchoes: 10, fightSec: 23, refMul: 0.5, speed: 0.4, r: 30, dmg: 16, xp: 52, ai: 'boss', pattern: 'charge', warnText: '⚠ 정상 직전, 눈보라가 몰아쳐요 ⚠', startText: '🌨️ 눈보라를 뚫고 정상으로!', summon: 'bee' },
+      boss: { name: '눈보라', emoji: '🌨️', hp: 1300, times: [75, 105, 135, 165], needEchoes: 9, fightSec: 15, refMul: 0.5, speed: 0.4, r: 30, dmg: 16, xp: 52, ai: 'boss', pattern: 'charge', warnText: '⚠ 정상 직전, 눈보라가 몰아쳐요 ⚠', startText: '🌨️ 눈보라를 뚫고 정상으로!', summon: 'bee' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { bee: 6, rock: 2 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { bee: 5, rock: 3, fog: 1, slope: 1 } },
@@ -447,7 +448,7 @@
       ruleText: '움직이는 조명: 경고 줄 뒤 조명 장치가 지나감(최대 체력의 40%) · 방해 요소가 10% 더 자주 나옴 · 큰 도전 4번',
       unlock: { world: 'mountain' },
       theme: { bg: '#1e0f24', grid: 'rgba(255,170,255,.06)', deco: 'stars' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, trains: { first: 26, every: 34, emoji: '💡', text: '💡 조명 장치가 움직여요! 빨간 줄을 피하세요' } },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, trains: { first: 26, every: 34, emoji: '💡', text: '💡 조명 장치가 움직여요! 빨간 줄을 피하세요'}, atkMul: 0.96 },
       enemies: {
         nerve:  { name: '긴장',       emoji: '😬', hp: 6,  speed: 0.85, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         shake:  { name: '떨림',       emoji: '🫨', hp: 5,  speed: 1.0,  r: 8,  dmg: 5,  xp: 1, ai: 'zig' },
@@ -462,7 +463,7 @@
         leaveText: '우리는 한 팀이에요',
         boons: { heal: '심호흡', power: '연습한 만큼', focus: '리허설', team: '우리 팀' },
       },
-      boss: { name: '무대 공포증', emoji: '🎭', hp: 1400, times: [75, 105, 135, 165], needEchoes: 10, fightSec: 22, refMul: 0.5, speed: 0.4, r: 32, dmg: 16, xp: 56, ai: 'boss', pattern: 'exam', warnText: '⚠ 막이 오르기 직전… 무대 공포증이 찾아와요 ⚠', startText: '🎭 무대 공포증, 지금까지의 나와 함께 극복해요!', summon: 'nerve',
+      boss: { name: '무대 공포증', emoji: '🎭', hp: 1400, times: [75, 105, 135, 165], needEchoes: 10, fightSec: 14, refMul: 0.5, speed: 0.4, r: 32, dmg: 16, xp: 56, ai: 'boss', pattern: 'exam', warnText: '⚠ 막이 오르기 직전… 무대 공포증이 찾아와요 ⚠', startText: '🎭 무대 공포증, 지금까지의 나와 함께 극복해요!', summon: 'nerve',
               lineup: ['school', 'office', 'beach'] },   // 피날레: 앞 월드의 큰 도전들이 차례로 찾아오고 마지막에 무대 공포증
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { nerve: 6, shake: 4 } },
