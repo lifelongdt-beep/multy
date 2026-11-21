@@ -1,4 +1,4 @@
-/* 퇴근 에코 — 효과음 (WebAudio 합성, 외부 에셋 없음) */
+/* Endless Me — 효과음 (WebAudio 합성, 외부 에셋 없음) */
 (function (root) {
   'use strict';
   let ctx = null;

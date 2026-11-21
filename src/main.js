@@ -1,4 +1,4 @@
-/* 퇴근 에코 — 입력 / 렌더 / 저장 / 연출 */
+/* Endless Me — 입력 / 렌더 / 저장 / 연출 */
 (function () {
   'use strict';
   const { Sim, addEcho, UPGRADES, SYNERGIES, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, MAX_ECHOES, MAX_LEVEL } = EchoSim;
