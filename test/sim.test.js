@@ -300,3 +300,22 @@ test('에코: 적에게 맞아 에너지가 0이 되면 2초 동안 사라졌다
   assert.strictEqual(ec.hp, E.TUNING.echoHp, '에너지를 채워서');
   assert.ok(ec.alive, '기록이 끝난 게 아니므로 계속 함께함');
 });
+
+test('한꺼번에 여러 레벨이 오르면: 첫 레벨만 카드로 고르고 나머지는 바로 자동 선택된다', () => {
+  const s = new Sim({ seed: 82 });
+  s.player.hp = 1e9;
+  s.player.xp = 200;   // 여러 레벨 분량
+  const lv0 = s.player.level;
+  s.step({ dx: 0, dy: 0 });
+  const autos = s.drainEvents().filter((e) => e.k === 'autoPick');
+  assert.ok(s.player.level - lv0 >= 3, `레벨 ${lv0} → ${s.player.level}`);
+  assert.ok(s.choices && s.choices.length, '카드는 한 번만 떠 있다');
+  assert.strictEqual(autos.length, s.player.level - lv0 - 1, '나머지 레벨은 바로 자동 선택');
+  assert.ok(autos.every((a) => a.id && a.icon), '자동 선택된 아이템 정보');
+  // 카드가 떠 있는 동안 또 레벨이 오르면 그것도 바로 자동 선택 (카드는 그대로)
+  const shown = s.choices;
+  s.player.xp = s.player.need; s.step({ dx: 0, dy: 0 });
+  assert.strictEqual(s.choices, shown, '떠 있던 카드는 바뀌지 않음');
+  assert.ok(s.drainEvents().some((e) => e.k === 'autoPick'));
+  assert.strictEqual(E.TUNING.choiceAutoSec, 3, '고르는 시간 3초');
+});

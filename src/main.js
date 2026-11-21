@@ -91,6 +91,7 @@
     try { if (navigator.vibrate) navigator.vibrate(Math.min(220, Math.max(70, Math.round((dmg || 5) * 12)))); } catch (e) { /* 무시 */ }
   }
   let floats = [];
+  let autoFlash = [];   // 자동 선택된 아이템 아이콘 반짝임 {id, icon, t}
   let banner = { text: '', t: 0 };
   let toast = { text: '', t: 0 };
 
@@ -114,7 +115,7 @@
         case 'helped': Sfx.play('levelup'); break;
         case 'train': Sfx.play('train'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': if (tutorial) banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
-        case 'autoPick': toast = { text: `✨ 자동 선택: ${ev.icon} ${ev.name}`, t: 130 }; Sfx.play('click'); break;   // 무엇이 골라졌는지 알려 줌
+        case 'autoPick': autoFlash.push({ id: ev.id, icon: ev.icon, t: 48 }); break;   // 자동 선택: 아이콘만 짧게 반짝 (글자·소리 없음)
         case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
         default: break;
       }
@@ -564,7 +565,10 @@
     }
     // 보유 아이템: 화면 위 HUD 두 번째 줄 (많아지면 글자를 줄여 한 줄에 맞춤)
     {
-      const owned = UPGRADES.filter((u) => p.stats[u.id] && !u.instant).map((u) => `${u.icon}${p.stats[u.id]}`);
+      const ownedUps = UPGRADES.filter((u) => p.stats[u.id] && !u.instant);
+      const owned = ownedUps.map((u) => `${u.icon}${p.stats[u.id]}`), ownedIds = ownedUps.map((u) => u.id);
+      // 자동 선택 id → 아이템 바의 능력 (조언 카드는 능력으로 바꿔서)
+      for (const a of autoFlash) if (!a.stat) a.stat = { boon_power: 'dmg', boon_focus: 'rate', boon_team: 'echo' }[a.id] || a.id;
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       if (!owned.length) {
         if (tutorial) { ctx.font = '11px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillText('🎒 아이템: 구슬을 모아 성장하면 생겨요', 8, 43); }
@@ -574,7 +578,22 @@
         while (size > 9 && total(size, gap) > W - 96) { size -= 1; gap = Math.max(3, gap - 1); }   // 오른쪽은 ⏸·🔊 버튼 자리
         ctx.font = `${size}px sans-serif`; ctx.fillStyle = '#fff';
         let ux = 8;
-        for (const t of owned) { ctx.fillText(t, ux, 43); ux += ctx.measureText(t).width + gap; }
+        for (let i = 0; i < owned.length; i++) {
+          const t = owned[i], w2 = ctx.measureText(t).width;
+          const fl = autoFlash.find((a) => a.stat === ownedIds[i]);
+          if (fl) {   // 자동 선택된 아이템: 아이콘 뒤가 짧게 반짝
+            ctx.globalAlpha = (Math.floor(fl.t / 6) % 2 ? 0.55 : 0.2);
+            ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(ux + size * 0.55, 43, size * 0.9, 0, 7); ctx.fill();
+            ctx.globalAlpha = 1; ctx.fillStyle = '#fff';
+          }
+          ctx.fillText(t, ux, 43); ux += w2 + gap;
+        }
+      }
+      // 아이템 바에 없는 것(회복 등)은 내 머리 위에서 아이콘만 짧게 반짝
+      for (const a of autoFlash) {
+        if (ownedIds.indexOf(a.stat) >= 0) continue;
+        ctx.globalAlpha = Math.floor(a.t / 6) % 2 ? 0.9 : 0.35; ctx.textAlign = 'center';
+        emoji(a.icon, p.x, p.y - 44, 16); ctx.globalAlpha = 1; ctx.textAlign = 'left';
       }
     }
     // 조이스틱 표시 (드래그 중)
@@ -626,6 +645,8 @@
     if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - 0.06);
     for (const f of floats) f.t -= 1;
     floats = floats.filter((f) => f.t > 0);
+    for (const a of autoFlash) a.t -= 1;
+    autoFlash = autoFlash.filter((a) => a.t > 0);
     if (banner.t > 0) banner.t -= 1;
     if (toast.t > 0) toast.t -= 1;
     render();

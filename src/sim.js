@@ -71,7 +71,7 @@
     helperNeed: 70,          // 곁에 이만큼(틱, 60=1초) 머물면 조언 카드 (이전 150틱=2.5초 → 약 1.2초)
     helperDecay: 1,          // 곁을 벗어나면 게이지가 틱당 이만큼 줄어듦 (이전 2: 잠깐 벗어나도 덜 깎임)
     helperStay: 15,          // 도우미가 기다려 주는 시간(초)
-    choiceAutoSec: 6,        // 레벨업·조언 카드는 게임을 멈추지 않고, 이 시간 안에 안 고르면 자동으로 골라 준다
+    choiceAutoSec: 3,        // 레벨업·조언 카드는 게임을 멈추지 않고, 이 시간 안에 안 고르면 자동으로 골라 준다
   };
 
   function mulberry32(a) {
@@ -248,6 +248,13 @@
         return;
       }
       if (!this.choices.some((c) => c.id === id)) return;
+      this._applyUpgrade(id);
+      this.choices = null;
+    }
+
+    /** 레벨업 아이템 하나를 적용 (카드 선택·자동 선택 공용) */
+    _applyUpgrade(id) {
+      const p = this.player;
       const up = UPGRADES.find((u) => u.id === id);
       if (up && up.instant) {
         p.hp = Math.min(p.maxhp, p.hp + TUNING.healAmount);
@@ -259,10 +266,25 @@
         }
       }
       this.rec.ups.push({ t: this.tick, id });
-      this.choices = null;
+    }
+
+    /** 한 번에 여러 레벨이 오르면: 첫 레벨만 카드로 고르고, 나머지는 바로 자동 선택 */
+    _levelUpAuto() {
+      const picks = this._rollLevel();
+      if (!picks.length) return;
+      const pick = picks[0];
+      this._applyUpgrade(pick.id);
+      this._ev({ k: 'autoPick', id: pick.id, icon: pick.icon, name: pick.name });
     }
 
     _levelUp() {
+      const picks = this._rollLevel();
+      this._offer(picks, 'levelup');
+      this._ev({ k: 'levelup' });
+    }
+
+    /** 레벨을 올리고 고를 카드 3장을 뽑는다 */
+    _rollLevel() {
       const p = this.player;
       p.level += 1; p.xp -= p.need; p.need = Math.round(4 + p.level * 2.8);
       const pool = UPGRADES.filter((u) => {
@@ -271,8 +293,7 @@
       });
       const picks = [];
       for (let i = 0; i < 3 && pool.length; i++) picks.push(pool.splice(Math.floor(this.rng() * pool.length), 1)[0]);
-      this._offer(picks, 'levelup');
-      this._ev({ k: 'levelup' });
+      return picks;
     }
 
     /** 카드를 띄운다. 이미 떠 있는 카드가 있으면 먼저 자동으로 골라 준다(카드가 겹치지 않게) */
@@ -289,7 +310,7 @@
       let pick = c[0];
       if (this.choiceKind === 'helper' && this.player.hp < this.player.maxhp * 0.5) pick = c.find((x) => x.id === 'boon_heal') || pick;
       this.choose(pick.id);
-      this._ev({ k: 'autoPick', icon: pick.icon, name: pick.name });
+      this._ev({ k: 'autoPick', id: pick.id, icon: pick.icon, name: pick.name });
     }
 
     /* ---------- 스폰 ---------- */
@@ -891,7 +912,10 @@
           this.gems[i] = this.gems[this.gems.length - 1]; this.gems.pop();
         }
       }
-      if (p.xp >= p.need && !this.choices) this._levelUp();
+      // 레벨업: 카드가 없으면 카드를 띄우고, 이미 고르는 중이거나 여러 레벨이 한꺼번에 오르면 나머지는 바로 자동 선택
+      for (let guard = 0; p.xp >= p.need && guard < 50; guard++) {
+        if (!this.choices) this._levelUp(); else this._levelUpAuto();
+      }
 
       // 이펙트 수명
       for (let i = this.fx.length - 1; i >= 0; i--) { this.fx[i].t -= 1; if (this.fx[i].t <= 0) { this.fx[i] = this.fx[this.fx.length - 1]; this.fx.pop(); } }
