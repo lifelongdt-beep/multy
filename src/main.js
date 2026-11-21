@@ -405,7 +405,11 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
     for (const g of sim.gems) {
-      if (g.kind === 'coffee') { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(sim.world.rules.dropEmoji || '☕', g.x, g.y, 15); continue; }
+      if (g.kind === 'coffee') {
+        if (useArt) Art.drawDrop(ctx, g, sim.world.rules.dropEmoji || '☕', now);
+        else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(sim.world.rules.dropEmoji || '☕', g.x, g.y, 15); }
+        continue;
+      }
       if (useArt) { Art.drawGem(ctx, g, now); continue; }
       ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.arc(g.x, g.y, 3.2, 0, 7); ctx.fill();
     }
@@ -418,6 +422,8 @@
         ctx.beginPath(); ctx.moveTo(0, h.y - h.h / 2); ctx.lineTo(W, h.y - h.h / 2); ctx.moveTo(0, h.y + h.h / 2); ctx.lineTo(W, h.y + h.h / 2); ctx.stroke(); ctx.setLineDash([]);
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 14px sans-serif';
         ctx.fillText(h.dir > 0 ? '▶ ▶ ▶' : '◀ ◀ ◀', W / 2, h.y);
+      } else if (useArt) {
+        Art.drawHazard(ctx, h, (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆', now);
       } else {
         const hx = h.x, hy = h.y;
         ctx.fillStyle = '#c9d3dc'; ctx.fillRect(hx - 70, hy - 20, 140, 40);

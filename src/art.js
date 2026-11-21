@@ -264,6 +264,64 @@
     });
   }
 
+  /* ---------- 위험물 (오른쪽을 보는 모습으로 그림, 왼쪽으로 가면 뒤집음) ---------- */
+  const HAZARD = {
+    train(g) {
+      rrect(g, -80, -22, 160, 40, 12); fillStroke(g, '#d9e2ea', 2.4);                   // 차체
+      g.beginPath(); g.moveTo(52, -22); g.quadraticCurveTo(82, -20, 82, 4); g.lineTo(82, 18); g.lineTo(52, 18); g.closePath(); fillStroke(g, '#26a69a', 2.4);   // 앞부분
+      rrect(g, 58, -16, 18, 13, 4); fillStroke(g, '#bdeefc', 1.6);                      // 앞 유리
+      circle(g, 74, 8, 3.2); fillStroke(g, '#fff59d', 1.4);                               // 전조등
+      for (let i = 0; i < 4; i++) { rrect(g, -70 + i * 30, -15, 20, 13, 3); fillStroke(g, '#2c3e50', 1.4); g.fillStyle = 'rgba(160,230,255,.35)'; g.fillRect(-68 + i * 30, -13, 7, 9); }
+      g.fillStyle = '#e53950'; g.fillRect(-79, 3, 131, 6); g.fillStyle = '#26a69a'; g.fillRect(-79, 9, 131, 3);
+      for (const x of [-60, -30, 20, 50]) { circle(g, x, 20, 5); fillStroke(g, '#37474f', 1.6); }
+    },
+    cart(g) {
+      line(g, [-70, -6, -78, -24], 3, '#6d4c41'); line(g, [-78, -24, -70, -24], 3, '#6d4c41');   // 손잡이
+      rrect(g, -70, 2, 145, 10, 3); fillStroke(g, '#78909c', 2);                                  // 짐칸
+      const bags = [[-62, -22, 34, 24, '#ef5350'], [-24, -30, 30, 32, '#42a5f5'], [10, -18, 36, 20, '#ffca28'], [10, -34, 26, 16, '#ab47bc'], [50, -24, 24, 26, '#66bb6a']];
+      for (const [x, y, w, h, col] of bags) { rrect(g, x, y, w, h, 4); fillStroke(g, col, 1.8); rrect(g, x + w / 2 - 5, y - 4, 10, 5, 2); g.lineWidth = 1.4; g.strokeStyle = OL; g.stroke(); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(x + 3, y + 3, 3, h - 6); }
+      for (const x of [-55, 60]) { circle(g, x, 17, 6); fillStroke(g, '#37474f', 1.8); circle(g, x, 17, 2); g.fillStyle = '#cfd8dc'; g.fill(); }
+    },
+    light(g) {
+      rrect(g, -80, -26, 160, 10, 3); fillStroke(g, '#546e7a', 2);                                // 트러스
+      g.strokeStyle = '#37474f'; g.lineWidth = 1.4; g.beginPath(); for (let x = -76; x < 76; x += 12) { g.moveTo(x, -25); g.lineTo(x + 6, -17); g.lineTo(x + 12, -25); } g.stroke();
+      for (const [x, col] of [[-55, '#ff80ab'], [-15, '#fff59d'], [25, '#80deea'], [62, '#b388ff']]) {
+        g.globalAlpha = 0.28; g.fillStyle = col; g.beginPath(); g.moveTo(x - 6, -6); g.lineTo(x + 6, -6); g.lineTo(x + 20, 24); g.lineTo(x - 20, 24); g.closePath(); g.fill(); g.globalAlpha = 1;   // 빛줄기
+        line(g, [x, -16, x, -12], 2);
+        rrect(g, x - 9, -13, 18, 12, 4); fillStroke(g, '#263238', 1.8); circle(g, x, -3, 5); fillStroke(g, col, 1.4);
+      }
+    },
+  };
+  function line(g, pts, lw, col) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.lineWidth = lw; g.strokeStyle = col || OL; g.stroke(); }
+
+  /* ---------- 회복 아이템 ---------- */
+  const DROP = {
+    coffee(g) {
+      for (const x of [-3, 2]) { g.beginPath(); g.moveTo(x, -6); g.quadraticCurveTo(x + 3, -9, x, -12); g.lineWidth = 1.3; g.strokeStyle = 'rgba(255,255,255,.8)'; g.stroke(); }
+      g.beginPath(); g.arc(7, 1, 3.5, -Math.PI / 2, Math.PI / 2); g.lineWidth = 2.2; g.strokeStyle = OL; g.stroke(); g.lineWidth = 1.2; g.strokeStyle = '#fff'; g.stroke();
+      g.beginPath(); g.moveTo(-7, -5); g.lineTo(7, -5); g.lineTo(5.5, 7); g.quadraticCurveTo(0, 9, -5.5, 7); g.closePath(); fillStroke(g, '#ffffff', 1.8);
+      g.fillStyle = '#8d5a3c'; g.fillRect(-6.3, -4.2, 12.6, 3);
+      g.fillStyle = '#ff7a59'; g.fillRect(-6, 0, 11.6, 3);
+    },
+    choco(g) {
+      g.save(); g.rotate(-0.25);
+      rrect(g, -8, -6, 16, 12, 2); fillStroke(g, '#6d3b22', 1.8);
+      g.strokeStyle = '#4e2715'; g.lineWidth = 1; g.beginPath(); g.moveTo(-8, 0); g.lineTo(8, 0); g.moveTo(-2.7, -6); g.lineTo(-2.7, 6); g.moveTo(2.7, -6); g.lineTo(2.7, 6); g.stroke();
+      g.beginPath(); g.moveTo(-8, 1); g.lineTo(8, 4); g.lineTo(8, 6); g.lineTo(-8, 6); g.closePath(); fillStroke(g, '#e53935', 1.6);   // 포장지
+      g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-6.5, -4.5, 3, 2);
+      g.restore();
+    },
+    pill(g) {
+      g.save(); g.rotate(-0.6);
+      rrect(g, -9, -4.5, 18, 9, 4.5); fillStroke(g, '#ffffff', 1.8);
+      g.save(); rrect(g, -9, -4.5, 18, 9, 4.5); g.clip(); g.fillStyle = '#26c6da'; g.fillRect(0, -5, 10, 10); g.restore();
+      rrect(g, -9, -4.5, 18, 9, 4.5); g.lineWidth = 1.8; g.strokeStyle = OL; g.stroke();
+      line(g, [0, -4.5, 0, 4.5], 1.2);
+      g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(-6, -2.8, 4, 1.4);
+      g.restore();
+    },
+  };
+
   /* ---------- 파편 (처치 연출) ---------- */
   let parts = [];
   function burst(x, y, color, n, big) {
@@ -369,6 +427,27 @@
       ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.35, 0, Math.PI * 2); ctx.fill();
     },
 
+    /** 질주하는 위험물: 🚆 열차(지하철·보스) · 🛒 수하물 카트(공항) · 💡 조명 장치(꿈의 무대). 앞쪽이 진행 방향(dir) */
+    drawHazard(ctx, h, kind, now) {
+      const key = kind === '🛒' ? 'cart' : kind === '💡' ? 'light' : 'train';
+      const c = sprite('hz:' + key, 168, 56, (g) => HAZARD[key](g));
+      const shake = Math.sin(now / 25) * 0.8;
+      ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(h.x, h.y + 22, 76, 7, 0, 0, Math.PI * 2); ctx.fill();
+      // 속도감: 뒤쪽 바람 줄
+      ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
+      for (let i = -1; i <= 1; i++) { const bx = h.x - h.dir * (90 + (now / 8 + i * 17) % 30); ctx.beginPath(); ctx.moveTo(bx, h.y + i * 11); ctx.lineTo(bx - h.dir * 22, h.y + i * 11); ctx.stroke(); }
+      blit(ctx, c, h.x, h.y + shake, 1, 1, h.dir < 0);
+    },
+    /** 회복 아이템: ☕ 커피 · 🍫 초콜릿 · 💊 비타민 (살짝 둥실거리며 반짝) */
+    drawDrop(ctx, g, kind, now) {
+      const key = kind === '🍫' ? 'choco' : kind === '💊' ? 'pill' : 'coffee';
+      const c = sprite('drop:' + key, 22, 24, (q) => DROP[key](q));
+      const bob = Math.sin(now / 260 + g.x * 0.1) * 1.6;
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(g.x, g.y + 8, 6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.35 + 0.25 * Math.sin(now / 200 + g.y); ctx.fillStyle = '#fff4b0';
+      ctx.beginPath(); ctx.arc(g.x, g.y - 1 + bob, 10, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;   // 은은한 빛
+      blit(ctx, c, g.x, g.y - 1 + bob, 0.95, 0.95);
+    },
     burst,
     drawParticles(ctx) {
       for (const q of parts) {
