@@ -236,6 +236,7 @@
       const p = this.player;
       if (id.indexOf('boon_') === 0) {          // 도우미가 주는 조언 카드
         const k = id.slice(5);
+        if (Worlds.BOONS[k]) this._ev({ k: 'gotItem', id, icon: Worlds.BOONS[k].icon });
         if (k === 'heal') { p.hp = Math.min(p.maxhp, p.hp + p.maxhp * TUNING.boonHealFrac); this._ev({ k: 'heal' }); }
         else {
           const stat = { power: 'dmg', focus: 'rate', team: 'echo' }[k];
@@ -256,6 +257,7 @@
     _applyUpgrade(id) {
       const p = this.player;
       const up = UPGRADES.find((u) => u.id === id);
+      if (up) this._ev({ k: 'gotItem', id, icon: up.icon });   // 새로 얻은 아이템 (머리 위 반짝임용)
       if (up && up.instant) {
         p.hp = Math.min(p.maxhp, p.hp + TUNING.healAmount);
         this._ev({ k: 'heal' });

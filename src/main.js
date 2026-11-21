@@ -93,6 +93,7 @@
   }
   let floats = [];
   let autoFlash = [];
+  let headFlash = [];   // 새로 얻은 아이템: 주인공 머리 위에서 잠깐 반짝 {icon, t}
   // 보스 극복 연출: 슬로모션 → 부풀며 빛남 → 폭발·충격파·색종이 → 화면 번쩍
   let bossFx = null, slowmo = 0, whiteFlash = 0;
   const BOSS_FX_LEN = 80;
@@ -139,6 +140,7 @@
         case 'helped': Sfx.play('levelup'); break;
         case 'train': Sfx.play('train'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': if (tutorial) banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
+        case 'gotItem': headFlash.push({ icon: ev.icon, t: 50 }); if (headFlash.length > 3) headFlash.shift(); break;
         case 'autoPick': autoFlash.push({ id: ev.id, icon: ev.icon, t: 48 }); break;   // 자동 선택: 아이콘만 짧게 반짝 (글자·소리 없음)
         case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
         default: break;
@@ -178,7 +180,7 @@
     playerEmoji = GameUI.emoji();
     if (window.Art) Art.setOutfit(GameUI.cycle());   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; floats = []; bossFx = null; slowmo = 0; whiteFlash = 0;
+    shake = 0; hurtFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -691,12 +693,20 @@
           ctx.fillText(t, ux, 43); ux += w2 + gap;
         }
       }
-      // 아이템 바에 없는 것(회복 등)은 내 머리 위에서 아이콘만 짧게 반짝
-      for (const a of autoFlash) {
-        if (ownedIds.indexOf(a.stat) >= 0) continue;
-        ctx.globalAlpha = Math.floor(a.t / 6) % 2 ? 0.9 : 0.35; ctx.textAlign = 'center';
-        emoji(a.icon, p.x, p.y - 44, 16); ctx.globalAlpha = 1; ctx.textAlign = 'left';
-      }
+      // 새로 얻은 아이템: 주인공 머리 위에서 살짝 떠오르며 반짝 (여러 개면 옆으로 나란히)
+      headFlash.forEach((h, i) => {
+        const k = 1 - h.t / 50, x = p.x + (i - (headFlash.length - 1) / 2) * 20, y = p.y - 40 - k * 10;
+        const pop = k < 0.2 ? 0.6 + k * 2.4 : 1.08 - Math.min(0.08, (k - 0.2) * 0.2);   // 톡 커졌다 제자리
+        ctx.globalAlpha = Math.min(1, h.t / 14);
+        const gl = ctx.createRadialGradient(x, y, 1, x, y, 15); gl.addColorStop(0, 'rgba(255,240,150,.8)'); gl.addColorStop(1, 'rgba(255,240,150,0)');
+        ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x, y, 15, 0, 7); ctx.fill();
+        ctx.save(); ctx.translate(x, y); ctx.rotate(now / 300);
+        ctx.fillStyle = '#fff8c4';
+        for (let s = 0; s < 4; s++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, -11 - 3 * Math.sin(now / 90 + s)); ctx.lineTo(1.6, -7); ctx.lineTo(-1.6, -7); ctx.closePath(); ctx.fill(); }
+        ctx.restore();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(h.icon, x, y, 15 * pop);
+        ctx.globalAlpha = 1; ctx.textAlign = 'left';
+      });
     }
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     // 조이스틱 표시 (드래그 중)
@@ -753,6 +763,8 @@
     for (const f of floats) f.t -= 1;
     floats = floats.filter((f) => f.t > 0);
     for (const a of autoFlash) a.t -= 1;
+    for (const h of headFlash) h.t -= 1;
+    headFlash = headFlash.filter((h) => h.t > 0);
     autoFlash = autoFlash.filter((a) => a.t > 0);
     if (banner.t > 0) banner.t -= 1;
     if (toast.t > 0) toast.t -= 1;
