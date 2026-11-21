@@ -36,9 +36,9 @@ test('캐릭터: 해금 비용 차감, 중복 해금/미보유 선택 거부', (
   const s = M.defaultSave();
   assert.strictEqual(M.unlockCharacter(s, 'athlete').reason, 'coins');
   assert.strictEqual(M.selectCharacter(s, 'athlete'), false);
-  s.coins = 500;
+  s.coins = 2000;
   assert.strictEqual(M.unlockCharacter(s, 'athlete').ok, true);
-  assert.strictEqual(s.coins, 500 - M.CHARACTERS.athlete.cost);
+  assert.strictEqual(s.coins, 2000 - M.CHARACTERS.athlete.cost);
   assert.strictEqual(M.unlockCharacter(s, 'athlete').reason, 'owned');
   assert.strictEqual(M.selectCharacter(s, 'athlete'), true);
   assert.strictEqual(s.chars.selected, 'athlete');
