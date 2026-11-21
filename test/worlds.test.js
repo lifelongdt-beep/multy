@@ -617,3 +617,26 @@ test('격앙 이후에는 전투가 길어질수록 받는 피해가 계속 커�
   b.hp = 0; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 });
   assert.strictEqual(s.bossRage, 1);
 });
+
+test('도우미: 짧게(약 1.2초) 머물러도 조언을 받고, 한 판에 여러 번(25초마다) 찾아온다', () => {
+  assert.ok(TUNING.helperNeed <= 75, `머무는 시간 ${TUNING.helperNeed}틱`);
+  const s = new Sim({ seed: 9, events: true, world: 'school' });
+  const arrivals = [];
+  let helpedAt = null;
+  while (s.tick < 100 * 60 && !s.over) {
+    s.player.hp = 1e9;
+    if (s.choices) s.choose(s.choices[0].id);
+    const had = !!s.helper;
+    // 두 번째 도우미에게만 가서 도움을 청한다
+    if (s.helper && s.helper.state === 'wait' && arrivals.length === 2) { s.player.x = s.helper.x; s.player.y = s.helper.y; }
+    s.step({ dx: 0, dy: 0 });
+    if (!had && s.helper) arrivals.push(s.tick / 60);
+    if (helpedAt === null && s.helped === 1) helpedAt = s.tick;
+    s.drainEvents();
+  }
+  assert.ok(arrivals.length >= 3, `100초 동안 ${arrivals.length}번 등장: ${arrivals.map((x) => x.toFixed(0))}`);
+  assert.ok(Math.abs(arrivals[0] - WORLDS.school.helper.t) < 0.1, '첫 등장은 월드의 helper.t초');
+  for (let i = 1; i < arrivals.length; i++) assert.ok(arrivals[i] - arrivals[i - 1] >= TUNING.helperEvery - 0.1, '간격');
+  assert.ok(helpedAt !== null && s.helped === 1, '도움을 받았다');
+  assert.ok((helpedAt / 60) - arrivals[1] < 1.5, `머문 지 ${((helpedAt / 60) - arrivals[1]).toFixed(2)}초 만에 조언`);
+});

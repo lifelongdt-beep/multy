@@ -62,6 +62,11 @@
     damageTaken: 0.9,        // 플레이어가 받는 피해 배율 (낮출수록 쉬움)
     hurtInvTicks: 50,        // 피격 후 무적 시간(틱)
     enemySpeedGrowth: 0.15,  // 진행도에 따른 적 속도 증가
+    // ---- 도우미(선생님 등) · 나중에 보상형 광고로 바꿀 자리 ----
+    helperEvery: 25,         // 첫 등장(월드의 helper.t초) 뒤 이 간격(초)마다 다시 찾아옴 (앞 도우미가 떠난 뒤)
+    helperNeed: 70,          // 곁에 이만큼(틱, 60=1초) 머물면 조언 카드 (이전 150틱=2.5초 → 약 1.2초)
+    helperDecay: 1,          // 곁을 벗어나면 게이지가 틱당 이만큼 줄어듦 (이전 2: 잠깐 벗어나도 덜 깎임)
+    helperStay: 15,          // 도우미가 기다려 주는 시간(초)
   };
 
   function mulberry32(a) {
@@ -364,7 +369,8 @@
       if (this.bossIdx > 0) interval *= 2;   // 보스전이 시작되면 졸개 스폰을 절반으로
       if (t % interval === 0) for (let i = 0; i < wave.n; i++) this._spawn(wave);
       while (this.swarmIdx < w.swarms.length && t >= w.swarms[this.swarmIdx].t * TICK) this._ring(w.swarms[this.swarmIdx++]);
-      if (t === w.helper.t * TICK) this._spawnHelper();
+      // 도우미: 첫 등장 뒤 helperEvery초마다 (앞 도우미가 떠났을 때만)
+      if (t >= w.helper.t * TICK && !this.helper && (t - w.helper.t * TICK) % (TUNING.helperEvery * TICK) === 0) this._spawnHelper();
       // 큰 도전(보스): 월드가 높을수록 여러 번. 앞 보스를 극복하면 숨 돌린 뒤 다음 보스가 등장
       const times = w.boss.times;
       if (this.bossIdx < times.length && !this.bossAlive) {
@@ -579,7 +585,7 @@
         const score = d < 90 ? -1 : Math.min(d, 220);
         if (score > best) { best = score; x = cx; y = cy; }
       }
-      this.helper = { x, y, r: 46, state: 'wait', prog: 0, need: 150, t: 0, stay: 1500, fade: 0, name: h.name, emoji: h.emoji };
+      this.helper = { x, y, r: 46, state: 'wait', prog: 0, need: TUNING.helperNeed, t: 0, stay: TUNING.helperStay * TICK, fade: 0, name: h.name, emoji: h.emoji };
       this._ev({ k: 'banner', text: h.arriveText });
       this._ev({ k: 'helper' });
     }
@@ -592,7 +598,7 @@
       hp.t += 1;
       if (hp.state === 'wait') {
         const inside = Math.hypot(p.x - hp.x, p.y - hp.y) < hp.r + p.r;
-        hp.prog = inside ? Math.min(hp.need, hp.prog + 1) : Math.max(0, hp.prog - 2);
+        hp.prog = inside ? Math.min(hp.need, hp.prog + 1) : Math.max(0, hp.prog - TUNING.helperDecay);
         if (hp.prog >= hp.need) {
           hp.state = 'done'; hp.fade = 150; this.helped += 1;
           const w = this.world.helper;

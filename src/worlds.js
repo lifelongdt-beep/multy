@@ -45,7 +45,7 @@
         group:  { name: '게으름',   emoji: '🦥', hp: 10, speed: 0.55, r: 12, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'hw', n: 2 } },
       },
       helper: {
-        name: '담임 선생님', emoji: '👩‍🏫', t: 45,
+        name: '담임 선생님', emoji: '👩‍🏫', t: 20,
         arriveText: '👩‍🏫 담임 선생님이 도와주러 오셨어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 선생님께 도움을 받았어요',
         leaveText: '선생님은 언제나 기다리고 계세요',
@@ -82,7 +82,7 @@
         ox:    { name: '포기 충동',         emoji: '🏳️', hp: 9,  speed: 0.6,  r: 11, dmg: 7,  xp: 3, ai: 'chase', onDeath: { type: 'quiz', n: 2 } },
       },
       helper: {
-        name: '학원 선생님', emoji: '🧑‍🏫', t: 45,
+        name: '학원 선생님', emoji: '🧑‍🏫', t: 20,
         arriveText: '🧑‍🏫 학원 선생님이 코칭하러 오셨어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 선생님의 코칭을 받았어요',
         leaveText: '질문은 언제든 환영이에요',
@@ -119,7 +119,7 @@
         meeting: { name: '끝없는 걱정',   emoji: '🌫️', hp: 12, speed: 0.55, r: 12, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'mail', n: 2 } },
       },
       helper: {
-        name: '멘토 선배', emoji: '🧑‍💼', t: 45,
+        name: '멘토 선배', emoji: '🧑‍💼', t: 20,
         arriveText: '🧑‍💼 멘토 선배가 조언해 주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 선배의 조언을 받았어요',
         leaveText: '궁금한 건 언제든 물어보세요',
@@ -156,7 +156,7 @@
         fatigue: { name: '쌓인 피로',     emoji: '🥱', hp: 14, speed: 0.5,  r: 13, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'sleepy', n: 3 } },
       },
       helper: {
-        name: '친절한 역무원', emoji: '🙋', t: 45,
+        name: '친절한 역무원', emoji: '🙋', t: 20,
         arriveText: '🙋 역무원이 도와주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 역무원의 안내를 받았어요',
         leaveText: '도움이 필요하면 언제든 말씀하세요',
@@ -193,7 +193,7 @@
         sock:   { name: '어질러진 방',   emoji: '🧦', hp: 13, speed: 0.5,  r: 13, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'snack', n: 2 } },
       },
       helper: {
-        name: '다정한 가족', emoji: '👨‍👩‍👧', t: 45,
+        name: '다정한 가족', emoji: '👨‍👩‍👧', t: 20,
         arriveText: '👨‍👩‍👧 가족이 챙겨 주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 가족의 응원을 받았어요',
         leaveText: '힘들 땐 언제든 이야기해요',
@@ -231,7 +231,7 @@
         battery:{ name: '작은 포기',  emoji: '🪫', hp: 13, speed: 0.5,  r: 12, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'lazy', n: 2 } },
       },
       helper: {
-        name: '친절한 트레이너', emoji: '🧔', t: 45,
+        name: '친절한 트레이너', emoji: '🧔', t: 20,
         arriveText: '🧔 트레이너가 자세를 봐 주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 트레이너의 코칭을 받았어요',
         leaveText: '꾸준함이 최고의 비결이에요',
@@ -269,7 +269,7 @@
         bubble: { name: '흐트러진 집중', emoji: '🫧', hp: 12, speed: 0.55, r: 12, dmg: 7,  xp: 3, ai: 'chase', onDeath: { type: 'hurry', n: 2 } },
       },
       helper: {
-        name: '사서 선생님', emoji: '👩‍💼', t: 45,
+        name: '사서 선생님', emoji: '👩‍💼', t: 20,
         arriveText: '👩‍💼 사서 선생님이 좋은 책을 추천해 주세요! 빛나는 원으로 가 보세요',
         thanksText: '💛 선생님께 추천을 받았어요',
         leaveText: '궁금한 건 언제든 물어보세요',
@@ -306,7 +306,7 @@
         wave:   { name: '밀려오는 귀찮음', emoji: '🌊', hp: 14, speed: 0.5,  r: 13, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'mosq', n: 3 } },
       },
       helper: {
-        name: '친절한 안전요원', emoji: '🙆', t: 45,
+        name: '친절한 안전요원', emoji: '🙆', t: 20,
         arriveText: '🙆 안전요원이 도와주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 안전요원의 도움을 받았어요',
         leaveText: '안전한 물놀이 되세요',
@@ -343,7 +343,7 @@
         queue:  { name: '긴 대기줄',  emoji: '🐢', hp: 15, speed: 0.45, r: 13, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'lost', n: 3 } },
       },
       helper: {
-        name: '친절한 안내원', emoji: '💁', t: 45,
+        name: '친절한 안내원', emoji: '💁', t: 20,
         arriveText: '💁 안내원이 길을 알려 주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 안내원의 도움을 받았어요',
         leaveText: '즐거운 여행 되세요',
@@ -381,7 +381,7 @@
         petri:  { name: '면역력 저하',   emoji: '🧫', hp: 14, speed: 0.5,  r: 12, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'germ', n: 3 } },
       },
       helper: {
-        name: '다정한 간호사', emoji: '👩‍⚕️', t: 45,
+        name: '다정한 간호사', emoji: '👩‍⚕️', t: 20,
         arriveText: '👩‍⚕️ 간호사가 건강을 챙겨 주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 간호사의 돌봄을 받았어요',
         leaveText: '건강이 제일 중요해요',
@@ -418,7 +418,7 @@
         wilt:   { name: '포기하고 싶은 마음',  emoji: '🥀', hp: 14, speed: 0.5,  r: 12, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'bee', n: 3 } },
       },
       helper: {
-        name: '산악 구조대', emoji: '👷', t: 45,
+        name: '산악 구조대', emoji: '👷', t: 20,
         arriveText: '👷 산악 구조대가 도와주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 구조대의 도움을 받았어요',
         leaveText: '천천히, 안전하게 올라가요',
@@ -455,7 +455,7 @@
         heart:  { name: '완벽주의',   emoji: '💎', hp: 15, speed: 0.5,  r: 12, dmg: 8,  xp: 3, ai: 'chase', onDeath: { type: 'shake', n: 3 } },
       },
       helper: {
-        name: '함께하는 동료', emoji: '🧑‍🎤', t: 45,
+        name: '함께하는 동료', emoji: '🧑‍🎤', t: 20,
         arriveText: '🧑‍🎤 동료가 응원하러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 동료의 응원을 받았어요',
         leaveText: '우리는 한 팀이에요',
