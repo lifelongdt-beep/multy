@@ -271,3 +271,32 @@ test('조언 카드가 오면, 떠 있던 레벨업 카드는 먼저 자동으�
   assert.ok(s.choices.every((c) => c.boon), '조언 카드만');
   assert.ok(autos >= 1, '레벨업 카드는 자동 선택됨');
 });
+
+test('에코: 적에게 맞아 에너지가 0이 되면 2초 동안 사라졌다가(공격 안 함) 에너지를 채워 다시 나타난다', () => {
+  const echo = { path: new Array(20000).fill(0).map((_, i) => (i % 2 ? 300 : 180)), ups: [], ticks: 10000 };
+  const s = new Sim({ seed: 81, echoes: [echo] });
+  const ec = s.echoes[0];
+  assert.strictEqual(ec.hp, E.TUNING.echoHp);
+  s.step({ dx: 0, dy: 0 });
+  // 에코 위치에 적 탄을 계속 쏴서 에너지를 다 깎는다
+  let downAt = null, events = [];
+  for (let i = 0; i < 600 && downAt === null; i++) {
+    s.player.hp = 1e9;
+    s.ebullets.push({ x: ec.x, y: ec.y, vx: 0, vy: 0, dmg: 10, life: 5, r: 4 });
+    s.step({ dx: 0, dy: 0 });
+    events.push(...s.drainEvents());
+    if (ec.down > 0) downAt = s.tick;
+  }
+  assert.ok(downAt, '에너지가 떨어지면 사라짐');
+  assert.ok(events.some((e) => e.k === 'echoDown'));
+  // 사라진 동안: 공격하지 않고, 탄에 맞지도 않음
+  const before = s.bullets.filter((b) => b.owner === 'echo').length;
+  s._make('hw', ec.x + 30, ec.y);
+  for (let i = 0; i < E.TUNING.echoDownSec * 60 - 2; i++) { s.player.hp = 1e9; s.step({ dx: 0, dy: 0 }); }
+  assert.ok(ec.down > 0, '아직 사라진 상태');
+  assert.strictEqual(s.bullets.filter((b) => b.owner === 'echo').length <= before, true, '사라진 동안 공격 안 함');
+  for (let i = 0; i < 5; i++) { s.player.hp = 1e9; s.step({ dx: 0, dy: 0 }); }
+  assert.strictEqual(ec.down, 0, '2초 뒤 다시 나타남');
+  assert.strictEqual(ec.hp, E.TUNING.echoHp, '에너지를 채워서');
+  assert.ok(ec.alive, '기록이 끝난 게 아니므로 계속 함께함');
+});

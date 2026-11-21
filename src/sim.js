@@ -23,6 +23,10 @@
 
   /* ---- 밸런스 튜닝 값 (여기만 만지면 됨) ---- */
   const TUNING = {
+    echoHp: 40,              // 에코 에너지: 적에게 닿거나 적 탄에 맞으면 줄고, 0이 되면 잠깐 사라졌다가 다시 나타남
+    echoDownSec: 2,          // 에너지가 다 떨어진 에코가 사라져 있는 시간(초). 그동안 공격하지 않음
+    echoInvTicks: 30,        // 에코가 맞은 뒤 다시 맞을 때까지 틱
+    echoR: 10,               // 에코 피격 반지름
     echoBasePower: 1.0,      // 에코 기본 공격력 배율 (에코는 맞아도 사라지지 않고, 기록이 끝나는 시점에만 사라짐)
     echoAgeDecay: 0.05,      // 한 세대 오래될수록 공격력 -5%
     echoMinPower: 0.6,       // 최저 배율
@@ -218,6 +222,7 @@
         path: e.path, ups: e.ups || [],
         x: e.path[0] || 0, y: e.path[1] || 0,
         cd: (i * 5) % 20, stats: newStats(), upIdx: 0, alive: true, id: i,
+        hp: TUNING.echoHp, inv: 0, down: 0,   // down>0 이면 에너지가 떨어져 잠깐 사라진 상태
         // 오래된 에코일수록 약해진다 (가장 최근 에코 = 풀 파워)
         power: TUNING.echoBasePower * Math.max(TUNING.echoMinPower, 1 - TUNING.echoAgeDecay * (list.length - 1 - i)),
       }));
@@ -494,6 +499,16 @@
       this._ev({ k: 'hurt', dmg: taken });
     }
 
+    /** 에코 피격: 에너지가 0이 되면 echoDownSec초 동안 사라졌다가 에너지를 채워 다시 나타난다 */
+    _hurtEcho(ec, dmg) {
+      ec.hp -= dmg; ec.inv = TUNING.echoInvTicks; ec.flash = 6;
+      if (ec.hp <= 0) {
+        ec.hp = 0; ec.down = TUNING.echoDownSec * TICK;
+        this.fx.push({ x: ec.x, y: ec.y, t: 20, kind: 'vanish' });
+        this._ev({ k: 'echoDown' });
+      }
+    }
+
     /** 충격파·형광펜 (플레이어/에코 공용) */
     _skills(a, d, pm, t, owner) {
       if (d.novaInt) {
@@ -747,7 +762,12 @@
       for (const ec of this.echoes) {
         if (!ec.alive) continue;
         if (t * 2 + 1 >= ec.path.length) { ec.alive = false; this.fx.push({ x: ec.x, y: ec.y, t: 20, kind: 'vanish' }); continue; }
-        ec.x = ec.path[t * 2]; ec.y = ec.path[t * 2 + 1];
+        ec.x = ec.path[t * 2]; ec.y = ec.path[t * 2 + 1];   // 사라져 있어도 기록은 계속 흘러간다
+        if (ec.inv > 0) ec.inv -= 1;
+        if (ec.down > 0) {
+          if (--ec.down === 0) { ec.hp = TUNING.echoHp; ec.inv = TUNING.echoInvTicks; this.fx.push({ x: ec.x, y: ec.y, t: 20, kind: 'echoUp' }); }
+          continue;   // 사라진 동안은 공격·스킬 없음 (성장 기록은 다시 나타난 뒤 따라잡음)
+        }
         while (ec.upIdx < ec.ups.length && ec.ups[ec.upIdx].t <= t) {
           const id = ec.ups[ec.upIdx].id;
           if (id in ec.stats && id !== 'heal' && id !== 'echo') ec.stats[id] += 1;
@@ -789,6 +809,13 @@
         if (!dead && p.inv === 0) {
           const rr = p.r + b.r;
           if ((p.x - b.x) * (p.x - b.x) + (p.y - b.y) * (p.y - b.y) < rr * rr) { this._hurtPlayer(b.dmg); dead = true; }
+        }
+        if (!dead) {   // 에코도 적 탄에 맞는다 (탄은 막아 준 만큼 사라짐)
+          const er = TUNING.echoR + b.r;
+          for (const ec of this.echoes) {
+            if (!ec.alive || ec.down || ec.inv) continue;
+            if ((ec.x - b.x) * (ec.x - b.x) + (ec.y - b.y) * (ec.y - b.y) < er * er) { this._hurtEcho(ec, b.dmg); dead = true; break; }
+          }
         }
         if (dead) { this.ebullets[i] = this.ebullets[this.ebullets.length - 1]; this.ebullets.pop(); }
       }
@@ -845,6 +872,11 @@
 
         e.x += mvx; e.y += mvy;
         if (p.inv === 0 && dist < e.r + p.r) this._hurtPlayer(e.dmg);
+        for (const ec of this.echoes) {   // 적에게 닿은 에코도 에너지가 준다
+          if (!ec.alive || ec.down || ec.inv) continue;
+          const ex = ec.x - e.x, ey = ec.y - e.y, rr = e.r + TUNING.echoR;
+          if (ex * ex + ey * ey < rr * rr) this._hurtEcho(ec, e.dmg);
+        }
       }
 
       // 구슬 흡수
