@@ -108,13 +108,13 @@
         case 'nova': shake = Math.max(shake, 3); Sfx.play('nova'); break;
         case 'echoDown': Sfx.play('echoDown'); break;
         case 'heal': Sfx.play('heal'); break;
-        case 'banner': banner = { text: ev.text, t: 150 }; break;
+        case 'banner': if (!ev.hint || tutorial) banner = { text: ev.text, t: 150 }; break;   // 설명성 문구는 튜토리얼에서만
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 150 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
         case 'helped': Sfx.play('levelup'); break;
-        case 'train': Sfx.play('train'); banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
-        case 'phase': banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
-        case 'autoPick': toast = { text: `✨ 자동 선택: ${ev.icon} ${ev.name}`, t: 110 }; break;
+        case 'train': Sfx.play('train'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
+        case 'phase': if (tutorial) banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
+        case 'autoPick': if (tutorial) toast = { text: `✨ 자동 선택: ${ev.icon} ${ev.name}`, t: 110 }; break;
         case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
         default: break;
       }
@@ -156,8 +156,6 @@
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
-    const short = tutorial ? null : GameUI.gearShort(sim.world.id);
-    if (short) toast = { text: `🧰 장비가 부족해요 (⚔ -${short.atk} 🛡 -${short.def}) · 매점에서 사면 수월해요`, t: 260 };
     ['start', 'levelup', 'end', 'tutorial', 'pause'].forEach((id) => $(id).classList.add('hidden'));
     $('again').textContent = '한 판만 더';
     Music.play(sim.world.id);   // 월드별 배경음악 (보스가 나오면 frame에서 보스 곡으로 전환)
@@ -213,7 +211,7 @@
       box.innerHTML = '';
       if (ch) {
         const stats = sim.player.stats;
-        const title = document.createElement('div'); title.className = 'ctitle';
+        const title = document.createElement('div'); title.className = 'ctitle' + (tutorial ? '' : ' hidden');
         title.textContent = sim.choiceKind === 'helper' ? `${sim.world.helper.emoji} ${sim.world.helper.name}의 조언 · 톡 눌러 고르기` : '🌱 성장! 톡 눌러 고르기 (안 고르면 자동)';
         box.appendChild(title);
         const row = document.createElement('div'); row.className = 'crow';
@@ -295,35 +293,27 @@
     if (tutorial) { showTutorialEnd(); return; }
     state = 'end'; Music.stop();
     const out = sim.exportEcho();
-    const res = addEcho(echoes, out, MAX_ECHOES);
-    echoes = res.list; echoWorld = sim.world.id;
+    echoes = addEcho(echoes, out, MAX_ECHOES).list; echoWorld = sim.world.id;
     save();
     const title = { dead: '쓰러졌다… 하지만!', clear: `${sim.world.boss.name} 극복! 🎉`, survive: '120초 버텼어요!' }[sim.result];
     Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
     $('endTitle').textContent = title;
     $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;
-    $('cheer').textContent = cheerMessage(sim.result, sim.helped, sim.echoes.length);
-    if (sim.result !== 'clear' && sim.echoes.length < sim.world.boss.needEchoes) $('cheer').textContent += `  (👻 이 월드의 큰 도전은 에코 ${sim.world.boss.needEchoes}명 이상일 때 도전할 만해요 · 이번 판 ${sim.echoes.length}명)`;
-    const alive = sim.echoes.filter((e) => e.alive).length;
-    $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}` + (sim.helped ? ` · 도움 ${sim.helped}회` : '') + (sim.bossCount > 1 ? ` · 큰 도전 ${sim.bossDefeated}/${sim.bossCount}` : '') + '<br>' +
-      (sim.echoes.length ? `이번 판 에코 ${alive}/${sim.echoes.length}명 생존<br>` : '') +
-      (res.removed.length
-        ? `가장 일찍 쓰러진 에코(${(res.removed[0].ticks / TICK).toFixed(0)}초)가 퇴장했습니다<br>`
-        : '') +
-      `가장 오래 버틴 에코 ${(Math.max(...echoes.map((e) => e.ticks)) / TICK).toFixed(0)}초까지 다음 판을 도와줍니다<br><small>(에코는 ${sim.world.name}에서만 함께해요)</small>`;
+    $('cheer').textContent = cheerMessage(sim.result, sim.helped, sim.echoes.length);   // 따뜻한 한마디 한 줄
+    // 본 게임 결과는 짧게: 핵심 숫자만 (자세한 설명은 튜토리얼에서)
+    $('stats').textContent = `⏱ ${(sim.tick / TICK).toFixed(0)}초 · ☠ ${sim.kills} · Lv ${sim.player.level}` + (sim.bossCount > 1 ? ` · 🏁 ${sim.bossDefeated}/${sim.bossCount}` : '');
     // 학점 · 도전 과제 · 일일 미션
     const sum = GameUI.recordRun({ kills: sim.kills, seconds: Math.floor(sim.tick / TICK), level: sim.player.level, result: sim.result, gems: sim.gemCount, echoes: sim.echoes.length, world: sim.world.id, helped: sim.helped });
     const lines = [`🎓 학점 +${sum.earned}`];
-    for (const a of sum.newAch) lines.push(`🏆 과제 달성: ${a.name} (+${a.reward})`);
-    for (const m of sum.missionsDone) lines.push(`🎯 미션 완료! (+${m.reward})`);
-    if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 새 월드 해금: ${w.emoji} ${w.name}! (매점에 새 장비 입고)`); }
+    for (const a of sum.newAch) lines.push(`🏆 ${a.name} +${a.reward}`);
+    for (const m of sum.missionsDone) lines.push(`🎯 +${m.reward}`);
+    if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 ${w.emoji} ${w.name}`); }
     if (sum.newCycle !== null && sum.newCycle !== undefined) {
-      lines.push(`🔁 12개 월드 완주! ${sum.newCycle + 1}회차 시작 — 학교부터 다시, 적이 더 강해져요`);
-      lines.push(`🧰 매점 장비 최대 레벨이 ${Meta.GEAR.maxBase + Meta.GEAR.maxPerLoop * sum.newCycle}까지 올랐어요`);
+      lines.push(`🔁 ${sum.newCycle + 1}회차!`);
     }
     if (sim.result !== 'clear') {
       const short = GameUI.gearShort(sim.world.id);
-      if (short) lines.push(`🧰 이 월드는 장비가 더 필요해요 (⚔ -${short.atk} 🛡 -${short.def}) · 매점에서 사 보세요`);
+      if (short) lines.push(`🧰 ⚔ -${short.atk} 🛡 -${short.def}`);
     }
     $('reward').innerHTML = '';
     lines.forEach((t) => { const d = document.createElement('div'); d.textContent = t; $('reward').appendChild(d); });
@@ -446,8 +436,8 @@
       emoji(hp.emoji, hp.x, hp.y + bob, 34);
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
       ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
-      ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
-      if (hp.state === 'wait') { ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.fillText(hp.prog > 0 ? '조언을 듣는 중…' : '곁에 가서 잠시 머물러 보세요', hp.x, hp.y + hp.r + 12); }
+      if (tutorial) ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
+      if (tutorial && hp.state === 'wait') { ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.fillText(hp.prog > 0 ? '조언을 듣는 중…' : '곁에 가서 잠시 머물러 보세요', hp.x, hp.y + hp.r + 12); }
       ctx.globalAlpha = 1;
     }
 
@@ -455,8 +445,7 @@
     for (const e of sim.enemies) {
       if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
       if (e.warn) { ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, 7); ctx.stroke(); }
-      // 적 = 방해 요소: 붉은 바탕 + 빨간 테두리 (에코의 파란 원과 구분)
-      ctx.fillStyle = 'rgba(255,60,85,.22)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 7); ctx.fill();
+      // 적 = 방해 요소: 빨간 테두리 원 (에코의 파란 원과 구분)
       ctx.strokeStyle = 'rgba(255,85,105,.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 7); ctx.stroke();
       emoji(e.emoji, e.x, e.y + 1, e.r * 2);
       if (e.type === 'boss') {
@@ -538,7 +527,7 @@
     if (wind) {
       const wx = Math.sin((sim.tick / (wind.period * TICK)) * Math.PI * 2);
       ctx.globalAlpha = Math.min(0.8, Math.abs(wx)); ctx.fillStyle = '#cfefff'; ctx.textAlign = 'center'; ctx.font = 'bold 13px sans-serif';
-      ctx.fillText(wx > 0 ? '🌬️ 바람 → → →' : '← ← ← 바람 🌬️', W / 2, 92);
+      ctx.fillText(wx > 0 ? '🌬️ →' : '← 🌬️', W / 2, 92);
       ctx.globalAlpha = 1;
     }
 
@@ -563,7 +552,7 @@
     ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
 
     // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림). 카드가 떠 있으면 안내는 숨김
-    if (!drag && !sim.choices) {
+    if (tutorial && !drag && !sim.choices) {
       ctx.globalAlpha = 0.35 + 0.2 * Math.sin(performance.now() / 350);
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
       ctx.fillText('👆 여기서 드래그하면 캐릭터가 안 가려져요', W / 2, PLAY_BOTTOM + 76);
@@ -575,7 +564,7 @@
       const owned = UPGRADES.filter((u) => p.stats[u.id] && !u.instant).map((u) => `${u.icon}${p.stats[u.id]}`);
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       if (!owned.length) {
-        ctx.font = '11px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillText('🎒 아이템: 구슬을 모아 성장하면 생겨요', 8, 43);
+        if (tutorial) { ctx.font = '11px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillText('🎒 아이템: 구슬을 모아 성장하면 생겨요', 8, 43); }
       } else {
         let size = 13, gap = 7;
         const total = (sz, g) => { ctx.font = `${sz}px sans-serif`; return owned.reduce((a, t) => a + ctx.measureText(t).width + g, 0); };

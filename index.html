@@ -40,9 +40,10 @@
   /* 레벨업·조언 카드: 게임을 멈추지 않는 작은 반투명 카드 (아래 조작 영역 = 적이 거의 없는 곳). 빈 곳은 터치가 그대로 게임으로 간다 */
   #cards{position:absolute;left:10px;right:10px;bottom:1.2%;z-index:6;pointer-events:none;display:flex;flex-direction:column;gap:3px}
   #cards.hidden{display:none}
+  #cards .ctitle.hidden{display:none}
   #cards .ctitle{font-size:11px;text-align:center;color:#ffe58a;text-shadow:0 1px 2px #000;opacity:.9}
   #cards .crow{display:flex;gap:8px}
-  #cards .mini{pointer-events:auto;flex:1;min-width:0;padding:4px 3px;border-radius:12px;background:rgba(30,36,64,.45);border:2px solid rgba(108,140,255,.75);color:#fff;font-size:10px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.15;touch-action:none;text-shadow:0 1px 2px #000;backdrop-filter:blur(1px)}
+  #cards .mini{pointer-events:auto;flex:1;min-width:0;padding:4px 3px;border-radius:12px;background:rgba(30,36,64,.12);border:2px solid rgba(108,140,255,.5);opacity:.6;color:#fff;font-size:10px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.15;touch-action:none;text-shadow:0 1px 2px #000;backdrop-filter:blur(1px)}
   #cards .mini.boon{border-color:rgba(255,211,77,.85)}
   #cards .mini:active{background:rgba(108,140,255,.5)}
   #cards .mini .ic{font-size:24px;line-height:1.1}
@@ -73,14 +74,10 @@
     <p id="pauseInfo"></p>
     <button id="resume">▶ 계속하기</button>
     <button id="quit" class="sub">🏳️ 그만하고 메뉴로</button>
-    <p style="font-size:12px">키보드: Esc / P</p>
   </div>
 
   <div id="start" class="overlay">
     <h1>👻 퇴근 에코</h1>
-    <p>학교 월드</p>
-    <p>화면 어디서나 <b>드래그</b>해서 이동<br>(<b>아래쪽 영역</b>에서 하면 손가락이 캐릭터를 덜 가려요 · 키보드: 방향키/WASD)<br>공격은 자동입니다.<br>
-       한 판이 끝나면 <b>이번 판의 내가 유령(에코)이 되어</b><br>다음 판에서 함께 싸웁니다.</p>
     <div id="coinbar">🎓 <b id="coins">0</b> 학점</div>
     <button id="bWorld" class="sub" style="min-width:200px;font-size:15px;padding:10px 14px">🗺️ 월드</button>
     <button id="go">시작</button>

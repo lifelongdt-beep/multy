@@ -515,7 +515,7 @@
       this.bossRage = Math.min(TUNING.rageMax, 1 + TUNING.rageRamp * Math.max(0, e.t / TICK - TUNING.enrageSec));
       if (!e.enraged && e.t >= TUNING.enrageSec * TICK) {   // 오래 끌면 거세진다 → 시간에 쫓기는 긴장감
         e.enraged = true; e.speed *= 1.25;
-        this._ev({ k: 'banner', text: '💢 점점 거세져요! 서둘러요' });
+        this._ev({ k: 'banner', text: '💢 점점 거세져요! 서둘러요', hint: true });
         this.fx.push({ x: e.x, y: e.y, t: 24, kind: 'nova', r: 140 });
       }
       const p = this.player;
@@ -605,7 +605,7 @@
         if (score > best) { best = score; x = cx; y = cy; }
       }
       this.helper = { x, y, r: 46, state: 'wait', prog: 0, need: TUNING.helperNeed, t: 0, stay: TUNING.helperStay * TICK, fade: 0, name: h.name, emoji: h.emoji };
-      this._ev({ k: 'banner', text: h.arriveText });
+      this._ev({ k: 'banner', text: h.arriveText, hint: true });
       this._ev({ k: 'helper' });
     }
 
@@ -623,11 +623,11 @@
           const w = this.world.helper;
           const ids = ['heal', 'power', this.echoes.length > 0 ? 'team' : 'focus'];
           this._offer(ids.map((id) => ({ id: 'boon_' + id, icon: Worlds.BOONS[id].icon, name: w.boons[id], desc: Worlds.BOONS[id].desc, instant: true, boon: true })), 'helper');
-          this._ev({ k: 'banner', text: w.thanksText });
+          this._ev({ k: 'banner', text: w.thanksText, hint: true });
           this._ev({ k: 'helped' });
         } else if (hp.t >= hp.stay) {
           hp.state = 'gone'; hp.fade = 90;
-          this._ev({ k: 'banner', text: this.world.helper.leaveText });
+          this._ev({ k: 'banner', text: this.world.helper.leaveText, hint: true });
         }
       } else if (--hp.fade <= 0) this.helper = null;
     }
@@ -669,7 +669,7 @@
           const p = this.player;
           p.hp = Math.min(p.maxhp, p.hp + p.maxhp * TUNING.bossBreatherHeal);
           this._ev({ k: 'heal' });
-          this._ev({ k: 'banner', text: `💛 한 고비 넘었어요! (${this.bossDefeated}/${this.bossCount}) 숨 돌리세요` });
+          this._ev({ k: 'banner', text: `💛 한 고비 넘었어요! (${this.bossDefeated}/${this.bossCount}) 숨 돌리세요`, hint: true });
         }
       }
       // 월드 규칙: 가끔 커피(체력 회복)
