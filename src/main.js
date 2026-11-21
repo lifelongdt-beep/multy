@@ -364,12 +364,14 @@
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-    // 에코 (반투명 시안 유령)
+    // 에코 = 내 편: 파란 원 + 파란 테두리 유령 (적은 빨간 테두리라 한눈에 구분)
     for (const ec of sim.echoes) {
       if (!ec.alive) continue;
-      ctx.globalAlpha = 0.16;
-      ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 11, 0, 7); ctx.fill();
-      ctx.globalAlpha = 0.45; emoji('👻', ec.x, ec.y + 1, 17);
+      ctx.globalAlpha = 0.30;
+      ctx.fillStyle = '#3fb8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.fill();
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = '#6fd6ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.stroke();
+      ctx.globalAlpha = 0.8; emoji('👻', ec.x, ec.y + 1, 16);
       ctx.globalAlpha = 1;
     }
 
@@ -400,11 +402,14 @@
     for (const e of sim.enemies) {
       if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
       if (e.warn) { ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, 7); ctx.stroke(); }
+      // 적 = 방해 요소: 붉은 바탕 + 빨간 테두리 (에코의 파란 원과 구분)
+      ctx.fillStyle = 'rgba(255,60,85,.22)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,85,105,.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 7); ctx.stroke();
       emoji(e.emoji, e.x, e.y + 1, e.r * 2);
       if (e.type === 'boss') {
-        ctx.fillStyle = '#000a'; ctx.fillRect(40, 54, W - 80, 7);
-        ctx.fillStyle = '#ff5d73'; ctx.fillRect(40, 54, (W - 80) * Math.max(0, e.hp / e.maxhp), 7);
-        ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText(`${e.label} · ${e.phase}/3`, W / 2, 48);
+        ctx.fillStyle = '#000a'; ctx.fillRect(40, 70, W - 80, 7);
+        ctx.fillStyle = '#ff5d73'; ctx.fillRect(40, 70, (W - 80) * Math.max(0, e.hp / e.maxhp), 7);
+        ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText(`${e.label} · ${e.phase}/3`, W / 2, 63);
       }
     }
 
@@ -480,12 +485,12 @@
     if (wind) {
       const wx = Math.sin((sim.tick / (wind.period * TICK)) * Math.PI * 2);
       ctx.globalAlpha = Math.min(0.8, Math.abs(wx)); ctx.fillStyle = '#cfefff'; ctx.textAlign = 'center'; ctx.font = 'bold 13px sans-serif';
-      ctx.fillText(wx > 0 ? '🌬️ 바람 → → →' : '← ← ← 바람 🌬️', W / 2, 50);
+      ctx.fillText(wx > 0 ? '🌬️ 바람 → → →' : '← ← ← 바람 🌬️', W / 2, 92);
       ctx.globalAlpha = 1;
     }
 
     // HUD
-    ctx.textAlign = 'left'; ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, 34);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, 52);
     ctx.fillStyle = '#ff5d73'; ctx.fillRect(8, 8, 100 * Math.max(0, p.hp / p.maxhp), 8);
     ctx.strokeStyle = '#fff6'; ctx.lineWidth = 1; ctx.strokeRect(8, 8, 100, 8);
     ctx.fillStyle = '#7dffb2'; ctx.fillRect(8, 20, 100 * Math.min(1, p.xp / p.need), 5);
@@ -512,14 +517,20 @@
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, PLAY_BOTTOM + 76, 38, 0, 7); ctx.globalAlpha *= 0.5; ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    // 보유 업그레이드 (조작 영역 위쪽 가장자리)
-    ctx.textAlign = 'left'; ctx.font = '12px sans-serif'; ctx.fillStyle = '#fff';
-    let ux = 6;
-    for (const u of UPGRADES) {
-      const lv = p.stats[u.id];
-      if (!lv || u.instant) continue;
-      const s = `${u.icon}${lv}`;
-      ctx.fillText(s, ux, PLAY_BOTTOM + 12); ux += ctx.measureText(s).width + 8;
+    // 보유 아이템: 화면 위 HUD 두 번째 줄 (많아지면 글자를 줄여 한 줄에 맞춤)
+    {
+      const owned = UPGRADES.filter((u) => p.stats[u.id] && !u.instant).map((u) => `${u.icon}${p.stats[u.id]}`);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      if (!owned.length) {
+        ctx.font = '11px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillText('🎒 아이템: 구슬을 모아 성장하면 생겨요', 8, 43);
+      } else {
+        let size = 13, gap = 7;
+        const total = (sz, g) => { ctx.font = `${sz}px sans-serif`; return owned.reduce((a, t) => a + ctx.measureText(t).width + g, 0); };
+        while (size > 9 && total(size, gap) > W - 16) { size -= 1; gap = Math.max(3, gap - 1); }
+        ctx.font = `${size}px sans-serif`; ctx.fillStyle = '#fff';
+        let ux = 8;
+        for (const t of owned) { ctx.fillText(t, ux, 43); ux += ctx.measureText(t).width + gap; }
+      }
     }
     // 조이스틱 표시 (드래그 중)
     if (drag) {
