@@ -8,6 +8,10 @@
 
   function ac() {
     if (muted) return null;
+    return ctxAlways();
+  }
+  /** 음소거여도 컨텍스트는 만든다 (배경음악은 음량 0으로 계속 박자를 유지) */
+  function ctxAlways() {
     if (!ctx) {
       const AC = root.AudioContext || root.webkitAudioContext;
       if (!AC) return null;
@@ -73,7 +77,10 @@
       d.fn();
     },
     unlock() { ac(); },
-    setMuted(m) { muted = !!m; },
+    setMuted(m) { muted = !!m; if (root.Music) root.Music.setMuted(muted); },
+    /** 배경음악(music.js)용: 같은 AudioContext와 출력 */
+    context() { return ctxAlways(); },
+    output() { ctxAlways(); return master; },
     isMuted() { return muted; },
   };
 })(typeof window !== 'undefined' ? window : globalThis);

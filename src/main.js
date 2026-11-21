@@ -157,6 +157,7 @@
     if (short) toast = { text: `🧰 장비가 부족해요 (⚔ -${short.atk} 🛡 -${short.def}) · 매점에서 사면 수월해요`, t: 260 };
     ['start', 'levelup', 'end', 'tutorial', 'pause'].forEach((id) => $(id).classList.add('hidden'));
     $('again').textContent = '한 판만 더';
+    Music.play(sim.world.id);   // 월드별 배경음악 (보스가 나오면 frame에서 보스 곡으로 전환)
     if (tutorial) banner = { text: '📘 튜토리얼 · 과거의 나 10명과 함께!', t: 150 };
   }
 
@@ -169,7 +170,7 @@
   /* ---------- 일시정지 ---------- */
   function pauseGame() {
     if (state !== 'play') return;
-    state = 'paused'; endDrag(); for (const k in keys) keys[k] = false;
+    state = 'paused'; endDrag(); Music.pause(); for (const k in keys) keys[k] = false;
     $('pauseInfo').textContent = tutorial ? '튜토리얼 중이에요' : `${sim.world.emoji} ${sim.world.name} · ${Math.floor(sim.tick / TICK)}초 · Lv ${sim.player.level}`;
     $('quit').textContent = '🏳️ 그만하고 메뉴로'; quitArmed = false;
     $('pause').classList.remove('hidden');
@@ -177,7 +178,7 @@
   function resumeGame() {
     if (state !== 'paused') return;
     $('pause').classList.add('hidden');
-    state = 'play'; last = performance.now(); acc = 0;
+    state = 'play'; last = performance.now(); acc = 0; Music.resume();
   }
   let quitArmed = false;
   function quitRun() {
@@ -185,7 +186,7 @@
     if (!quitArmed) { quitArmed = true; $('quit').textContent = '⚠ 한 번 더 누르면 이번 판은 기록되지 않아요'; return; }
     quitArmed = false;
     if (tutorial) GameUI.finishTutorial();
-    tutorial = false; sim = null; state = 'menu';
+    tutorial = false; sim = null; state = 'menu'; Music.stop();
     $('pause').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh();
   }
   $('pauseBtn').onclick = () => { Sfx.play('click'); pauseGame(); };
@@ -221,7 +222,7 @@
 
   /** 튜토리얼 결과 화면: 에코·학점에 반영하지 않고, 이제 내 에코를 0명부터 쌓는다는 걸 알려준다 */
   function showTutorialEnd() {
-    state = 'end';
+    state = 'end'; Music.stop();
     GameUI.finishTutorial();
     tutorial = false;
     Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
@@ -241,7 +242,7 @@
 
   function showEnd() {
     if (tutorial) { showTutorialEnd(); return; }
-    state = 'end';
+    state = 'end'; Music.stop();
     const out = sim.exportEcho();
     const res = addEcho(echoes, out, MAX_ECHOES);
     echoes = res.list; echoWorld = sim.world.id;
@@ -572,6 +573,8 @@
         if (sim.over) { showEnd(); break; }
       }
     }
+    // 보스가 나오면 긴장감 있는 곡으로. 여러 번 나오는 월드는 사이 쉬는 시간에도 유지하고, 모두 극복하면 원래 곡으로
+    if (state === 'play' && sim) Music.setBoss(sim.bossAlive || (sim.bossIdx > 0 && sim.bossIdx < sim.bossCount));
     const showPause = state === 'play';
     if (showPause !== pauseShown) { pauseShown = showPause; $('pauseBtn').style.display = showPause ? '' : 'none'; }
     if (state === 'paused') { render(); requestAnimationFrame(frame); return; }   // 멈춘 동안 연출도 멈춘다
