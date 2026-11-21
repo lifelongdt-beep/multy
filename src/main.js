@@ -114,7 +114,7 @@
         case 'helped': Sfx.play('levelup'); break;
         case 'train': Sfx.play('train'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': if (tutorial) banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
-        case 'autoPick': if (tutorial) toast = { text: `✨ 자동 선택: ${ev.icon} ${ev.name}`, t: 110 }; break;
+        case 'autoPick': toast = { text: `✨ 자동 선택: ${ev.icon} ${ev.name}`, t: 130 }; Sfx.play('click'); break;   // 무엇이 골라졌는지 알려 줌
         case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
         default: break;
       }
