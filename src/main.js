@@ -93,6 +93,10 @@
   }
   let floats = [];
   let autoFlash = [];
+  // 보스 극복 연출: 슬로모션 → 부풀며 빛남 → 폭발·충격파·색종이 → 화면 번쩍
+  let bossFx = null, slowmo = 0, whiteFlash = 0;
+  const BOSS_FX_LEN = 80;
+  function bossFxActive() { return !!bossFx && bossFx.t < BOSS_FX_LEN; }
   /* ---------- 새 그림체 (시안: 학교 월드). 일시정지 화면의 🎨 버튼 / G키로 이전 그림체와 바꿔 비교 ---------- */
   let artPref = 'new';
   try { artPref = localStorage.getItem('echo-art') || 'new'; } catch (e) { /* 무시 */ }
@@ -115,7 +119,14 @@
         case 'dmg':
           // 데미지 숫자는 표시하지 않음 (화면을 깔끔하게)
           Sfx.play('hit'); break;
-        case 'kill': Sfx.play('kill'); if (artOn() && ev.x !== undefined) { const big = ev.type === 'boss'; Art.burst(ev.x, ev.y, Art.enemyColor(ev.type, ev.name), big ? 34 : 7, big); } break;
+        case 'kill':
+          if (ev.type === 'boss') {   // 보스 극복: 바로 터뜨리지 않고 짧은 연출
+            bossFx = { x: ev.x, y: ev.y, r: ev.r || 30, name: ev.name, emoji: ev.emoji, t: 0, last: !!ev.last };
+            slowmo = 50; shake = Math.max(shake, 8); Sfx.play('bossDown');
+            break;
+          }
+          Sfx.play('kill'); if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, Art.enemyColor(ev.type, ev.name), 7, false);
+          break;
         case 'gem': Sfx.play('gem'); break;
         case 'levelup': Sfx.play('levelup'); break;
         case 'hurt': shake = Math.max(shake, 7); hurtFlash = 1; Sfx.play('hurt'); vibrate(ev.dmg); break;
@@ -166,7 +177,7 @@
     }
     playerEmoji = GameUI.emoji();
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; floats = [];
+    shake = 0; hurtFlash = 0; floats = []; bossFx = null; slowmo = 0; whiteFlash = 0;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -357,6 +368,47 @@
     ctx.fillText(text, x, y);
   }
   function emoji(ch, x, y, size) { ctx.font = `${size}px serif`; ctx.fillText(ch, x, y); }
+
+  /** 보스가 터지는 순간: 큰 파편 + 여러 색 색종이 + 흰 번쩍임 */
+  function bossBoom() {
+    const f = bossFx; if (!f) return;
+    shake = Math.max(shake, 16); whiteFlash = 1;
+    if (window.Art) {
+      Art.burst(f.x, f.y, Art.enemyColor('boss', f.name), 40, true);
+      for (const col of ['#ffe14d', '#ff6b9a', '#7fdcff', '#7dffb2', '#c9a0ff']) Art.burst(f.x, f.y, col, 9, true);
+    }
+    banner = { text: `✨ ${f.name} 극복!`, t: 120 };
+  }
+  /** 보스 극복 연출 그리기 */
+  function drawBossFx(now) {
+    const f = bossFx, t = f.t;
+    ctx.save();
+    if (t < 30) {
+      // 1) 빛줄기가 돌고, 보스가 부들부들 떨며 부풀어 오르고 하얗게 달아오름
+      const k = t / 30;
+      ctx.translate(f.x, f.y); ctx.rotate(now / 400);
+      ctx.globalAlpha = 0.25 + 0.45 * k; ctx.fillStyle = '#fff6c2';
+      for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-7, -f.r * (1.6 + k * 2.2)); ctx.lineTo(7, -f.r * (1.6 + k * 2.2)); ctx.closePath(); ctx.fill(); }
+      ctx.restore(); ctx.save();
+      const sc = 1 + k * 0.35, jx = (Math.random() - 0.5) * 4 * k, jy = (Math.random() - 0.5) * 4 * k;
+      const ghost = { x: f.x + jx, y: f.y + jy, r: f.r * sc, type: 'boss', name: f.name, def: { name: f.name }, flash: t % 6 < 3 ? 1 : 0, warn: false };
+      if (artOn() && Art.hasEnemy(ghost)) Art.drawEnemy(ctx, ghost, now, f.x);
+      else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(f.emoji || '💥', ghost.x, ghost.y, f.r * 2 * sc); }
+      ctx.globalAlpha = k * 0.8; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * sc * 0.9, 0, 7); ctx.fill();
+    } else {
+      // 2) 터진 뒤: 충격파 고리 3겹 + 가운데 빛 번짐
+      const k = (t - 30) / (BOSS_FX_LEN - 30);
+      for (let i = 0; i < 3; i++) {
+        const kk = Math.max(0, k - i * 0.12); if (kk <= 0 || kk >= 1) continue;
+        ctx.globalAlpha = (1 - kk) * 0.9; ctx.strokeStyle = i === 1 ? '#7fdcff' : '#ffe14d'; ctx.lineWidth = 6 * (1 - kk) + 1;
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r + kk * 260, 0, 7); ctx.stroke();
+      }
+      const gl = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r * 3);
+      gl.addColorStop(0, `rgba(255,250,210,${0.8 * (1 - k)})`); gl.addColorStop(1, 'rgba(255,250,210,0)');
+      ctx.globalAlpha = 1; ctx.fillStyle = gl; ctx.fillRect(f.x - f.r * 3, f.y - f.r * 3, f.r * 6, f.r * 6);
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
 
   function render() {
     const sc = cv.width / W;
@@ -558,6 +610,9 @@
     }
     ctx.globalAlpha = 1;
 
+    if (bossFx) drawBossFx(now);
+    if (whiteFlash > 0) { ctx.fillStyle = `rgba(255,250,235,${whiteFlash * 0.75})`; ctx.fillRect(0, 0, W, H); }
+
     // 밤·안개 월드: 조준 거리 밖은 어둡게 (자동 공격이 닿는 범위가 보이도록)
     const sight = sim.world.rules.sight;
     if (sight) {
@@ -665,18 +720,22 @@
   let pauseShown = true;
   function frame(now) {
     if (state === 'play') {
-      acc += Math.min(100, now - last); last = now;
+      acc += Math.min(100, now - last) * (slowmo > 0 ? 0.3 : 1); last = now;   // 보스 극복 순간은 슬로모션
       const dt = 1000 / TICK;
       while (acc >= dt && state === 'play') {
         acc -= dt; sim.step(currentInput());
         handleEvents();
         if (tutorial) tutorialTips();
-        if (sim.over) { showEnd(); break; }
+        if (sim.over) break;
       }
     }
     // 보스가 나오면 긴장감 있는 곡으로. 여러 번 나오는 월드는 사이 쉬는 시간에도 유지하고, 모두 극복하면 원래 곡으로
     updateCards();
     if (state === 'play' && sim) Music.setBoss(sim.bossAlive || (sim.bossIdx > 0 && sim.bossIdx < sim.bossCount));
+    if (state === 'play' && sim && sim.over && !bossFxActive()) showEnd();   // 마지막 보스면 연출이 끝난 뒤 결과 화면
+    if (slowmo > 0) slowmo -= 1;
+    if (bossFx) { bossFx.t += 1; if (bossFx.t === 30) bossBoom(); if (bossFx.t > BOSS_FX_LEN + 20) bossFx = null; }
+    if (whiteFlash > 0) whiteFlash = Math.max(0, whiteFlash - 0.05);
     const showPause = state === 'play';
     if (showPause !== pauseShown) { pauseShown = showPause; $('pauseBtn').style.display = showPause ? '' : 'none'; }
     if (state === 'paused') { render(); requestAnimationFrame(frame); return; }   // 멈춘 동안 연출도 멈춘다
@@ -694,5 +753,5 @@
   requestAnimationFrame(frame);
 
   // 테스트/디버그용 훅
-  window.__echo = { get sim() { return sim; }, get state() { return state; }, get echoes() { return echoes; }, get tutorial() { return tutorial; } };
+  window.__echo = { get bossFx() { return bossFx; }, get sim() { return sim; }, get state() { return state; }, get echoes() { return echoes; }, get tutorial() { return tutorial; } };
 })();

@@ -114,6 +114,19 @@
     b.connect(bg); bg.connect(master); b.start(t); b.stop(t + 0.14);
   }
 
+  // 보스 극복: 낮게 '쿵' 터지고 → 반짝이는 상승 팡파르
+  function bossDownSound() {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.55);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.28, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.75);
+    noise(0.35, 0.09);
+    [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => soft(f, i === 5 ? 0.6 : 0.2, 'triangle', 0.06, 0.35 + i * 0.07));
+    soft(2093, 0.5, 'sine', 0.025, 0.35 + 5 * 0.07 + 0.03);
+  }
+
   function noise(dur, vol) {
     const c = ac(); if (!c) return;
     const n = Math.floor(c.sampleRate * dur);
@@ -139,6 +152,7 @@
     win:      { gap: 0,   fn: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, f, 0.18, 'triangle', 0.08, i * 0.1)) },
     lose:     { gap: 0,   fn: () => [392, 330, 262].forEach((f, i) => tone(f, f * 0.9, 0.3, 'sine', 0.08, i * 0.18)) },
     train:    { gap: 400, fn: () => { tone(220, 220, 0.25, 'sawtooth', 0.09); tone(277, 277, 0.25, 'sawtooth', 0.07); tone(220, 200, 0.25, 'sawtooth', 0.09, 0.3); tone(277, 250, 0.25, 'sawtooth', 0.07, 0.3); } },
+    bossDown: { gap: 300, fn: bossDownSound },
     click:    { gap: 0,   fn: () => tone(500, 700, 0.06, 'triangle', 0.05) },
   };
 

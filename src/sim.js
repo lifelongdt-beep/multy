@@ -728,7 +728,7 @@
       const v = e.type === 'boss' ? 3 : e.xp;
       for (let g = 0; g < big; g++) this.gems.push({ x: e.x + (this.rng() - 0.5) * 14, y: e.y + (this.rng() - 0.5) * 14, v });
       this.fx.push({ x: e.x, y: e.y, t: 14, kind: 'pop' });
-      this._ev({ k: 'kill', x: e.x, y: e.y, type: e.type, name: e.name });
+      this._ev({ k: 'kill', x: e.x, y: e.y, type: e.type, name: e.name, r: e.r, emoji: e.emoji, last: e.type === 'boss' && this.bossDefeated + 1 >= this.bossCount });
       if (e.type === 'boss') {
         this.bossDefeated += 1; this.bossAlive = false; this.lastBossDeath = this.tick; this.bossRage = 1;
         if (this.bossDefeated >= this.bossCount) this.bossDead = true;
