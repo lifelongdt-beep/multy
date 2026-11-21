@@ -75,7 +75,7 @@
 
   const UPGRADES = [
     { id: 'rate',   icon: '✏️', name: '샤프 속도↑',  desc: '발사 간격 -20%' },
-    { id: 'multi',  icon: '🧽', name: '지우개 +1',    desc: '동시 발사 수 +1' },
+    { id: 'multi',  icon: '📕', name: '책 +1',        desc: '동시 발사 수 +1' },
     { id: 'dmg',    icon: '📝', name: '필기 강화',    desc: '공격력 +50%' },
     { id: 'speed',  icon: '👟', name: '운동화',        desc: '이동속도 +15%' },
     { id: 'magnet', icon: '🧲', name: '자석 필통',     desc: '구슬 흡수 범위 +' },
@@ -90,7 +90,7 @@
 
   const SYNERGIES = {
     focus:    { name: '집중 필기',   desc: '샤프 속도 2+ & 필기 강화 2+ → 공격력 +30%' },
-    shotgun:  { name: '관통 샷건',   desc: '지우개 2+ & 관통 1+ → 관통 +1' },
+    shotgun:  { name: '관통 샷건',   desc: '책 2+ & 관통 1+ → 관통 +1' },
     exam:     { name: '만점 러시',   desc: '시험 만점 2+ & 샤프 속도 2+ → 치명타 +10%' },
     bellring: { name: '타종식',      desc: '형광펜 2+ & 종소리 1+ → 충격파 범위 +30%' },
   };
