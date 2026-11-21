@@ -70,6 +70,7 @@
   addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === '1' || k === '2' || k === '3') { pickCard(+k - 1); return; }
+    if (k === 'g') { toggleArt(); return; }
     if (k === 'escape' || k === 'p') { if (state === 'play') pauseGame(); else if (state === 'paused') resumeGame(); return; }
     keys[k] = true;
   });
@@ -91,7 +92,19 @@
     try { if (navigator.vibrate) navigator.vibrate(Math.min(220, Math.max(70, Math.round((dmg || 5) * 12)))); } catch (e) { /* 무시 */ }
   }
   let floats = [];
-  let autoFlash = [];   // 자동 선택된 아이템 아이콘 반짝임 {id, icon, t}
+  let autoFlash = [];
+  /* ---------- 새 그림체 (시안: 학교 월드). 일시정지 화면의 🎨 버튼 / G키로 이전 그림체와 바꿔 비교 ---------- */
+  let artPref = 'new';
+  try { artPref = localStorage.getItem('echo-art') || 'new'; } catch (e) { /* 무시 */ }
+  function artOn() { const w = sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]; return artPref === 'new' && !!window.Art && Art.supports(w); }
+  function toggleArt() {
+    artPref = artPref === 'new' ? 'old' : 'new';
+    try { localStorage.setItem('echo-art', artPref); } catch (e) { /* 무시 */ }
+    if (window.Art) Art.clearParticles();
+    const b = document.getElementById('artBtn'); if (b) b.textContent = artPref === 'new' ? '🎨 그림체: 새 그림체' : '🎨 그림체: 이전';
+  }
+  window.EchoArt = { toggle: toggleArt, get pref() { return artPref; } };
+  let lastPX = null, lastPY = null, faceDir = 1;   // 자동 선택된 아이템 아이콘 반짝임 {id, icon, t}
   let banner = { text: '', t: 0 };
   let toast = { text: '', t: 0 };
 
@@ -102,7 +115,7 @@
         case 'dmg':
           // 데미지 숫자는 표시하지 않음 (화면을 깔끔하게)
           Sfx.play('hit'); break;
-        case 'kill': Sfx.play('kill'); break;
+        case 'kill': Sfx.play('kill'); if (artOn() && ev.x !== undefined) { const big = ev.type === 'boss'; Art.burst(ev.x, ev.y, Art.enemyColor(ev.type, ev.name), big ? 34 : 7, big); } break;
         case 'gem': Sfx.play('gem'); break;
         case 'levelup': Sfx.play('levelup'); break;
         case 'hurt': shake = Math.max(shake, 7); hurtFlash = 1; Sfx.play('hurt'); vibrate(ev.dmg); break;
@@ -194,6 +207,8 @@
   $('pauseBtn').onclick = () => { Sfx.play('click'); pauseGame(); };
   $('resume').onclick = () => { Sfx.play('click'); quitArmed = false; resumeGame(); };
   $('quit').onclick = () => { Sfx.play('click'); quitRun(); };
+  $('artBtn').onclick = () => { Sfx.play('click'); toggleArt(); render(); };
+  $('artBtn').textContent = artPref === 'new' ? '🎨 그림체: 새 그림체' : '🎨 그림체: 이전';
   // 앱을 내리거나 다른 창으로 가면 자동으로 일시정지 (전화·알림 등)
   document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
   addEventListener('blur', () => pauseGame());
@@ -348,6 +363,8 @@
     const sx = shake > 0 ? (Math.random() - 0.5) * shake : 0, sy = shake > 0 ? (Math.random() - 0.5) * shake : 0;
     ctx.setTransform(sc, 0, 0, cv.height / H, sx * sc, sy * sc);
     const th = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).theme;
+    const useArt = artOn();
+    if (useArt) Art.drawBackground(ctx, W, H); else {
     ctx.fillStyle = th.bg; ctx.fillRect(-20, -20, W + 40, H + 40);
     ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
     if (th.deco === 'ruled') {            // 학원: 공책 줄무늬
@@ -382,11 +399,14 @@
       for (let x = 0; x <= W; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
       for (let y = 0; y <= H; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
     }
+    }
     if (!sim) return;
+    const now = performance.now();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
     for (const g of sim.gems) {
       if (g.kind === 'coffee') { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(sim.world.rules.dropEmoji || '☕', g.x, g.y, 15); continue; }
+      if (useArt) { Art.drawGem(ctx, g, now); continue; }
       ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.arc(g.x, g.y, 3.2, 0, 7); ctx.fill();
     }
     // 열차 (경고 줄 → 질주)
@@ -413,6 +433,7 @@
       if (!ec.alive || ec.down > 0) continue;   // 에너지가 떨어져 사라진 동안은 그리지 않음
       // 흐리게: 내 캐릭터·적보다 눈에 덜 띄도록 (파란 테두리는 남겨 적과 구분). 맞으면 잠깐 깜빡임
       const hit = ec.inv > 0 && Math.floor(ec.inv / 4) % 2 === 0 ? 0.5 : 1;
+      if (useArt) { Art.drawEcho(ctx, ec, playerEmoji, now, 0.3 * hit); continue; }   // 새 그림체: 과거의 나 모습의 유령
       ctx.globalAlpha = 0.07 * hit;
       ctx.fillStyle = '#3fb8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.fill();
       ctx.globalAlpha = 0.32 * hit;
@@ -436,7 +457,7 @@
         ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r - 5, -Math.PI / 2, -Math.PI / 2 + (hp.prog / hp.need) * Math.PI * 2); ctx.stroke();
       }
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      emoji(hp.emoji, hp.x, hp.y + bob, 34);
+      if (useArt) Art.drawTeacher(ctx, hp.x, hp.y + bob); else emoji(hp.emoji, hp.x, hp.y + bob, 34);
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
       ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
       if (tutorial) ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
@@ -446,11 +467,14 @@
 
     // 적
     for (const e of sim.enemies) {
+      if (useArt && Art.hasEnemy(e)) Art.drawEnemy(ctx, e, now, sim.player.x);
+      else {
       if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
       if (e.warn) { ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, 7); ctx.stroke(); }
       // 적 = 방해 요소: 빨간 테두리 원 (에코의 파란 원과 구분)
       ctx.strokeStyle = 'rgba(255,85,105,.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 7); ctx.stroke();
       emoji(e.emoji, e.x, e.y + 1, e.r * 2);
+      }
       if (e.type === 'boss') {
         ctx.fillStyle = '#000a'; ctx.fillRect(40, 70, W - 80, 7);
         ctx.fillStyle = '#ff5d73'; ctx.fillRect(40, 70, (W - 80) * Math.max(0, e.hp / e.maxhp), 7);
@@ -459,7 +483,9 @@
     }
 
     // 탄환 / 형광펜 / 적 탄환
+    if (useArt) Art.drawParticles(ctx);
     for (const b of sim.bullets) {
+      if (useArt) { Art.drawBullet(ctx, b); continue; }
       ctx.globalAlpha = b.owner === 'echo' ? 0.4 : 1;
       ctx.fillStyle = b.crit ? '#ffd34d' : b.owner === 'echo' ? '#8fe3ff' : '#ffe27a';
       ctx.beginPath(); ctx.arc(b.x, b.y, (b.owner === 'echo' ? 2.6 : 3.2) + (b.crit ? 1.2 : 0), 0, 7); ctx.fill();
@@ -479,7 +505,7 @@
     }
     ctx.globalAlpha = 1;
     ctx.globalAlpha = 1;
-    for (const b of sim.ebullets) { ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff8'; ctx.lineWidth = 1; ctx.stroke(); }
+    for (const b of sim.ebullets) { if (useArt) { Art.drawEnemyBullet(ctx, b); continue; } ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff8'; ctx.lineWidth = 1; ctx.stroke(); }
 
     // 플레이어
     const p = sim.player;
@@ -495,8 +521,15 @@
       ctx.fillStyle = '#7dffb2';
       ctx.beginPath(); ctx.moveTo(p.x - 5, ay - 5); ctx.lineTo(p.x + 5, ay - 5); ctx.lineTo(p.x, ay + 2); ctx.closePath(); ctx.fill();
     }
-    if (p.inv > 0 && Math.floor(p.inv / 4) % 2) ctx.globalAlpha = 0.4;
-    emoji(playerEmoji, p.x, p.y + 1, 22); ctx.globalAlpha = 1;
+    const moving = lastPX !== null && Math.hypot(p.x - lastPX, p.y - lastPY) > 0.3;
+    if (lastPX !== null && Math.abs(p.x - lastPX) > 0.3) faceDir = p.x < lastPX ? -1 : 1;
+    lastPX = p.x; lastPY = p.y;
+    const blink = p.inv > 0 && Math.floor(p.inv / 4) % 2;
+    if (useArt) Art.drawPlayer(ctx, p, playerEmoji, moving, faceDir, now, blink);
+    else {
+      if (blink) ctx.globalAlpha = 0.4;
+      emoji(playerEmoji, p.x, p.y + 1, 22); ctx.globalAlpha = 1;
+    }
 
     // 이펙트
     for (const f of sim.fx) {
