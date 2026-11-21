@@ -443,6 +443,13 @@
     stage:    { hair: 'short', hairCol: '#7b1fa2', outfit: '#6a1b9a', headset: true },
   };
   for (const id in H) HELPER[id] = (g) => person(g, H[id]);
+  // 선행: 도움이 필요한 사람들 (아이·할머니·친구)
+  const NPC = {
+    child:  { s: 0.78, o: { hair: 'short', hairCol: '#5d4037', outfit: '#ffb74d', scarf: '#4fc3f7' } },
+    elder:  { s: 0.95, o: { hair: 'bun', hairCol: '#e0e0e0', outfit: '#a1887f', glasses: true } },
+    friend: { s: 0.9,  o: { hair: 'long', hairCol: '#3b2b25', outfit: '#81c784', book: '#ffd54f' } },
+  };
+  for (const k in NPC) HELPER['npc:' + k] = (g) => { g.translate(0, 17 * (1 - NPC[k].s)); g.scale(NPC[k].s, NPC[k].s); person(g, NPC[k].o); };
 
   /* ---------- 배경 ---------- */
   function floorPlanks(g, W, H2, base, step) { g.fillStyle = base; g.fillRect(0, 0, W, H2); for (let y = 0, i = 0; y < H2; y += step, i++) { g.fillStyle = i % 2 ? 'rgba(255,255,255,.02)' : 'rgba(0,0,0,.05)'; g.fillRect(0, y, W, step); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, y, W, 1); } }

@@ -71,7 +71,21 @@
     helperNeed: 70,          // 곁에 이만큼(틱, 60=1초) 머물면 조언 카드 (이전 150틱=2.5초 → 약 1.2초)
     helperDecay: 1,          // 곁을 벗어나면 게이지가 틱당 이만큼 줄어듦 (이전 2: 잠깐 벗어나도 덜 깎임)
     helperStay: 15,          // 도우미가 기다려 주는 시간(초)
-    choiceAutoSec: 3,        // 레벨업·조언 카드는 게임을 멈추지 않고, 이 시간 안에 안 고르면 자동으로 골라 준다
+    choiceAutoSec: 3,
+    // ---- 선행(좋은 일)을 하면 아이템 ----
+    deedRescueFirst: 32,     // 어려움에 처한 사람: 첫 등장(초)
+    deedRescueEvery: 40,     //   이후 간격(초)
+    deedRescueGuards: 6,     //   둘러싼 방해 요소 수 (모두 물리치면 "고마워!" + 아이템 카드)
+    deedRescueStay: 22,      //   기다려 주는 시간(초) — 못 도와줘도 벌은 없음
+    deedEscortFirst: 58,     // 친구 지켜주기: 첫 등장(초)
+    deedEscortEvery: 55,     //   이후 간격(초)
+    friendHp: 100,           //   친구 체력 (방해 요소에 닿으면 줄어듦)
+    friendSpeed: 0.75,       //   친구가 걷는 속도 (내가 곁에 있을 때만 걸음)
+    friendWaitDist: 130,     //   이보다 멀면 친구가 무서워서 멈춰 기다림
+    deedSpotEvery: 5,        // 작은 선행 거리(쓰레기·쓰러진 화분·떨어진 인형)가 생기는 간격(초)
+    deedSpotMax: 3,
+    deedSpotLife: 14,        //   사라지기까지(초)
+    deedGaugeNeed: 5,        //   이만큼 모으면 아이템 카드        // 레벨업·조언 카드는 게임을 멈추지 않고, 이 시간 안에 안 고르면 자동으로 골라 준다
   };
 
   function mulberry32(a) {
@@ -203,7 +217,10 @@
       this.bossAlive = false;
       this.bossDefeated = 0;
       this.bossCount = this.world.boss.times.length;
-      this.bossLineup = this._makeLineup(opts.seed >>> 0);   // 이번 판에 나올 보스 정의들 (순서대로)
+      this.bossLineup = this._makeLineup(opts.seed >>> 0);
+      // 선행: 어려움에 처한 사람(rescue) · 친구 지켜주기(escort) · 작은 선행 거리(spots) + 게이지
+      this.deeds = { rescue: null, escort: null, spots: [], gauge: 0, done: 0 };
+      this.drng = mulberry32(((opts.seed >>> 0) ^ 0xDEED5) >>> 0);   // 위치 정하기 전용 난수 (본 흐름과 분리)   // 이번 판에 나올 보스 정의들 (순서대로)
       this.lastBossDeath = 0;
       this.bossRage = 1;            // 보스전이 길어질수록 커지는 피해 배율
       this.over = false;
@@ -289,6 +306,11 @@
     _rollLevel() {
       const p = this.player;
       p.level += 1; p.xp -= p.need; p.need = Math.round(4 + p.level * 2.8);
+      return this._rollPicks();
+    }
+    /** 아이템 카드 3장 (레벨업·선행 보상 공용) */
+    _rollPicks() {
+      const p = this.player;
       const pool = UPGRADES.filter((u) => {
         if (u.instant) return p.hp <= p.maxhp * 0.9;
         return p.stats[u.id] < MAX_LEVEL;
@@ -676,6 +698,73 @@
       this._ev({ k: 'helper' });
     }
 
+    /* ---------- 선행(좋은 일) ---------- */
+    /** 선행 보상: 아이템 카드 3장 (게임은 멈추지 않음, 안 고르면 자동) */
+    _deedReward(extraAuto) {
+      this.deeds.done += 1;
+      if (extraAuto) {   // 친구를 끝까지 지켜 주면 아이템 하나는 바로 얻음
+        const bonus = this._rollPicks()[0];
+        if (bonus) { this._applyUpgrade(bonus.id); this._ev({ k: 'autoPick', id: bonus.id, icon: bonus.icon, name: bonus.name }); }
+      }
+      this._offer(this._rollPicks().map((u) => Object.assign({}, u, { deed: true })), 'deed');
+    }
+    _updateDeeds(t) {
+      const T = TUNING, d = this.deeds, p = this.player, r = this.drng, sec = t / TICK;
+      // 1) 어려움에 처한 사람 돕기
+      if (!d.rescue && sec >= T.deedRescueFirst && (t - T.deedRescueFirst * TICK) % (T.deedRescueEvery * TICK) === 0) {
+        let x = W / 2, y = H * 0.4, best = -1;
+        for (let i = 0; i < 10; i++) { const cx = 50 + r() * (W - 100), cy = 110 + r() * (H - 300), dd = Math.hypot(cx - p.x, cy - p.y); const sc = dd < 120 ? -1 : Math.min(dd, 230); if (sc > best) { best = sc; x = cx; y = cy; } }
+        const kinds = ['child', 'elder', 'friend'];
+        d.rescue = { x, y, kind: kinds[Math.floor(r() * kinds.length)], t: 0, state: 'wait', fade: 0, guards: [] };
+        const types = Object.keys(this.world.enemies).filter((k) => !this.world.enemies[k].onDeath && this.world.enemies[k].ai !== 'shoot');
+        for (let i = 0; i < T.deedRescueGuards; i++) {
+          const a = (i / T.deedRescueGuards) * Math.PI * 2;
+          this._make(types[i % types.length], x + Math.cos(a) * 34, y + Math.sin(a) * 34);
+          const e = this.enemies[this.enemies.length - 1]; e.guard = d.rescue; e.gAng = a; e.hp *= 0.6; e.maxhp = e.hp;
+          d.rescue.guards.push(e);
+        }
+        this._ev({ k: 'deed', what: 'rescueStart', x, y });
+      }
+      const rs = d.rescue;
+      if (rs) {
+        rs.t += 1;
+        if (rs.state === 'wait') {
+          if (rs.guards.every((e) => e.hp <= 0 || this.enemies.indexOf(e) < 0)) {
+            rs.state = 'done'; rs.fade = 90; this._ev({ k: 'deed', what: 'rescued', x: rs.x, y: rs.y }); this._deedReward(false);
+          } else if (rs.t >= T.deedRescueStay * TICK) { rs.state = 'gone'; rs.fade = 60; for (const e of rs.guards) e.guard = null; this._ev({ k: 'deed', what: 'rescueLeft' }); }
+        } else if (--rs.fade <= 0) d.rescue = null;
+      }
+      // 2) 친구 지켜주기 (내가 곁에 있을 때만 걷고, 반대편까지 무사히 가면 아이템 2개)
+      if (!d.escort && sec >= T.deedEscortFirst && (t - T.deedEscortFirst * TICK) % (T.deedEscortEvery * TICK) === 0 && !this.bossAlive) {
+        const dir = r() < 0.5 ? 1 : -1, y = 170 + r() * 260;
+        d.escort = { x: dir > 0 ? 16 : W - 16, y, dir, hp: T.friendHp, maxhp: T.friendHp, inv: 0, state: 'walk', fade: 0, waiting: false, goal: dir > 0 ? W - 16 : 16 };
+        this._ev({ k: 'deed', what: 'escortStart', x: d.escort.x, y });
+      }
+      const es = d.escort;
+      if (es) {
+        if (es.state === 'walk') {
+          if (es.inv > 0) es.inv -= 1;
+          es.waiting = Math.hypot(p.x - es.x, p.y - es.y) > T.friendWaitDist;
+          if (!es.waiting) es.x += es.dir * T.friendSpeed;
+          if ((es.dir > 0 && es.x >= es.goal) || (es.dir < 0 && es.x <= es.goal)) { es.state = 'done'; es.fade = 90; this._ev({ k: 'deed', what: 'escortDone', x: es.x, y: es.y }); this._deedReward(true); }
+          else if (es.hp <= 0) { es.state = 'fail'; es.fade = 70; this._ev({ k: 'deed', what: 'escortFail' }); }
+        } else if (--es.fade <= 0) d.escort = null;
+      }
+      // 3) 작은 선행 거리: 지나가면 💛 +1, 다 모으면 아이템 카드
+      if (sec >= 8 && t % (T.deedSpotEvery * TICK) === 0 && d.spots.length < T.deedSpotMax) {
+        const kinds = ['litter', 'pot', 'toy'];
+        d.spots.push({ x: 30 + r() * (W - 60), y: 90 + r() * (H - 260), kind: kinds[Math.floor(r() * kinds.length)], t: T.deedSpotLife * TICK });
+      }
+      for (let i = d.spots.length - 1; i >= 0; i--) {
+        const sp = d.spots[i];
+        if (Math.hypot(p.x - sp.x, p.y - sp.y) < p.r + 12) {
+          d.spots.splice(i, 1); d.gauge += 1; this.fx.push({ x: sp.x, y: sp.y, t: 20, kind: 'deed' });
+          this._ev({ k: 'deed', what: 'spot', x: sp.x, y: sp.y });
+          if (d.gauge >= T.deedGaugeNeed) { d.gauge = 0; this._ev({ k: 'deed', what: 'gaugeFull' }); this._deedReward(false); }
+        } else if (--sp.t <= 0) d.spots.splice(i, 1);
+      }
+    }
+
     /** 도우미 곁(상담 구역)에 머무르면 게이지가 차고, 가득 차면 조언 카드를 받는다. 적은 도우미를 건드리지 못한다. */
     _updateHelper() {
       const hp = this.helper;
@@ -843,6 +932,7 @@
 
       this._updateHazards();
       this._updateHelper();
+      this._updateDeeds(t);
 
       // 적 이동/AI/접촉/사망
       for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -891,6 +981,21 @@
           default: break;
         }
 
+        // 선행: 어려움에 처한 사람을 둘러싼 방해 요소는 내가 다가오기 전까지 그 사람 곁을 맴돈다
+        const rs = this.deeds.rescue;
+        if (e.guard && rs === e.guard && rs.state === 'wait' && Math.hypot(p.x - rs.x, p.y - rs.y) > 110) {
+          e.gAng += 0.025;
+          const gx = rs.x + Math.cos(e.gAng) * 34 - e.x, gy = rs.y + Math.sin(e.gAng) * 34 - e.y, gd = Math.hypot(gx, gy) || 1;
+          const sp = Math.min(gd, Math.max(0.6, e.speed));
+          mvx = gx / gd * sp; mvy = gy / gd * sp;
+        }
+        // 친구 지켜주기: 친구 가까이 있는 방해 요소는 친구 쪽으로 간다 (보스·원거리 제외)
+        const es = this.deeds.escort;
+        if (es && es.state === 'walk' && e.type !== 'boss' && bt.ai !== 'shoot') {
+          const fx = es.x - e.x, fy = es.y - e.y, fd = Math.hypot(fx, fy) || 1;
+          if (fd < 70 && fd < dist) { mvx = fx / fd * e.speed; mvy = fy / fd * e.speed; }
+          if (fd < e.r + 8 && es.inv === 0) { es.hp -= es.maxhp * 0.08; es.inv = 40; this._ev({ k: 'deed', what: 'friendHurt' }); }
+        }
         e.x += mvx; e.y += mvy;
         if (p.inv === 0 && dist < e.r + p.r) this._hurtPlayer(e.dmg);
         for (const ec of this.echoes) {   // 적에게 닿은 에코도 에너지가 준다

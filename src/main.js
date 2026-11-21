@@ -138,6 +138,11 @@
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 150 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
         case 'helped': Sfx.play('levelup'); break;
+        case 'deed':   // 선행: 소리·반짝임만 (설명은 튜토리얼 안내에서)
+          if (ev.what === 'spot') { Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); }
+          else if (ev.what === 'rescued' || ev.what === 'escortDone' || ev.what === 'gaugeFull') { Sfx.play('levelup'); if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, '#ff8cc0', 12, false); }
+          else if (ev.what === 'rescueStart' || ev.what === 'escortStart') Sfx.play('heal');
+          break;
         case 'train': Sfx.play('train'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': if (tutorial) banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
         case 'gotItem': headFlash.push({ icon: ev.icon, t: 50 }); if (headFlash.length > 3) headFlash.shift(); break;
@@ -145,6 +150,62 @@
         case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
         default: break;
       }
+    }
+  }
+
+  /* ---------- 선행 그리기: 곤란한 사람 · 지켜 줄 친구 · 작은 선행 거리 ---------- */
+  const NPC_EMO = { child: '🧒', elder: '👵', friend: '🧑' };
+  function drawNPC(useArt, kind, x, y) {
+    ctx.strokeStyle = 'rgba(255,140,190,.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y + 22, 13, 5, 0, 0, 7); ctx.stroke();   // 분홍 바닥 링 = 도와줄 사람
+    if (useArt) Art.drawHelper(ctx, 'npc:' + kind, x, y); else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(NPC_EMO[kind] || '🧑', x, y, 28); }
+  }
+  function drawDeeds(useArt, people) {
+    const d = sim.deeds; if (!d) return;
+    const now = performance.now();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    // 작은 선행 거리: 은은한 분홍 빛 + 물건 (적보다 아래), 사람들은 적보다 위에 그려 가려지지 않게
+    if (!people) for (const sp of d.spots) {
+      const a = Math.min(1, sp.t / 60), pul = 0.5 + 0.5 * Math.sin(now / 260 + sp.x);
+      ctx.globalAlpha = a * (0.25 + 0.2 * pul); ctx.fillStyle = '#ff8cc0'; ctx.beginPath(); ctx.arc(sp.x, sp.y, 15, 0, 7); ctx.fill();
+      ctx.globalAlpha = a; emoji(sp.kind === 'litter' ? '🥤' : sp.kind === 'pot' ? '🪴' : '🧸', sp.x, sp.y, 18);
+    }
+    ctx.globalAlpha = 1;
+    if (!people) return;
+    // 곤란한 사람: 머리 위 ❗ 말풍선 (도와주면 💛)
+    const rs = d.rescue;
+    if (rs) {
+      ctx.globalAlpha = rs.state === 'wait' ? 1 : Math.max(0, rs.fade / 90);
+      const bob = rs.state === 'done' ? -Math.abs(Math.sin(now / 160)) * 5 : 0;
+      drawNPC(useArt, rs.kind, rs.x, rs.y + bob);
+      const by = rs.y - 34 + Math.sin(now / 200) * 2;
+      if (rs.state === 'wait') {
+        ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.beginPath(); ctx.arc(rs.x, by, 9, 0, 7); ctx.fill();
+        ctx.fillStyle = '#ff4d6d'; ctx.font = 'bold 13px sans-serif'; ctx.fillText('!', rs.x, by + 1);
+        // 남은 시간: 말풍선 둘레
+        const left = 1 - rs.t / (EchoSim.TUNING.deedRescueStay * TICK);
+        ctx.strokeStyle = '#ff8cc0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rs.x, by, 11, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
+      } else if (rs.state === 'done') emoji('💛', rs.x, by, 18);
+      ctx.globalAlpha = 1;
+    }
+    // 친구: 체력 막대 + 도착 깃발. 멀어지면 멈춰 서서 손짓(…)
+    const es = d.escort;
+    if (es) {
+      ctx.globalAlpha = es.state === 'walk' ? 1 : Math.max(0, es.fade / 90);
+      if (es.state === 'walk') {
+        ctx.globalAlpha *= 0.5 + 0.3 * Math.sin(now / 300); emoji('🚩', es.goal, es.y - 10, 20); ctx.globalAlpha = 1;
+        ctx.strokeStyle = 'rgba(255,140,190,.35)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(es.x, es.y + 16); ctx.lineTo(es.goal, es.y + 16); ctx.stroke(); ctx.setLineDash([]);
+      }
+      const step = es.state === 'walk' && !es.waiting ? Math.abs(Math.sin(now / 140)) * 2 : 0;
+      if (es.inv > 0 && Math.floor(es.inv / 4) % 2) ctx.globalAlpha *= 0.4;
+      drawNPC(useArt, 'friend', es.x, es.y - step);
+      ctx.globalAlpha = es.state === 'walk' ? 1 : Math.max(0, es.fade / 90);
+      if (es.state === 'walk') {
+        const w = 26, f = Math.max(0, es.hp / es.maxhp);
+        ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(es.x - w / 2, es.y - 30, w, 4);
+        ctx.fillStyle = f > 0.4 ? '#ff8cc0' : '#ff4d6d'; ctx.fillRect(es.x - w / 2, es.y - 30, w * f, 4);
+        if (es.waiting) { ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('…', es.x + 14, es.y - 22); }
+      } else if (es.state === 'done') emoji('💛', es.x, es.y - 34, 18);
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -242,11 +303,11 @@
       if (ch) {
         const stats = sim.player.stats;
         const title = document.createElement('div'); title.className = 'ctitle' + (tutorial ? '' : ' hidden');
-        title.textContent = sim.choiceKind === 'helper' ? `${sim.world.helper.emoji} ${sim.world.helper.name}의 조언 · 톡 눌러 고르기` : '🌱 성장! 톡 눌러 고르기 (안 고르면 자동)';
+        title.textContent = sim.choiceKind === 'helper' ? `${sim.world.helper.emoji} ${sim.world.helper.name}의 조언 · 톡 눌러 고르기` : sim.choiceKind === 'deed' ? '💛 고마워! 선물을 골라요' : '🌱 성장! 톡 눌러 고르기 (안 고르면 자동)';
         box.appendChild(title);
         const row = document.createElement('div'); row.className = 'crow';
         ch.forEach((u, i) => {
-          const b = document.createElement('button'); b.className = 'mini' + (u.boon ? ' boon' : '');
+          const b = document.createElement('button'); b.className = 'mini' + (u.boon ? ' boon' : '') + (u.deed ? ' deed' : '');
           // 처음 얻는 아이템은 무슨 효과인지, 가진 아이템은 레벨 변화를 보여 준다
           const lv = (u.instant || !(u.id in stats) || !stats[u.id]) ? '' : `Lv${stats[u.id]}→${stats[u.id] + 1}`;
           const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = u.icon;
@@ -528,6 +589,8 @@
       ctx.globalAlpha = 1;
     }
 
+    drawDeeds(useArt);
+
     // 적
     for (const e of sim.enemies) {
       if (useArt && Art.hasEnemy(e)) Art.drawEnemy(ctx, e, now, sim.player.x);
@@ -569,6 +632,7 @@
     ctx.globalAlpha = 1;
     ctx.globalAlpha = 1;
     for (const b of sim.ebullets) { if (useArt) { Art.drawEnemyBullet(ctx, b); continue; } ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff8'; ctx.lineWidth = 1; ctx.stroke(); }
+    drawDeeds(useArt, true);
 
     // 플레이어
     const p = sim.player;
@@ -656,6 +720,7 @@
     ctx.textAlign = 'right'; ctx.font = '12px sans-serif';
     const alive = sim.echoes.filter((e) => e.alive && !e.down).length;   // 지금 화면에 나와 있는 에코 수
     ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
+    if (sim.deeds) { ctx.font = '11px sans-serif'; ctx.fillStyle = '#ffb3d4'; ctx.fillText(`💛 ${sim.deeds.gauge}/${EchoSim.TUNING.deedGaugeNeed}`, W - 8, 29); ctx.fillStyle = '#fff'; }
 
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림). 카드가 떠 있으면 안내는 숨김
