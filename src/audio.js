@@ -94,6 +94,26 @@
     soft(1568 * 1.005, 0.42, 'sine', 0.03, 3 * 0.065 + 0.02);   // 살짝 어긋난 음으로 반짝임(코러스)
   }
 
+  // 피격: 거친 잡음 대신 "뿌잉" 하고 내려가는 말랑한 소리 (아픈 건 알 수 있게, 귀는 편하게)
+  function hurtSound() {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    const o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(620, t);
+    o.frequency.exponentialRampToValueAtTime(240, t + 0.16);   // 아래로 미끄러지는 "뿌잉"
+    f.type = 'lowpass'; f.frequency.value = 2200;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.13, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+    o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + 0.22);
+    // 몸에 닿는 느낌의 부드러운 '통' (낮은 사인)
+    const b = c.createOscillator(), bg = c.createGain();
+    b.type = 'sine'; b.frequency.setValueAtTime(180, t); b.frequency.exponentialRampToValueAtTime(90, t + 0.1);
+    bg.gain.setValueAtTime(0.0001, t); bg.gain.exponentialRampToValueAtTime(0.12, t + 0.006); bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    b.connect(bg); bg.connect(master); b.start(t); b.stop(t + 0.14);
+  }
+
   function noise(dur, vol) {
     const c = ac(); if (!c) return;
     const n = Math.floor(c.sampleRate * dur);
@@ -111,7 +131,7 @@
     kill:     { gap: 45,  fn: killSound },
     gem:      { gap: 55,  fn: gemSound },   // 한꺼번에 빨아들여도 소리가 겹쳐 시끄럽지 않게
     levelup:  { gap: 120, fn: levelupSound },
-    hurt:     { gap: 80,  fn: () => { tone(160, 60, 0.2, 'sawtooth', 0.1); noise(0.12, 0.06); } },
+    hurt:     { gap: 120, fn: hurtSound },
     nova:     { gap: 100, fn: () => { tone(300, 80, 0.3, 'sine', 0.1); noise(0.15, 0.04); } },
     echoDown: { gap: 80,  fn: () => tone(600, 150, 0.25, 'sine', 0.06) },
     boss:     { gap: 0,   fn: () => { tone(110, 70, 0.6, 'sawtooth', 0.1); tone(165, 90, 0.6, 'square', 0.05, 0.1); } },
