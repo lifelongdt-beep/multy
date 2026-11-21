@@ -199,6 +199,7 @@
       this.bossAlive = false;
       this.bossDefeated = 0;
       this.bossCount = this.world.boss.times.length;
+      this.bossLineup = this._makeLineup(opts.seed >>> 0);   // 이번 판에 나올 보스 정의들 (순서대로)
       this.lastBossDeath = 0;
       this.bossRage = 1;            // 보스전이 길어질수록 커지는 피해 배율
       this.over = false;
@@ -293,6 +294,36 @@
       return type === 'boss' ? w.boss : (w.enemies[type] || ENEMY_TYPES[type]);
     }
 
+    /** 보스 순서: 1회차는 월드의 보스(lineup이 있으면 그 보스들 → 마지막에 월드 보스),
+     *  2회차부터는 12개 월드의 보스 중 무작위(바로 앞과 같은 보스는 피함). 난이도 값은 항상 이 월드 기준 */
+    _makeLineup(seed) {
+      const w = this.world, n = w.boss.times.length;
+      let ids;
+      if (this.cycle > 0) {
+        const r = mulberry32((seed ^ 0xB0551E5) >>> 0);   // 본 난수와 분리 (같은 시드면 같은 순서)
+        ids = [];
+        for (let i = 0; i < n; i++) {
+          let id;
+          do { id = Worlds.ORDER[Math.floor(r() * Worlds.ORDER.length)]; } while (i > 0 && id === ids[i - 1]);
+          ids.push(id);
+        }
+      } else if (w.boss.lineup) ids = w.boss.lineup.slice(0, n - 1).concat([w.id]);
+      else ids = new Array(n).fill(w.id);
+      while (ids.length < n) ids.unshift(w.id);
+      return ids.map((id) => this._bossFrom(id));
+    }
+    /** 다른 월드의 보스를 이 월드에 맞춰 데려온다: 모습·패턴·문구는 그 보스, 체력·피해·소환 등은 이 월드 기준 */
+    _bossFrom(id) {
+      const own = this.world.boss;
+      if (id === this.world.id || !WORLDS[id]) return own;
+      const b = WORLDS[id].boss;
+      return Object.assign({}, b, {
+        hp: own.hp, times: own.times, needEchoes: own.needEchoes, fightSec: own.fightSec, refMul: own.refMul,
+        speed: own.speed, dmg: own.dmg, xp: own.xp, summon: own.summon, lineup: undefined, origin: id,
+      });
+    }
+    _bossAt(idx) { return this.bossLineup[Math.max(0, Math.min(this.bossLineup.length - 1, idx | 0))]; }
+
     _hpScale() {
       const progress = this.tick / RUN_TICKS;
       return (1 + progress * TUNING.hpGrowth) * (1 + TUNING.echoHpScale * this.echoes.length) * (this.world.rules.hpMul || 1) * this.mul.hp;
@@ -329,7 +360,7 @@
     }
 
     _make(type, x, y, idx) {
-      const b = this._def(type);
+      const b = type === 'boss' ? this._bossAt(idx) : this._def(type);
       const progress = this.tick / RUN_TICKS;
       const hp = type === 'boss' ? this._bossHp(b, idx || 0) : b.hp * this._hpScale();
       const cdBase = b.fireCd || b.dashCd || 150;
@@ -394,11 +425,11 @@
       const times = w.boss.times;
       if (this.bossIdx < times.length && !this.bossAlive) {
         const due = Math.max(times[this.bossIdx] * TICK, this.bossIdx > 0 ? this.lastBossDeath + TUNING.bossGapSec * TICK : 0);
-        if (t === due - 180) this._ev({ k: 'banner', text: w.boss.warnText });
+        if (t === due - 180) this._ev({ k: 'banner', text: this._bossAt(this.bossIdx).warnText });
         if (t >= due) {
           this._make('boss', W / 2, -30, this.bossIdx);
           this.bossIdx += 1; this.bossAlive = true; this.bossSpawned = true;
-          this._ev({ k: 'boss', text: w.boss.startText + (this.bossCount > 1 ? ` (${this.bossIdx}/${this.bossCount})` : '') });
+          this._ev({ k: 'boss', text: this._bossAt(this.bossIdx - 1).startText + (this.bossCount > 1 ? ` (${this.bossIdx}/${this.bossCount})` : '') });
         }
       }
       // 월드 고유 규칙: 지하철 열차 (보스 등장 전까지)

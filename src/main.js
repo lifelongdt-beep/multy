@@ -295,7 +295,8 @@
     const out = sim.exportEcho();
     echoes = addEcho(echoes, out, MAX_ECHOES).list; echoWorld = sim.world.id;
     save();
-    const title = { dead: '쓰러졌다… 하지만!', clear: `${sim.world.boss.name} 극복! 🎉`, survive: '120초 버텼어요!' }[sim.result];
+    const lastBoss = sim.bossLineup[sim.bossLineup.length - 1];
+    const title = { dead: '쓰러졌다… 하지만!', clear: `${lastBoss.name} 극복! 🎉`, survive: '120초 버텼어요!' }[sim.result];
     Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
     $('endTitle').textContent = title;
     $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;

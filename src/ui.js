@@ -56,7 +56,7 @@
       const gearLine = rec.atk + rec.def === 0 ? '🧰 장비 없이도 OK'
         : `🧰 권장 장비 ⚔${rec.atk} 🛡${rec.def} (내 장비 ⚔${gt.atk} 🛡${gt.def})` + (gt.atk < rec.atk || gt.def < rec.def ? ' ⚠ 매점에서 장비를 더 사야 해요' : ' ✅');
       const desc = open
-        ? `${w.desc}\n✨ ${w.ruleText}\n🏁 큰 도전 ${w.boss.times.length}번 · 👻 권장 에코 ${w.boss.needEchoes}명+ · 🎓 학점 x${(w.coinMul * M.cycleCoinMul(save.cycle)).toFixed(1)} · 극복 ${clears}회 · 최장 ${best}초\n${gearLine}`
+        ? `${w.desc}\n✨ ${w.ruleText}\n🏁 큰 도전 ${w.boss.times.length}번${save.cycle > 0 ? ' (🎲 무작위)' : ''} · 👻 권장 에코 ${w.boss.needEchoes}명+ · 🎓 학점 x${(w.coinMul * M.cycleCoinMul(save.cycle)).toFixed(1)} · 극복 ${clears}회 · 최장 ${best}초\n${gearLine}`
         : `🔒 ${prev.emoji} ${prev.name}의 큰 도전 "${prev.boss.name}"을(를) 극복하면 열립니다`;
       const row = item(open ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
       row.querySelector('small').style.whiteSpace = 'pre-line';

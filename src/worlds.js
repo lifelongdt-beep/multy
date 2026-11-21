@@ -16,6 +16,7 @@
  *   에코가 이보다 적으면 사실상 못 잡고 이 수만큼 있으면 아슬아슬하게, 더 많으면 여유 있게 잡는다. (정원 10명 이하)
  * boss.refMul: 기준 화력 배율 = 그 월드에서 보스가 나올 때 "평균적인 내" 화력 / 40 (실측: 학원은 경험치 +30%라 높고, 보스가 일찍 나오는 회사·지하철은 낮음)
  * boss.fightSec: 필요 에코 수가 갖춰졌을 때 한 보스를 상대하는 목표 시간(초)
+ * boss.lineup: (선택) 마지막 보스 전에 차례로 나올 다른 월드의 보스 id 목록. 2회차부터는 모든 월드의 보스 중 무작위로 나온다(sim.js)
  *
  * enemies 필드: hp, speed, r(반지름), dmg(접촉 피해), xp, ai
  *   ai: chase | zig(지그재그) | dash(돌진) | shoot(원거리) | boss
@@ -199,7 +200,7 @@
         leaveText: '힘들 땐 언제든 이야기해요',
         boons: { heal: '따뜻한 밥 한 끼', power: '든든한 응원', focus: '일찍 자기', team: '가족과 함께' },
       },
-      boss: { name: '불면증', emoji: '😵‍💫', hp: 1000, times: [80, 115, 150], needEchoes: 9, fightSec: 28, refMul: 0.6, speed: 0.35, r: 30, dmg: 14, xp: 40, ai: 'boss', pattern: 'spiral', warnText: '⚠ 잠이 오지 않아요… 불면증이 찾아와요 ⚠', startText: '😵‍💫 불면증, 천천히 숨 쉬며 극복해요!', summon: 'scroll' },
+      boss: { name: '불면증', emoji: '😵‍💫', hp: 1000, times: [75, 105, 135, 165], needEchoes: 9, fightSec: 28, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 40, ai: 'boss', pattern: 'spiral', warnText: '⚠ 잠이 오지 않아요… 불면증이 찾아와요 ⚠', startText: '😵‍💫 불면증, 천천히 숨 쉬며 극복해요!', summon: 'scroll' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { snack: 6, scroll: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { snack: 5, scroll: 4, game: 2, moon: 1 } },
@@ -237,7 +238,7 @@
         leaveText: '꾸준함이 최고의 비결이에요',
         boons: { heal: '물 한 모금', power: '바른 자세', focus: '호흡법', team: '운동 메이트' },
       },
-      boss: { name: '작심삼일', emoji: '🗓️', hp: 1050, times: [80, 115, 150], needEchoes: 9, fightSec: 27, refMul: 0.65, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'charge', warnText: '⚠ 오늘만 쉴까…? 작심삼일이 다가와요 ⚠', startText: '🗓️ 작심삼일, 오늘도 해내요!', summon: 'lazy' },
+      boss: { name: '작심삼일', emoji: '🗓️', hp: 1050, times: [75, 105, 135, 165], needEchoes: 9, fightSec: 27, refMul: 0.55, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'charge', warnText: '⚠ 오늘만 쉴까…? 작심삼일이 다가와요 ⚠', startText: '🗓️ 작심삼일, 오늘도 해내요!', summon: 'lazy' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { lazy: 6, sweat: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { lazy: 5, sweat: 4, excuse: 2, ache: 1 } },
@@ -275,7 +276,7 @@
         leaveText: '궁금한 건 언제든 물어보세요',
         boons: { heal: '잠깐 산책', power: '딱 맞는 참고서', focus: '뽀모도로 공부법', team: '스터디 친구' },
       },
-      boss: { name: '집중력 저하', emoji: '😵', hp: 1100, times: [80, 115, 150], needEchoes: 9, fightSec: 26, refMul: 0.65, speed: 0.4, r: 30, dmg: 14, xp: 44, ai: 'boss', pattern: 'exam', warnText: '⚠ 글자가 눈에 안 들어와요… 집중력 저하 ⚠', startText: '😵 집중력 저하, 한 줄씩 차근차근!', summon: 'nod' },
+      boss: { name: '집중력 저하', emoji: '😵', hp: 1100, times: [75, 105, 135, 165], needEchoes: 9, fightSec: 26, refMul: 0.55, speed: 0.4, r: 30, dmg: 14, xp: 44, ai: 'boss', pattern: 'exam', warnText: '⚠ 글자가 눈에 안 들어와요… 집중력 저하 ⚠', startText: '😵 집중력 저하, 한 줄씩 차근차근!', summon: 'nod' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { nod: 6, hurry: 3 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { nod: 5, hurry: 4, tempt: 2, compare: 1 } },
@@ -312,7 +313,7 @@
         leaveText: '안전한 물놀이 되세요',
         boons: { heal: '그늘에서 쉬기', power: '구명조끼', focus: '물 마시기', team: '함께 노는 친구' },
       },
-      boss: { name: '태풍', emoji: '⛈️', hp: 1150, times: [75, 110, 145], needEchoes: 10, fightSec: 25, refMul: 0.55, speed: 0.35, r: 30, dmg: 15, xp: 46, ai: 'boss', pattern: 'spiral', warnText: '⚠ 하늘이 어두워져요… 태풍이 다가와요 ⚠', startText: '⛈️ 태풍, 함께 버텨내요!', summon: 'mosq' },
+      boss: { name: '태풍', emoji: '⛈️', hp: 1150, times: [75, 105, 135, 165], needEchoes: 10, fightSec: 25, refMul: 0.55, speed: 0.35, r: 30, dmg: 15, xp: 46, ai: 'boss', pattern: 'spiral', warnText: '⚠ 하늘이 어두워져요… 태풍이 다가와요 ⚠', startText: '⛈️ 태풍, 함께 버텨내요!', summon: 'mosq' },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { sun: 5, mosq: 4 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { sun: 5, mosq: 4, jelly: 2, sand: 1 } },
@@ -442,7 +443,7 @@
     /* ================= 12. 꿈의 무대 ================= */
     stage: {
       id: 'stage', name: '꿈의 무대', emoji: '🎤', coinMul: 6.0,
-      desc: '드디어 꿈꾸던 첫 무대! 조명 장치가 움직이고 긴장과 떨림이 한꺼번에 몰려와요. 함께하는 동료가 곁을 지켜 줍니다. 마지막 월드예요.',
+      desc: '드디어 꿈꾸던 첫 무대! 조명 장치가 움직이고 긴장과 떨림이 한꺼번에 몰려와요. 함께하는 동료가 곁을 지켜 줍니다. 지금까지 만난 큰 도전들이 다시 찾아오고, 마지막에 무대 공포증이 기다려요.',
       ruleText: '움직이는 조명: 경고 줄 뒤 조명 장치가 지나감(최대 체력의 40%) · 방해 요소가 10% 더 자주 나옴 · 큰 도전 4번',
       unlock: { world: 'mountain' },
       theme: { bg: '#1e0f24', grid: 'rgba(255,170,255,.06)', deco: 'stars' },
@@ -461,7 +462,8 @@
         leaveText: '우리는 한 팀이에요',
         boons: { heal: '심호흡', power: '연습한 만큼', focus: '리허설', team: '우리 팀' },
       },
-      boss: { name: '무대 공포증', emoji: '🎭', hp: 1400, times: [75, 105, 135, 165], needEchoes: 10, fightSec: 22, refMul: 0.5, speed: 0.4, r: 32, dmg: 16, xp: 56, ai: 'boss', pattern: 'exam', warnText: '⚠ 막이 오르기 직전… 무대 공포증이 찾아와요 ⚠', startText: '🎭 무대 공포증, 지금까지의 나와 함께 극복해요!', summon: 'nerve' },
+      boss: { name: '무대 공포증', emoji: '🎭', hp: 1400, times: [75, 105, 135, 165], needEchoes: 10, fightSec: 22, refMul: 0.5, speed: 0.4, r: 32, dmg: 16, xp: 56, ai: 'boss', pattern: 'exam', warnText: '⚠ 막이 오르기 직전… 무대 공포증이 찾아와요 ⚠', startText: '🎭 무대 공포증, 지금까지의 나와 함께 극복해요!', summon: 'nerve',
+              lineup: ['school', 'office', 'beach'] },   // 피날레: 앞 월드의 큰 도전들이 차례로 찾아오고 마지막에 무대 공포증
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { nerve: 6, shake: 4 } },
         { from: 20, to: 45,  interval: 36, n: 2, w: { nerve: 5, shake: 4, oops: 2, mirror: 1 } },

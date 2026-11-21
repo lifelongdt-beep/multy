@@ -91,7 +91,9 @@ test('모든 월드: 전체 판 동안 NaN 없이 돌아가고 보스가 90초�
         for (const h of s.hazards) assert.ok(Number.isFinite(h.x) && Number.isFinite(h.y), `${id} 위험물 NaN`);
       }
     }
-    assert.strictEqual(bossName, WORLDS[id].boss.name, `${id}: 보스 이름`);
+    // 첫 보스: 보통은 월드의 보스, 꿈의 무대는 lineup의 첫 보스(앞 월드의 큰 도전)
+    const first = WORLDS[id].boss.lineup ? WORLDS[WORLDS[id].boss.lineup[0]].boss.name : WORLDS[id].boss.name;
+    assert.strictEqual(bossName, first, `${id}: 첫 보스 이름`);
   }
 });
 
@@ -639,4 +641,45 @@ test('도우미: 짧게(약 1.2초) 머물러도 조언을 받고, 한 판에 �
   for (let i = 1; i < arrivals.length; i++) assert.ok(arrivals[i] - arrivals[i - 1] >= TUNING.helperEvery - 0.1, '간격');
   assert.ok(helpedAt !== null && s.helped === 1, '도움을 받았다');
   assert.ok((helpedAt / 60) - arrivals[1] < 1.5, `머문 지 ${((helpedAt / 60) - arrivals[1]).toFixed(2)}초 만에 조언`);
+});
+
+test('보스 횟수: 지하철 이후는 모두 4번 (다시 줄어들지 않음)', () => {
+  const counts = ORDER.map((id) => WORLDS[id].boss.times.length);
+  for (let i = 1; i < counts.length; i++) assert.ok(counts[i] >= counts[i - 1], `횟수가 줄어들면 안 됨: ${counts}`);
+  for (const id of ORDER.slice(3)) assert.strictEqual(WORLDS[id].boss.times.length, 4, id);
+});
+
+test('꿈의 무대(1회차): 앞 월드의 큰 도전들이 차례로 나오고, 마지막은 무대 공포증', () => {
+  const s = new Sim({ seed: 5, events: false, world: 'stage' });
+  const names = s.bossLineup.map((b) => b.name);
+  const lu = WORLDS.stage.boss.lineup;
+  assert.deepStrictEqual(names, lu.map((id) => WORLDS[id].boss.name).concat([WORLDS.stage.boss.name]));
+  // 다른 월드 보스도 체력·피해·소환은 꿈의 무대 기준 (모습·패턴은 원래 보스)
+  const b0 = s.bossLineup[0];
+  assert.strictEqual(b0.pattern, WORLDS[lu[0]].boss.pattern);
+  assert.strictEqual(b0.emoji, WORLDS[lu[0]].boss.emoji);
+  for (const k of ['needEchoes', 'fightSec', 'refMul', 'dmg', 'summon']) assert.strictEqual(b0[k], WORLDS.stage.boss[k], k);
+  s._make('boss', 0, 0, 0); assert.strictEqual(s.enemies[0].name, WORLDS[lu[0]].boss.name);
+  s._make('boss', 0, 0, 3); assert.strictEqual(s.enemies[1].name, WORLDS.stage.boss.name);
+});
+
+test('2회차부터: 여러 월드의 보스가 무작위로 나온다 (같은 시드면 같은 순서, 연속 중복 없음)', () => {
+  const seen = new Set();
+  for (let seed = 1; seed <= 30; seed++) {
+    const s = new Sim({ seed, events: false, world: 'subway', cycle: 1 });
+    const ids = s.bossLineup.map((b) => b.origin || 'subway');
+    for (let i = 1; i < ids.length; i++) assert.notStrictEqual(ids[i], ids[i - 1], '연속 같은 보스 없음');
+    ids.forEach((x) => seen.add(x));
+    const again = new Sim({ seed, events: false, world: 'subway', cycle: 1 });
+    assert.deepStrictEqual(again.bossLineup.map((b) => b.name), s.bossLineup.map((b) => b.name));
+    for (const b of s.bossLineup) assert.strictEqual(b.needEchoes, WORLDS.subway.boss.needEchoes, '난이도는 이 월드 기준');
+  }
+  assert.ok(seen.size >= 8, `30판 동안 나온 보스 종류 ${seen.size}`);
+  // 학교(보스 1번)도 2회차엔 다른 보스가 나올 수 있다
+  const schoolBosses = new Set(); for (let seed = 1; seed <= 30; seed++) schoolBosses.add(new Sim({ seed, world: 'school', cycle: 1 }).bossLineup[0].name);
+  assert.ok(schoolBosses.size > 3);
+  // 무작위 보스로 끝까지 진행해도 정상
+  const s = new Sim({ seed: 7, events: true, world: 'gym', cycle: 2 });
+  while (!s.over && s.tick < 20000) { s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id); const b = s.enemies.find((e) => e.type === 'boss'); if (b) b.hp -= b.maxhp * 0.002; s.step({ dx: Math.sin(s.tick / 40) * 0.6, dy: 0 }); s.drainEvents(); }
+  assert.strictEqual(s.result, 'clear');
 });
