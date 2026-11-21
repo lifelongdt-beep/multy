@@ -39,6 +39,33 @@
     o.start(t); o.stop(t + dur + 0.02);
   }
 
+  /** 부드럽게 시작하는 음 (딱 소리 없이): 짧게 올라갔다가 자연스럽게 사라짐 */
+  function soft(f, dur, type, vol, delay) {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime + (delay || 0);
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f * 0.94, t);
+    o.frequency.exponentialRampToValueAtTime(f, t + 0.025);   // 살짝 미끄러져 올라가는 "뿅"
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+
+  // 구슬을 연달아 먹으면 음이 한 칸씩 올라간다 (펜타토닉: 도 레 미 솔 라 …)
+  const GEM_SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
+  let gemCombo = 0, gemLast = 0;
+  function gemSound() {
+    const now = (root.performance || Date).now();
+    gemCombo = now - gemLast < 450 ? Math.min(GEM_SCALE.length - 1, gemCombo + 1) : 0;
+    gemLast = now;
+    const f = 880 * Math.pow(2, GEM_SCALE[gemCombo] / 12);
+    soft(f, 0.14, 'sine', 0.13);                 // 맑은 몸통
+    soft(f * 2, 0.09, 'triangle', 0.035, 0.03);  // 반짝이는 윗소리
+  }
+
   function noise(dur, vol) {
     const c = ac(); if (!c) return;
     const n = Math.floor(c.sampleRate * dur);
@@ -54,7 +81,7 @@
     shoot:    { gap: 110, fn: () => tone(700, 420, 0.05, 'square', 0.025) },
     hit:      { gap: 60,  fn: () => tone(220, 130, 0.04, 'sawtooth', 0.02) },
     kill:     { gap: 30,  fn: () => { tone(320, 90, 0.13, 'square', 0.12); tone(700, 1050, 0.09, 'triangle', 0.1); noise(0.07, 0.1); } },
-    gem:      { gap: 20,  fn: () => { tone(1100, 1700, 0.08, 'sine', 0.18); tone(2200, 2200, 0.05, 'sine', 0.05); } },
+    gem:      { gap: 35,  fn: gemSound },
     levelup:  { gap: 0,   fn: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.14, 'triangle', 0.07, i * 0.07)) },
     hurt:     { gap: 80,  fn: () => { tone(160, 60, 0.2, 'sawtooth', 0.1); noise(0.12, 0.06); } },
     nova:     { gap: 100, fn: () => { tone(300, 80, 0.3, 'sine', 0.1); noise(0.15, 0.04); } },
