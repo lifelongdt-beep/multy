@@ -29,6 +29,37 @@
     const emo = (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji;
     c.setTransform(2, 0, 0, 2, 0, 0); Art.drawKidPreview(c, 28, 38, emo, save.cycle, 1.15);
     $('outfitName').textContent = `👕 ${of.name} ${'★'.repeat(of.stars)}${of.variant ? ` · 색 ${of.variant + 1}` : ''}`;
+    const t = M.titleOf(M.deedScore(save)).title;
+    $('titleLine').textContent = M.deedScore(save) > 0 ? `${t.icon} ${t.name}` : '';
+  }
+
+  /* ---------- 선행: 칭호 · 도감 ---------- */
+  function renderDeeds() {
+    const body = $('pbody'); body.innerHTML = '';
+    const sc = M.deedScore(save), tt = M.titleOf(sc), d = save.deeds;
+    body.appendChild(item(tt.title.icon, tt.title.name,
+      tt.next ? `다음 칭호 ${tt.next.icon} ${tt.next.name}까지 💛 ${tt.next.at - sc}` : '최고 칭호에 도달했어요!',
+      { progress: tt.next ? (sc - tt.title.at) / (tt.next.at - tt.title.at) : 1, done: !tt.next }));
+    body.appendChild(el('div', 'msg', `🙋 도운 사람 ${d.people}명 · 🤝 지켜 준 친구 ${d.escorts}명 · 💛 작은 선행 ${d.spots}개`));
+    const book = M.deedBook(save), got = book.filter((b) => b.count > 0).length;
+    body.appendChild(el('div', 'msg', `📖 선행 도감 ${got} / ${book.length}`));
+    const grid = el('div', 'book');
+    grid.appendChild(el('div', 'wn', ''));
+    for (const k of M.DEED_KINDS) grid.appendChild(el('div', 'cell', M.DEED_KIND_INFO[k].emoji));
+    for (const w of M.WORLD_ORDER) {
+      const wd = M.WORLDS[w];
+      const open = M.worldUnlocked(save, w);
+      grid.appendChild(el('div', 'wn', open ? `${wd.emoji} ${wd.name}` : '🔒 ???'));
+      for (const k of M.DEED_KINDS) {
+        const n = (book.find((b) => b.world === w && b.kind === k) || {}).count || 0;
+        const c = el('div', 'cell' + (n ? ' got' : ''), n ? M.DEED_KIND_INFO[k].emoji : '❔');
+        if (n) c.appendChild(el('small', '', `×${n}`));
+        grid.appendChild(c);
+      }
+    }
+    body.appendChild(grid);
+    body.appendChild(el('div', 'msg', '칭호'));
+    for (const t of M.TITLES) body.appendChild(item(sc >= t.at ? t.icon : '🔒', t.name, `💛 ${t.at}`, { done: sc >= t.at }));
   }
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
   function item(icon, title, desc, opts) {
@@ -204,6 +235,7 @@
   $('bWorld').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🗺️ 월드 선택', renderWorlds); };
   $('bShop').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏪 상점', renderShop); };
   $('bChar').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🧑 캐릭터', renderChars); };
+  $('bDeed').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💛 선행', renderDeeds); };
   $('bQuest').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏆 과제 · 미션', renderQuests); };
   $('bBackup').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💾 백업', renderBackup); };
   $('pback').onclick = () => { Sfx.play('click'); closePanel(); };
@@ -216,6 +248,10 @@
     /** 한 판 결과를 저장하고 요약({earned,total,newAch,missionsDone})을 돌려준다 */
     recordRun(run) { ensureDaily(); const r = M.recordRun(save, run, today()); commit(); return r; },
     tutorialDone() { return save.tutorial === true; },
+    /** 선행 점수 (마을이 밝아지는 정도) */
+    deedScore() { return M.deedScore(save); },
+    /** 지난 판에 도와준 사람이 이번 판에 찾아온다 (한 번만) */
+    takeVisitor() { const v = M.takeVisitor(save); if (v) commit(); return v; },
     cycle() { return save.cycle; },
     /** 시작하려는 월드에 장비가 모자라면 {atk, def} 부족분, 충분하면 null */
     gearShort(worldId) {

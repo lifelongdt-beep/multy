@@ -85,7 +85,15 @@
     deedSpotEvery: 5,        // 작은 선행 거리(쓰레기·쓰러진 화분·떨어진 인형)가 생기는 간격(초)
     deedSpotMax: 3,
     deedSpotLife: 14,        //   사라지기까지(초)
-    deedGaugeNeed: 5,        //   이만큼 모으면 아이템 카드        // 레벨업·조언 카드는 게임을 멈추지 않고, 이 시간 안에 안 고르면 자동으로 골라 준다
+    deedGaugeNeed: 5,        //   이만큼 모으면 아이템 카드
+    allySec: 14,             // 도와준 사람이 곁에서 응원하며 함께하는 시간(초)
+    allyEvery: 34,           //   하트를 던지는 간격(틱)
+    allyDmg: 0.8,            //   하트 위력 (내 총알 위력 대비)
+    warmR: 150,              // 선행 순간 퍼지는 따뜻한 빛 반경
+    warmSec: 3,              //   빛을 받은 방해 요소가 순해지는(느려지고 닿아도 아프지 않은) 시간(초)
+    visitorSec: 3,           // 지난 판에 도와준 사람이 찾아오는 시각(초)
+    visitorHeal: 0.35,       //   선물: 체력 회복 비율
+    visitorGems: 8,          //   선물: 구슬 수        // 레벨업·조언 카드는 게임을 멈추지 않고, 이 시간 안에 안 고르면 자동으로 골라 준다
   };
 
   function mulberry32(a) {
@@ -219,7 +227,8 @@
       this.bossCount = this.world.boss.times.length;
       this.bossLineup = this._makeLineup(opts.seed >>> 0);
       // 선행: 어려움에 처한 사람(rescue) · 친구 지켜주기(escort) · 작은 선행 거리(spots) + 게이지
-      this.deeds = { rescue: null, escort: null, spots: [], gauge: 0, done: 0 };
+      this.deeds = { rescue: null, escort: null, spots: [], gauge: 0, done: 0, people: [], spotCount: 0, escorts: 0, visitor: null, visitorKind: (opts.visitor && opts.visitor.kind) || null };
+      this.allies = [];      // 도와준 사람들: 잠시 곁에서 하트를 던지며 응원 (사람이므로 적 목록과 별개, 다치지 않음)
       this.drng = mulberry32(((opts.seed >>> 0) ^ 0xDEED5) >>> 0);   // 위치 정하기 전용 난수 (본 흐름과 분리)   // 이번 판에 나올 보스 정의들 (순서대로)
       this.lastBossDeath = 0;
       this.bossRage = 1;            // 보스전이 길어질수록 커지는 피해 배율
@@ -700,16 +709,64 @@
 
     /* ---------- 선행(좋은 일) ---------- */
     /** 선행 보상: 아이템 카드 3장 (게임은 멈추지 않음, 안 고르면 자동) */
-    _deedReward(extraAuto) {
+    _deedReward(extraAuto, who) {
       this.deeds.done += 1;
+      if (who) {   // 도와준 사람은 고마워하며 잠시 함께한다
+        this.deeds.people.push(who.kind);
+        this.allies.push({ x: who.x, y: who.y, kind: who.kind, t: TUNING.allySec * TICK, cd: 20, ang: this.allies.length * 2.1 });
+      }
+      this._warm(who ? who.x : this.player.x, who ? who.y : this.player.y);
       if (extraAuto) {   // 친구를 끝까지 지켜 주면 아이템 하나는 바로 얻음
         const bonus = this._rollPicks()[0];
         if (bonus) { this._applyUpgrade(bonus.id); this._ev({ k: 'autoPick', id: bonus.id, icon: bonus.icon, name: bonus.name }); }
       }
       this._offer(this._rollPicks().map((u) => Object.assign({}, u, { deed: true })), 'deed');
     }
+    /** 따뜻한 빛: 주변 방해 요소가 잠시 순해진다 (느려지고, 닿아도 아프지 않음) */
+    _warm(x, y) {
+      const R = TUNING.warmR;
+      for (const e of this.enemies) if (e.type !== 'boss' && (e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) < R * R) e.calm = TUNING.warmSec * TICK;
+      this._ev({ k: 'warm', x, y, r: R });
+    }
+    _updateAllies() {
+      const p = this.player, d = derive(p.stats);
+      for (let i = this.allies.length - 1; i >= 0; i--) {
+        const a = this.allies[i];
+        a.ang += 0.012;
+        const gx = p.x + Math.cos(a.ang) * 38, gy = p.y + Math.sin(a.ang) * 30 + 6, dx = gx - a.x, dy = gy - a.y, dd = Math.hypot(dx, dy) || 1;
+        const sp = Math.min(dd, 2.6); a.x += dx / dd * sp; a.y += dy / dd * sp;
+        if (--a.cd <= 0) {
+          const tg = this._nearest(a.x, a.y, 220);
+          if (tg) {
+            const ang = Math.atan2(tg.y - a.y, tg.x - a.x);
+            this.bullets.push({ x: a.x, y: a.y - 6, vx: Math.cos(ang) * 4.5, vy: Math.sin(ang) * 4.5, dmg: d.dmg * TUNING.allyDmg, crit: false, pierce: 0, life: 60, owner: 'ally', hit: [] });
+          }
+          a.cd = TUNING.allyEvery;
+        }
+        if (--a.t <= 0) { this.allies.splice(i, 1); this._ev({ k: 'deed', what: 'allyBye', x: a.x, y: a.y }); }
+      }
+    }
     _updateDeeds(t) {
       const T = TUNING, d = this.deeds, p = this.player, r = this.drng, sec = t / TICK;
+      this._updateAllies();
+      // 0) 지난 판에 도와준 사람이 찾아와 작은 선물을 주고 간다 (은혜 갚기)
+      if (d.visitorKind && t === T.visitorSec * TICK) {
+        d.visitor = { x: p.x < W / 2 ? W - 20 : 20, y: Math.min(PLAY_BOTTOM - 30, Math.max(90, p.y)), kind: d.visitorKind, state: 'come', fade: 0 };
+        this._ev({ k: 'deed', what: 'visitStart', kind: d.visitorKind });
+      }
+      const vs = d.visitor;
+      if (vs) {
+        if (vs.state === 'come') {
+          const dx = p.x - vs.x, dy = p.y - vs.y, dd = Math.hypot(dx, dy) || 1;
+          vs.x += dx / dd * 2.2; vs.y += dy / dd * 2.2;
+          if (dd < 30) {
+            vs.state = 'gift'; vs.fade = 70;
+            p.hp = Math.min(p.maxhp, p.hp + p.maxhp * T.visitorHeal); this._ev({ k: 'heal' });
+            for (let g = 0; g < T.visitorGems; g++) { const a = (g / T.visitorGems) * Math.PI * 2; this.gems.push({ x: p.x + Math.cos(a) * 34, y: p.y + Math.sin(a) * 34, v: 1 }); }
+            this._ev({ k: 'deed', what: 'visitGift', x: vs.x, y: vs.y, kind: vs.kind });
+          }
+        } else if (--vs.fade <= 0) d.visitor = null;
+      }
       // 1) 어려움에 처한 사람 돕기
       if (!d.rescue && sec >= T.deedRescueFirst && (t - T.deedRescueFirst * TICK) % (T.deedRescueEvery * TICK) === 0) {
         let x = W / 2, y = H * 0.4, best = -1;
@@ -730,7 +787,7 @@
         rs.t += 1;
         if (rs.state === 'wait') {
           if (rs.guards.every((e) => e.hp <= 0 || this.enemies.indexOf(e) < 0)) {
-            rs.state = 'done'; rs.fade = 90; this._ev({ k: 'deed', what: 'rescued', x: rs.x, y: rs.y }); this._deedReward(false);
+            rs.state = 'done'; rs.fade = 40; this._ev({ k: 'deed', what: 'rescued', x: rs.x, y: rs.y, kind: rs.kind }); this._deedReward(false, rs);
           } else if (rs.t >= T.deedRescueStay * TICK) { rs.state = 'gone'; rs.fade = 60; for (const e of rs.guards) e.guard = null; this._ev({ k: 'deed', what: 'rescueLeft' }); }
         } else if (--rs.fade <= 0) d.rescue = null;
       }
@@ -746,7 +803,7 @@
           if (es.inv > 0) es.inv -= 1;
           es.waiting = Math.hypot(p.x - es.x, p.y - es.y) > T.friendWaitDist;
           if (!es.waiting) es.x += es.dir * T.friendSpeed;
-          if ((es.dir > 0 && es.x >= es.goal) || (es.dir < 0 && es.x <= es.goal)) { es.state = 'done'; es.fade = 90; this._ev({ k: 'deed', what: 'escortDone', x: es.x, y: es.y }); this._deedReward(true); }
+          if ((es.dir > 0 && es.x >= es.goal) || (es.dir < 0 && es.x <= es.goal)) { es.state = 'done'; es.fade = 40; this.deeds.escorts += 1; this._ev({ k: 'deed', what: 'escortDone', x: es.x, y: es.y, kind: 'friend' }); this._deedReward(true, { x: es.x, y: es.y, kind: 'friend' }); }
           else if (es.hp <= 0) { es.state = 'fail'; es.fade = 70; this._ev({ k: 'deed', what: 'escortFail' }); }
         } else if (--es.fade <= 0) d.escort = null;
       }
@@ -758,7 +815,7 @@
       for (let i = d.spots.length - 1; i >= 0; i--) {
         const sp = d.spots[i];
         if (Math.hypot(p.x - sp.x, p.y - sp.y) < p.r + 12) {
-          d.spots.splice(i, 1); d.gauge += 1; this.fx.push({ x: sp.x, y: sp.y, t: 20, kind: 'deed' });
+          d.spots.splice(i, 1); d.gauge += 1; d.spotCount += 1; this.fx.push({ x: sp.x, y: sp.y, t: 20, kind: 'deed' });
           this._ev({ k: 'deed', what: 'spot', x: sp.x, y: sp.y });
           if (d.gauge >= T.deedGaugeNeed) { d.gauge = 0; this._ev({ k: 'deed', what: 'gaugeFull' }); this._deedReward(false); }
         } else if (--sp.t <= 0) d.spots.splice(i, 1);
@@ -951,7 +1008,7 @@
             const dir = dist > 150 ? 1 : dist < 110 ? -0.8 : 0;
             mvx = ux * e.speed * dir; mvy = uy * e.speed * dir;
             e.cd -= 1;
-            if (e.cd <= 0 && dist < 280) {
+            if (e.cd <= 0 && dist < 280 && !(e.calm > 0)) {
               const n = bt.volley || 1, base = Math.atan2(ay, ax);
               for (let k = 0; k < n; k++) this._ebullet(e.x, e.y, base + (k - (n - 1) / 2) * (bt.spread || 0.2), bt.bspeed || 2.2, bt.bdmg || 5);
               e.cd = bt.fireCd;
@@ -996,12 +1053,13 @@
           if (fd < 70 && fd < dist) { mvx = fx / fd * e.speed; mvy = fy / fd * e.speed; }
           if (fd < e.r + 8 && es.inv === 0) { es.hp -= es.maxhp * 0.08; es.inv = 40; this._ev({ k: 'deed', what: 'friendHurt' }); }
         }
+        if (e.calm > 0) { e.calm -= 1; mvx *= 0.35; mvy *= 0.35; }   // 따뜻한 빛을 받아 순해짐
         e.x += mvx; e.y += mvy;
-        if (p.inv === 0 && dist < e.r + p.r) this._hurtPlayer(e.dmg);
+        if (p.inv === 0 && dist < e.r + p.r && !(e.calm > 0)) this._hurtPlayer(e.dmg);
         for (const ec of this.echoes) {   // 적에게 닿은 에코도 에너지가 준다
           if (!ec.alive || ec.down || ec.inv) continue;
           const ex = ec.x - e.x, ey = ec.y - e.y, rr = e.r + TUNING.echoR;
-          if (ex * ex + ey * ey < rr * rr) this._hurtEcho(ec, e.dmg);
+          if (ex * ex + ey * ey < rr * rr && !(e.calm > 0)) this._hurtEcho(ec, e.dmg);
         }
       }
 

@@ -146,8 +146,34 @@
       tutorial: false,                            // 튜토리얼(에코 10명과 함께하는 첫 판)을 마쳤거나 건너뛰었는지
       gear: {},                                   // 월드 매점 장비 'world:atk|def' -> level
       cycle: 0,                                   // 회차(0=1회차). 12개 월드를 모두 극복하면 +1, 학교부터 다시
+      deeds: { people: 0, escorts: 0, spots: 0, book: {}, visitor: null },   // 선행 기록: 도운 사람 · 지켜 준 친구 · 작은 선행 · 도감('world:kind' -> 횟수) · 다음 판에 찾아올 사람
     };
   }
+
+  /* ---------- 선행: 점수 · 칭호 · 도감 ---------- */
+  const DEED_KINDS = ['child', 'elder', 'friend'];
+  const DEED_KIND_INFO = { child: { emoji: '🧒', name: '길 잃은 아이' }, elder: { emoji: '👵', name: '곤란한 어르신' }, friend: { emoji: '🧑', name: '친구' } };
+  const TITLES = [
+    { at: 0,    icon: '🌱', name: '새싹' },
+    { at: 10,   icon: '🙂', name: '친절한 학생' },
+    { at: 40,   icon: '🤝', name: '든든한 이웃' },
+    { at: 100,  icon: '💛', name: '모두의 친구' },
+    { at: 250,  icon: '☀️', name: '마을의 햇살' },
+    { at: 600,  icon: '🦸', name: '따뜻한 영웅' },
+    { at: 1500, icon: '🌈', name: '전설의 착한 사람' },
+    { at: 4000, icon: '👼', name: '세상을 밝히는 사람' },
+  ];
+  /** 선행 점수: 사람을 돕거나 친구를 지키면 3점, 작은 선행은 1점 */
+  function deedScore(save) { const d = save.deeds || {}; return (d.people || 0) * 3 + (d.spots || 0); }
+  function titleOf(score) { let t = TITLES[0], next = null; for (let i = 0; i < TITLES.length; i++) { if (score >= TITLES[i].at) { t = TITLES[i]; next = TITLES[i + 1] || null; } } return { title: t, next }; }
+  /** 도감: 월드 × 사람 종류 */
+  function deedBook(save) {
+    const book = (save.deeds && save.deeds.book) || {}, list = [];
+    for (const w of WORLD_ORDER) for (const k of DEED_KINDS) list.push({ world: w, kind: k, count: book[w + ':' + k] || 0 });
+    return list;
+  }
+  /** 다음 판 시작 때 찾아올 사람을 꺼낸다 (한 번 찾아오면 사라짐) */
+  function takeVisitor(save) { const v = save.deeds && save.deeds.visitor; if (save.deeds) save.deeds.visitor = null; return v || null; }
 
   const isNum = (x) => typeof x === 'number' && isFinite(x);
 
@@ -191,6 +217,14 @@
         if (cc && isNum(cc[id]) && cc[id] > 0) d.worlds.cycleClears[id] = Math.floor(cc[id]);
       }
       if (WORLDS[raw.worlds.selected] && worldUnlocked(d, raw.worlds.selected)) d.worlds.selected = raw.worlds.selected;
+    }
+    if (raw.deeds && typeof raw.deeds === 'object') {
+      for (const k of ['people', 'escorts', 'spots']) if (isNum(raw.deeds[k]) && raw.deeds[k] >= 0) d.deeds[k] = Math.floor(raw.deeds[k]);
+      if (raw.deeds.book && typeof raw.deeds.book === 'object') {
+        for (const w of WORLD_ORDER) for (const k of DEED_KINDS) { const v = raw.deeds.book[w + ':' + k]; if (isNum(v) && v > 0) d.deeds.book[w + ':' + k] = Math.floor(v); }
+      }
+      const v = raw.deeds.visitor;
+      if (v && DEED_KINDS.indexOf(v.kind) >= 0) d.deeds.visitor = { kind: v.kind, world: WORLDS[v.world] ? v.world : 'school' };
     }
     // 튜토리얼 기능 이전부터 플레이하던 사람은 이미 게임을 아는 것으로 본다
     d.tutorial = raw.tutorial === true || d.stats.runs > 0;
@@ -310,6 +344,19 @@
       save.worlds.cycleClears[worldId] = (save.worlds.cycleClears[worldId] || 0) + 1;
     }
     save.worlds.best[worldId] = Math.max(save.worlds.best[worldId] || 0, run.seconds);
+    // 선행 기록: 도운 사람은 도감에 남고, 마지막으로 도운 사람이 다음 판에 찾아온다
+    const titleBefore = titleOf(deedScore(save)).title;
+    const dr = run.deeds;
+    if (dr && typeof dr === 'object') {
+      const people = Array.isArray(dr.people) ? dr.people.filter((k) => DEED_KINDS.indexOf(k) >= 0) : [];
+      save.deeds.people += people.length;
+      save.deeds.escorts += isNum(dr.escorts) ? Math.max(0, Math.floor(dr.escorts)) : 0;
+      save.deeds.spots += isNum(dr.spots) ? Math.max(0, Math.floor(dr.spots)) : 0;
+      for (const k of people) { const key = worldId + ':' + k; save.deeds.book[key] = (save.deeds.book[key] || 0) + 1; }
+      if (people.length) save.deeds.visitor = { kind: people[people.length - 1], world: worldId };
+    }
+    const titleAfter = titleOf(deedScore(save)).title;
+    const newTitle = titleAfter !== titleBefore ? titleAfter : null;
 
     // 기본 보상
     const base = Math.floor(run.kills * 0.4 + run.seconds * 0.5 + run.level * 3 + (run.result === 'clear' ? 100 : run.seconds >= 120 ? 40 : 0));
@@ -345,7 +392,7 @@
         if (!save.ach[a.id] && a.test(st, run, save)) { save.ach[a.id] = true; newAch.push(a); save.coins += a.reward; st.totalCoins += a.reward; total += a.reward; }
       }
     }
-    return { earned, base, total, newAch, missionsDone, newWorld, newCycle };
+    return { earned, base, total, newAch, missionsDone, newWorld, newCycle, newTitle };
   }
 
   /* ---------- 백업 코드 (서버 저장 전까지 기기 이전용) ---------- */
@@ -475,6 +522,7 @@
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
+    deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

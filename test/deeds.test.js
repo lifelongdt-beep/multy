@@ -63,3 +63,32 @@ test('선행 배치는 같은 시드면 같다 (결정적)', () => {
   assert.deepStrictEqual(a.deeds.spots.map((p) => [p.x, p.y]), b.deeds.spots.map((p) => [p.x, p.y]));
   assert.strictEqual(a.kills, b.kills);
 });
+
+test('도와준 사람은 잠시 함께 싸우고(하트), 주변 방해 요소는 순해진다', () => {
+  const s = new Sim({ seed: 7, echoes: [], world: 'school' });
+  s.player.hp = 1e9;
+  run(s, TUNING.deedRescueFirst * TICK + 2, pick);
+  const rs = s.deeds.rescue;
+  for (const e of rs.guards) e.hp = 0;
+  s._make(Object.keys(s.world.enemies)[0], rs.x + 20, rs.y);
+  const near = s.enemies[s.enemies.length - 1];
+  s.step({ x: 0, y: 0 });
+  assert.strictEqual(s.allies.length, 1);
+  assert.deepStrictEqual(s.deeds.people, [rs.kind]);
+  assert.ok(near.calm > 0, '따뜻한 빛을 받아 순해짐');
+  let hearts = 0;
+  for (let i = 0; i < 120; i++) { pick(s); s.step({ x: 0, y: 0 }); hearts = Math.max(hearts, s.bullets.filter((b) => b.owner === 'ally').length); }
+  assert.ok(hearts > 0, '하트를 던짐');
+  run(s, TUNING.allySec * TICK, pick);
+  assert.strictEqual(s.allies.length, 0, '시간이 지나면 인사하고 떠남');
+});
+
+test('지난 판에 도와준 사람이 찾아와 체력·구슬 선물을 준다', () => {
+  const s = new Sim({ seed: 2, echoes: [], world: 'school', visitor: { kind: 'elder' } });
+  s.player.hp = s.player.maxhp * 0.3;
+  const gems0 = s.gems.length; let gift = false;
+  for (let i = 0; i < 60 * 8 && !gift; i++) { s.step({ x: 0, y: 0 }); gift = s.events.some((e) => e.k === 'deed' && e.what === 'visitGift'); s.events.length = 0; }
+  assert.ok(gift);
+  assert.ok(s.player.hp > s.player.maxhp * 0.5);
+  assert.ok(s.gems.length >= gems0 + TUNING.visitorGems - 2);
+});

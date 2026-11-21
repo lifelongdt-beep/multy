@@ -349,3 +349,24 @@ test('에코 풀: 월드 정보가 없는 옛 데이터는 학교의 에코로 �
   assert.deepStrictEqual(M.echoesForWorld(null, 'subway'), { world: 'subway', echoes: [], cleared: 0 });
   assert.strictEqual(M.echoesForWorld({ world: 'school', echoes: [] }, 'zzz').world, 'school', '모르는 월드는 학교');
 });
+
+test('선행 기록: 도감·찾아올 사람·칭호', () => {
+  const Mt = require('../src/meta.js');
+  const save = Mt.sanitize({});
+  const base = { kills: 10, seconds: 60, level: 5, result: 'dead', gems: 10, echoes: 0, world: 'school', helped: 0 };
+  let r = Mt.recordRun(save, Object.assign({}, base, { deeds: { people: ['child', 'elder', 'bogus'], escorts: 1, spots: 7 } }), '2026-11-21');
+  assert.strictEqual(save.deeds.people, 2);
+  assert.strictEqual(save.deeds.spots, 7);
+  assert.strictEqual(save.deeds.book['school:child'], 1);
+  assert.deepStrictEqual(save.deeds.visitor, { kind: 'elder', world: 'school' });
+  assert.strictEqual(Mt.deedScore(save), 13);
+  assert.strictEqual(r.newTitle.name, '친절한 학생');
+  // 저장·불러오기 후에도 유지, 찾아올 사람은 한 번만
+  const s2 = Mt.sanitize(JSON.parse(JSON.stringify(save)));
+  assert.deepStrictEqual(s2.deeds, save.deeds);
+  assert.strictEqual(Mt.takeVisitor(s2).kind, 'elder');
+  assert.strictEqual(Mt.takeVisitor(s2), null);
+  r = Mt.recordRun(save, base, '2026-11-21');
+  assert.strictEqual(r.newTitle, null);
+  assert.strictEqual(Mt.deedBook(save).length, 36);
+});
