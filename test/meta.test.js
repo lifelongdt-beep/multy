@@ -370,3 +370,22 @@ test('선행 기록: 도감·찾아올 사람·칭호', () => {
   assert.strictEqual(r.newTitle, null);
   assert.strictEqual(Mt.deedBook(save).length, 36);
 });
+
+test('기본 강화: 회차마다 비싸지고, 키울 수 있는 강화는 최대 레벨이 회차마다 +5', () => {
+  const s = M.defaultSave();
+  assert.strictEqual(M.shopMax(s, 'hp'), 5);
+  assert.strictEqual(M.shopMax(s, 'speed'), 5);
+  s.cycle = 2;
+  assert.strictEqual(M.shopMax(s, 'hp'), 15);
+  assert.strictEqual(M.shopMax(s, 'speed'), 5, '이동속도처럼 한계가 있는 강화는 그대로');
+  assert.ok(M.shopCost('hp', 0, 1) > M.shopCost('hp', 0, 0) * 5, '회차가 오르면 크게 비싸짐');
+  assert.ok(M.shopCost('hp', 0, 2) > M.shopCost('hp', 0, 1));
+  // 회차 수입과 같은 비율로 오른다
+  const E2 = require('../src/worlds.js');
+  assert.ok(Math.abs(M.shopCost('dmg', 3, 4) / M.shopCost('dmg', 3, 0) - E2.rewardMul('school', 4)) / E2.rewardMul('school', 4) < 0.01);
+  s.shop.hp = 5; s.coins = 1e12;
+  assert.strictEqual(M.buyUpgrade(s, 'hp').ok, true);
+  assert.strictEqual(s.shop.hp, 6);
+  assert.strictEqual(M.sanitize({ cycle: 0, shop: { hp: 12 } }).shop.hp, 5);
+  assert.strictEqual(M.sanitize({ cycle: 3, shop: { hp: 12 } }).shop.hp, 12);
+});

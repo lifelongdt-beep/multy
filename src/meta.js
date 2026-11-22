@@ -24,18 +24,21 @@
 
   /* ---------- 영구 강화 (상점) ---------- */
   const SHOP = [
-    { id: 'hp',     icon: '❤️', name: '튼튼한 체력',   max: 5, base: 120, per: 7,    fmt: (v) => `체력 +${v}` },
-    { id: 'dmg',    icon: '💪', name: '단련된 필기',   max: 5, base: 150, per: 0.06, fmt: (v) => `공격력 +${Math.round(v * 100)}%` },
+    { id: 'hp',     icon: '❤️', name: '튼튼한 체력',   max: 5, grow: true, base: 120, per: 7,    fmt: (v) => `체력 +${v}` },
+    { id: 'dmg',    icon: '💪', name: '단련된 필기',   max: 5, grow: true, base: 150, per: 0.06, fmt: (v) => `공격력 +${Math.round(v * 100)}%` },
     { id: 'speed',  icon: '👟', name: '가벼운 발걸음', max: 5, base: 120, per: 0.04, fmt: (v) => `이동속도 +${Math.round(v * 100)}%` },
     { id: 'magnet', icon: '🧲', name: '넓은 자석',     max: 5, base: 90, per: 8,    fmt: (v) => `구슬 흡수 범위 +${v}` },
     { id: 'xp',     icon: '📚', name: '빠른 습득',     max: 5, base: 180, per: 0.08, fmt: (v) => `경험치 +${Math.round(v * 100)}%` },
-    { id: 'regen',  icon: '🍱', name: '든든한 도시락', max: 5, base: 210, per: 0.25,  fmt: (v) => `체력 재생 +${v.toFixed(1)}/초` },
-    { id: 'echo',   icon: '👻', name: '에코 단련',     max: 5, base: 240, per: 0.05, fmt: (v) => `에코 공격력 +${Math.round(v * 100)}%` },
+    { id: 'regen',  icon: '🍱', name: '든든한 도시락', max: 5, grow: true, base: 210, per: 0.25,  fmt: (v) => `체력 재생 +${v.toFixed(1)}/초` },
+    { id: 'echo',   icon: '👻', name: '에코 단련',     max: 5, grow: true, base: 240, per: 0.05, fmt: (v) => `에코 공격력 +${Math.round(v * 100)}%` },
     { id: 'coin',   icon: '🎓', name: '장학금',        max: 5, base: 270, per: 0.10, fmt: (v) => `학점 획득 +${Math.round(v * 100)}%` },
   ];
   const SHOP_BY_ID = {}; SHOP.forEach((s) => { SHOP_BY_ID[s.id] = s; });
 
-  function shopCost(id, level) { return Math.round(SHOP_BY_ID[id].base * Math.pow(1.85, level)); }
+  /** 기본 강화 가격: 회차마다 그 회차 수입만큼 비싸진다 (학교 단계의 학점 배율). 레벨은 5개 묶음마다 다시 기본가부터 */
+  function shopCost(id, level, cycle) { return Math.round(SHOP_BY_ID[id].base * Math.pow(1.85, level % 5) * Worlds.rewardMul('school', cycle || 0)); }
+  /** 최대 레벨: 체력·공격력·재생·에코처럼 계속 키울 수 있는 강화는 회차마다 +5 */
+  function shopMax(save, id) { const it = SHOP_BY_ID[id]; return it.grow ? it.max * (Math.min(9999, save.cycle || 0) + 1) : it.max; }
 
   /* ---------- 월드 매점 장비 ----------
    * 월드마다 ⚔ 공격 장비(팀 공격력 x1.06/레벨, 에코 포함) 1개 + 🛡 방어 장비(받는 피해 ÷1.05/레벨) 1개.
@@ -183,7 +186,8 @@
     if (!raw || typeof raw !== 'object') return d;
     if (isNum(raw.coins) && raw.coins >= 0) d.coins = Math.floor(raw.coins);
     if (raw.shop && typeof raw.shop === 'object') {
-      for (const it of SHOP) { const lv = raw.shop[it.id]; if (isNum(lv)) d.shop[it.id] = Math.max(0, Math.min(it.max, Math.floor(lv))); }
+      const cyc = isNum(raw.cycle) && raw.cycle >= 0 ? Math.min(9999, Math.floor(raw.cycle)) : 0;
+      for (const it of SHOP) { const lv = raw.shop[it.id]; if (isNum(lv)) d.shop[it.id] = Math.max(0, Math.min(shopMax({ cycle: cyc }, it.id), Math.floor(lv))); }
     }
     if (raw.chars && typeof raw.chars === 'object') {
       const un = Array.isArray(raw.chars.unlocked) ? raw.chars.unlocked.filter((id) => CHARACTERS[id]) : [];
@@ -294,8 +298,8 @@
     const it = SHOP_BY_ID[id];
     if (!it) return { ok: false, reason: 'unknown' };
     const lv = shopLevel(save, id);
-    if (lv >= it.max) return { ok: false, reason: 'max' };
-    const cost = shopCost(id, lv);
+    if (lv >= shopMax(save, id)) return { ok: false, reason: 'max' };
+    const cost = shopCost(id, lv, save.cycle);
     if (save.coins < cost) return { ok: false, reason: 'coins', cost };
     save.coins -= cost; save.shop[id] = lv + 1;
     return { ok: true, cost, level: lv + 1 };
@@ -521,7 +525,7 @@
     SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld, echoesForWorld,
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
-    shopCost, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
+    shopCost, shopMax, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
     deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };

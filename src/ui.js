@@ -118,14 +118,14 @@
   /* ---------- 상점 ---------- */
   function renderShop() {
     const body = $('pbody'); body.innerHTML = '';
-    body.appendChild(el('div', 'msg', '🏪 기본 강화 (모든 월드 공통)'));
+    body.appendChild(el('div', 'msg', '🏪 기본 강화 (모든 월드 공통)' + (save.cycle > 0 ? ` · 🔁 ${save.cycle + 1}회차 가격` : '')));
     for (const it of M.SHOP) {
       const lv = M.shopLevel(save, it.id);
-      const maxed = lv >= it.max;
-      const cost = maxed ? 0 : M.shopCost(it.id, lv);
-      const row = item(it.icon, `${it.name}  Lv ${lv}/${it.max}`,
-        `${it.fmt(it.per * lv)} → ${maxed ? '최대' : it.fmt(it.per * (lv + 1))}`, { done: maxed, progress: lv / it.max });
-      const b = el('button', '', maxed ? '최대' : `🎓 ${cost}`);
+      const mx = M.shopMax(save, it.id), maxed = lv >= mx;
+      const cost = maxed ? 0 : M.shopCost(it.id, lv, save.cycle);
+      const row = item(it.icon, `${it.name}  Lv ${lv}/${mx}`,
+        `${it.fmt(it.per * lv)} → ${maxed ? (it.grow ? '최대 (다음 회차에 +5)' : '최대') : it.fmt(it.per * (lv + 1))}`, { done: maxed, progress: lv / mx });
+      const b = el('button', '', maxed ? '최대' : `🎓 ${M.fmtNum(cost)}`);
       b.disabled = maxed || save.coins < cost;
       b.onclick = () => { if (M.buyUpgrade(save, it.id).ok) { Sfx.play('levelup'); commit(); rerender(); } };
       row.appendChild(b); body.appendChild(row);
