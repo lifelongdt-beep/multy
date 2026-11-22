@@ -880,7 +880,8 @@
           continue;
         }
         if (h.state === 'warn') {
-          if (h.t >= h.warn) { h.state = 'go'; this._ev({ k: 'trainPass', dir: h.dir }); }
+          if (h.t === h.warn - 6) this._ev({ k: 'trainPass', dir: h.dir });   // 소리 지연을 감안해 출발 0.1초 전에 지나가는 소리 시작
+          if (h.t >= h.warn) { h.state = 'go'; }
           continue;
         }
         h.x += h.dir * h.speed;

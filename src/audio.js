@@ -142,7 +142,7 @@
    *  dir: 1 = 왼→오, -1 = 오→왼. heavy: 열차처럼 무거운 것(덜컹 소리) */
   function passSound(dir, heavy) {
     const c = ac(); if (!c) return;
-    const t = c.currentTime, dur = 1.25;
+    const t = c.currentTime, dur = 1.0;   // 화면을 가로지르는 시간(약 1초)에 맞춤
     const pan = c.createStereoPanner ? c.createStereoPanner() : null;
     if (pan) { pan.pan.setValueAtTime(-0.9 * dir, t); pan.pan.linearRampToValueAtTime(0.9 * dir, t + dur); pan.connect(master); }
     const out = pan || master;
@@ -151,10 +151,13 @@
     for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     const src = c.createBufferSource(); src.buffer = buf;
     const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.9;
-    bp.frequency.setValueAtTime(380, t); bp.frequency.exponentialRampToValueAtTime(1300, t + dur * 0.45); bp.frequency.exponentialRampToValueAtTime(260, t + dur);
-    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(heavy ? 0.22 : 0.16, t + dur * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    bp.frequency.setValueAtTime(700, t); bp.frequency.exponentialRampToValueAtTime(1300, t + dur * 0.4); bp.frequency.exponentialRampToValueAtTime(260, t + dur);
+    const pk = heavy ? 0.22 : 0.18, g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(pk * 0.6, t + 0.04); g.gain.linearRampToValueAtTime(pk, t + dur * 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);   // 바로 들리게 (늦게 커지지 않게)
     src.connect(bp); bp.connect(g); g.connect(out); src.start(t); src.stop(t + dur + 0.02);
-    if (!heavy) return;
+    if (!heavy) {   // 가벼운 것(책수레·공 등): 굴러가는 바퀴 소리를 지나가는 동안 바로 들려줌
+      for (let k = 0; k < 7; k++) { const tk = t + 0.02 + k * 0.12, near = 1 - Math.abs(k - 3) / 4; const ko = c.createOscillator(), kg = c.createGain(); ko.type = 'triangle'; ko.frequency.setValueAtTime(520, tk); ko.frequency.exponentialRampToValueAtTime(300, tk + 0.04); kg.gain.setValueAtTime(0.035 * (0.4 + near), tk); kg.gain.exponentialRampToValueAtTime(0.0001, tk + 0.05); ko.connect(kg); kg.connect(out); ko.start(tk); ko.stop(tk + 0.07); }
+      return;
+    }
     // 낮은 굉음
     const o = c.createOscillator(), og = c.createGain(); o.type = 'sawtooth';
     o.frequency.setValueAtTime(58, t); o.frequency.linearRampToValueAtTime(70, t + dur * 0.45); o.frequency.linearRampToValueAtTime(48, t + dur);
