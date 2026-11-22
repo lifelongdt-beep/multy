@@ -16,6 +16,7 @@
     mixolydian: [0, 2, 4, 5, 7, 9, 10],
     lydian:     [0, 2, 4, 6, 7, 9, 11],
     harmonic:   [0, 2, 3, 5, 7, 8, 11],
+    phrygian:   [0, 1, 3, 5, 7, 8, 10],
   };
 
   // 드럼 패턴: 16칸(16분음표), x=강하게, o=약하게
@@ -33,6 +34,9 @@
     folk:    { k: 'x.....x.x.......', s: '....x.......x...', h: 'x.xxx.xxx.xxx.xx' },
     rock:    { k: 'x.x...x.x.x.....', s: '....x.......x...', h: 'xxxxxxxxxxxxxxxx' },
     boss:    { k: 'x...x...x...x.x.', s: '....x.......x.xx', h: 'xxxxxxxxxxxxxxxx' },
+    spiral:  { k: 'x..x..x...x..x..', s: '....x.......x...', h: 'x.xxx.xxx.xxx.xx' },   // 소용돌이: 셋잇단 느낌
+    march:   { k: 'x.x.x.x.x.x.x.x.', s: '....x..x....x.xx', h: 'x.x.x.x.x.x.x.x.' },   // 돌진: 행진 북
+    express: { k: 'x..xx..xx..xx..x', s: '....x.......x...', h: 'xoxxxoxxxoxxxoxx' },   // 열차: 바퀴 리듬
   };
 
   /* 월드별 곡 설계 (root: MIDI 음 번호, prog: 음계 도수 0~6, 한 마디에 한 코드) */
@@ -70,9 +74,31 @@
     };
   }
 
-  /** 곡 한 바퀴(8마디)의 이벤트 목록 */
+  /* 왕(보스)마다 다른 곡: 공격 방식(pattern)이 장르를, 이름이 세부(조·템포·코드·멜로디·악기)를 정한다 */
+  const BOSS_STYLE = {
+    exam:   { scale: 'harmonic', drums: 'boss',    lead: 'alarm', bass: 'xxxxxxxxxxxxxxxx', bpm: 1.25, progs: [[0, 0, 5, 4], [0, 3, 4, 4], [0, 5, 3, 4], [0, 1, 0, 4]], tag: '긴장' },
+    spiral: { scale: 'phrygian', drums: 'spiral',  lead: 'swirl', bass: 'x..x..x.x..x..x.', bpm: 1.12, progs: [[0, 1, 0, 6], [0, 1, 3, 1], [0, 6, 5, 1], [0, 3, 1, 0]], tag: '소용돌이' },
+    charge: { scale: 'minor',    drums: 'march',   lead: 'riff',  bass: 'x.x.x.x.xxx.x.x.', bpm: 1.3,  progs: [[0, 5, 6, 4], [0, 6, 5, 6], [0, 3, 6, 4], [0, 0, 6, 5]], tag: '돌진' },
+    lane:   { scale: 'dorian',   drums: 'express', lead: 'arp',   bass: 'x.xxx.xxx.xxx.xx', bpm: 1.28, progs: [[0, 6, 5, 6], [0, 3, 6, 4], [0, 6, 3, 4]], tag: '질주' },
+  };
+  const hashStr = (s) => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.codePointAt(0), 16777619); return h >>> 0; };
+  /** bossDef: {name, pattern} — 없으면 그 월드의 기본 보스 곡 (예전과 같음) */
+  function bossThemeSong(id, bossDef) {
+    const s = SONGS[id] || SONGS.school, st = BOSS_STYLE[bossDef.pattern] || BOSS_STYLE.exam, h = hashStr(bossDef.name), r = rng(h);
+    const root0 = Math.max(48, Math.min(57, s.root - (s.root >= 60 ? 12 : 0) + [-3, -2, 0, 2, 3, 5][Math.floor(r() * 6)]));   // 베이스가 너무 낮거나 리드가 너무 높지 않게
+    const waves = ['square', 'sawtooth', 'triangle'];
+    return {
+      name: `${bossDef.name}의 테마 (${st.tag})`, bpm: Math.max(110, Math.min(166, Math.round(s.bpm * st.bpm + (r() - 0.5) * 14))),
+      root: root0, scale: st.scale, prog: st.progs[Math.floor(r() * st.progs.length)],
+      lead: { wave: waves[Math.floor(r() * waves.length)], oct: st.lead === 'riff' ? 1 : 2, style: st.lead },
+      bass: { wave: r() < 0.5 ? 'sawtooth' : 'square', pat: st.bass }, pad: { wave: 'sawtooth', vol: 0.03 }, drums: st.drums,
+      seed: h % 100000 + 7, boss: true, riff: Math.floor(r() * 4), rot: Math.floor(r() * 7),   // rot: 멜로디 시작 위치 (보스마다 다른 선율)
+    };
+  }
+
+  /** 곡 한 바퀴(8마디)의 이벤트 목록. boss: true(월드 기본 보스 곡) 또는 보스 정의 {name, pattern} */
   function compose(worldId, boss) {
-    const song = boss ? bossSong(worldId) : (SONGS[worldId] || SONGS.school);
+    const song = boss ? (typeof boss === 'object' && boss.name ? bossThemeSong(worldId, boss) : bossSong(worldId)) : (SONGS[worldId] || SONGS.school);
     const r = rng(song.seed);
     const bars = 8, steps = bars * 16;
     const ev = [];
@@ -103,11 +129,19 @@
       for (const t of tones.slice(0, 3)) ev.push({ step: bar * 16, kind: 'pad', midi: noteOf(song, t, 0), len: 16, wave: song.pad.wave, vol: song.pad.vol });
       // 리드
       const st = song.lead.style;
-      if (st === 'arp' || st === 'alarm') {
+      if (st === 'swirl') {   // 소용돌이: 두 옥타브를 오르내리는 16분 아르페지오
+        const order = [0, 1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 3, 2, 1];
+        for (let i = 0; i < 16; i++) { const k = order[(i + (song.rot || 0)) % 16], t = tones[k % 3] + 7 * Math.floor(k / 3); ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, t, song.lead.oct - 1), len: 1, wave: song.lead.wave, vol: 0.045 }); }
+      } else if (st === 'riff') {   // 돌진: 근음·5도·옥타브로 만든 힘찬 리프 (보스마다 리듬 다름)
+        const RIFFS = ['x.x.xx.x.x.xx.x.', 'xx.x.xx.xx.x.x.x', 'x..xx..xx.x.x.xx', 'x.xx.x.xx.xx.x.x'], rf = RIFFS[song.riff || 0];
+        const pick = [0, 4, 7, 4, 0, 7, 4, 2];
+        let n = song.rot || 0;
+        for (let i = 0; i < 16; i++) if (rf[i] === 'x') ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, chord + pick[n++ % pick.length], song.lead.oct), len: 1, wave: song.lead.wave, vol: 0.055 });
+      } else if (st === 'arp' || st === 'alarm') {
         const order = st === 'alarm' ? [0, 1, 2, 1, 0, 2, 1, 2] : [0, 1, 2, 3 % tones.length, 2, 1, 0, 1];
         const every = st === 'alarm' ? 1 : 2;   // 보스는 16분, 일반은 8분
         for (let i = 0; i < 16; i += every) {
-          const t = tones[order[(i / every) % order.length] % tones.length] + (st === 'alarm' && bar % 2 ? 1 : 0);
+          const t = tones[order[(i / every + (song.rot || 0)) % order.length] % tones.length] + (st === 'alarm' && bar % 2 ? 1 : 0);
           ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, t, song.lead.oct), len: every, wave: song.lead.wave, vol: st === 'alarm' ? 0.05 : 0.07 });
         }
       } else {
@@ -158,7 +192,7 @@
     const comp = compose(worldId, boss);
     const byStep = Array.from({ length: comp.steps }, () => []);
     for (const e of comp.events) byStep[e.step].push(e);
-    return { world: worldId, boss: !!boss, comp, byStep };
+    return { world: worldId, boss: !!boss, bossName: boss && boss.name ? boss.name : null, comp, byStep };
   }
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -213,7 +247,7 @@
   }
 
   root.Music = {
-    compose, SONGS, bossSong,
+    compose, SONGS, bossSong, bossThemeSong,
     /** 월드 곡 재생 시작 (같은 곡이면 그대로) */
     play(worldId) {
       const c = ctx(); if (!c) return;
@@ -224,17 +258,20 @@
       tick();
     },
     /** 보스 곡으로 전환/복귀 (다음 박에서 바뀜) */
-    setBoss(on) {
+    /** bossDef가 있으면 그 왕의 테마로 (왕이 바뀌면 곡도 바뀜). 왕 사이 쉬는 동안(bossDef 없음)은 지금 곡 유지 */
+    setBoss(on, bossDef) {
       if (!playing || !cur) return;
       const target = pending || cur;
-      if (target.boss === !!on) return;
-      pending = prep(cur.world, !!on);
+      if (!on) { if (target.boss) pending = prep(cur.world, false); return; }
+      if (!bossDef) { if (!target.boss) pending = prep(cur.world, true); return; }
+      if (target.boss && target.bossName === bossDef.name) return;
+      pending = prep(cur.world, { name: bossDef.name, pattern: bossDef.pattern });
     },
     pause() { paused = true; },
     resume() { const c = ctx(); if (!c || !playing) return; if (paused) { paused = false; nextT = c.currentTime + 0.05; } },
     stop() { playing = false; paused = false; pending = null; cur = null; if (timer) { clearInterval(timer); timer = null; } },
     setMuted(m) { if (bus) bus.gain.value = m ? 0 : VOLUME; },
-    get state() { return { playing, paused, world: cur && cur.world, boss: !!(cur && cur.boss), pending: !!pending }; },
+    get state() { return { playing, paused, world: cur && cur.world, boss: !!(cur && cur.boss), bossName: (pending || cur || {}).bossName || null, song: cur && cur.comp.name, pending: !!pending }; },
   };
-  if (typeof module !== 'undefined' && module.exports) module.exports = { compose, SONGS, bossSong, SCALES };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { compose, SONGS, bossSong, bossThemeSong, SCALES };
 })(typeof window !== 'undefined' ? window : globalThis);

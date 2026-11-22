@@ -938,7 +938,10 @@
     }
     // 보스가 나오면 긴장감 있는 곡으로. 여러 번 나오는 월드는 사이 쉬는 시간에도 유지하고, 모두 극복하면 원래 곡으로
     updateCards();
-    if (state === 'play' && sim) Music.setBoss(sim.bossAlive || (sim.bossIdx > 0 && sim.bossIdx < sim.bossCount));
+    if (state === 'play' && sim) {   // 왕마다 다른 테마 (왕과 왕 사이 쉬는 동안은 지금 곡 유지)
+      const be = sim.bossAlive ? sim.enemies.find((e) => e.type === 'boss') : null;
+      Music.setBoss(sim.bossAlive || (sim.bossIdx > 0 && sim.bossIdx < sim.bossCount), be ? be.def : null);
+    }
     if (state === 'play' && sim && sim.over && !bossFxActive()) showEnd();   // 마지막 보스면 연출이 끝난 뒤 결과 화면
     if (slowmo > 0) slowmo -= 1;
     if (bossFx) { bossFx.t += 1; if (bossFx.t === 30) bossBoom(); if (bossFx.t > BOSS_FX_LEN + 20) bossFx = null; }
