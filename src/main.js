@@ -142,7 +142,7 @@
         case 'banner': if (!ev.hint || tutorial) banner = { text: ev.text, t: 150 }; break;   // 설명성 문구는 튜토리얼에서만
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 150 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
-        case 'helped': Sfx.play('levelup'); break;
+        case 'helped': Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y + (Math.random() - 0.5) * 24, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
         case 'warm': warmFx.push({ x: ev.x, y: ev.y, r: ev.r, t: 0 }); break;
         case 'deed':   // 선행: 소리·반짝임만 (설명은 튜토리얼 안내에서)
           if (ev.what === 'spot') { Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
@@ -656,7 +656,7 @@
     // 도우미(선생님 등): 빛나는 상담 구역 + 게이지. 가까이 가서 잠시 머물면 조언 카드를 받는다
     if (sim.helper) {
       const hp = sim.helper, bob = Math.sin(performance.now() / 300) * 2;
-      const fadeA = hp.state === 'wait' ? 1 : Math.max(0, hp.fade / (hp.state === 'done' ? 150 : 90));
+      const fadeA = hp.state === 'wait' ? 1 : Math.max(0, hp.fade / 45) * (hp.state === 'done' ? 0.55 + 0.45 * Math.abs(Math.sin(performance.now() / 60)) : 1);   // 도움을 받으면 반짝이며 금방 사라짐
       ctx.globalAlpha = fadeA;
       const glow = ctx.createRadialGradient(hp.x, hp.y, 4, hp.x, hp.y, hp.r + 8);
       glow.addColorStop(0, 'rgba(255,225,120,.35)'); glow.addColorStop(1, 'rgba(255,225,120,.05)');

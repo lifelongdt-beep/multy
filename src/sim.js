@@ -75,7 +75,7 @@
     helperEvery: 16,         // 첫 등장(월드의 helper.t초) 뒤 이 간격(초)마다 다시 찾아옴 (앞 도우미가 떠난 뒤)
     helperNeed: 70,          // 곁에 이만큼(틱, 60=1초) 머물면 조언 카드 (이전 150틱=2.5초 → 약 1.2초)
     helperDecay: 1,          // 곁을 벗어나면 게이지가 틱당 이만큼 줄어듦 (이전 2: 잠깐 벗어나도 덜 깎임)
-    helperStay: 11,          // 도우미가 기다려 주는 시간(초)
+    helperStay: 7,           // 도우미가 기다려 주는 시간(초)
     choiceAutoSec: 3,
     // ---- 선행(좋은 일)을 하면 아이템 ----
     enemyLifeSec: 10,        // 일반 방해 요소는 이 시간(초)이 지나면 스르르 사라진다 (화면이 붐비지 않게). 보스·구조 대상 곁의 방해 요소는 제외
@@ -851,14 +851,14 @@
         const inside = Math.hypot(p.x - hp.x, p.y - hp.y) < hp.r + p.r;
         hp.prog = inside ? Math.min(hp.need, hp.prog + 1) : Math.max(0, hp.prog - TUNING.helperDecay);
         if (hp.prog >= hp.need) {
-          hp.state = 'done'; hp.fade = 150; this.helped += 1;
+          hp.state = 'done'; hp.fade = 45; this.helped += 1;
           const w = this.world.helper;
           const ids = ['heal', 'power', this.echoes.length > 0 ? 'team' : 'focus'];
           this._offer(ids.map((id) => ({ id: 'boon_' + id, icon: Worlds.BOONS[id].icon, name: w.boons[id], desc: Worlds.BOONS[id].desc, instant: true, boon: true })), 'helper');
           this._ev({ k: 'banner', text: w.thanksText, hint: true });
-          this._ev({ k: 'helped' });
+          this._ev({ k: 'helped', x: hp.x, y: hp.y });
         } else if (hp.t >= hp.stay) {
-          hp.state = 'gone'; hp.fade = 90;
+          hp.state = 'gone'; hp.fade = 45;
           this._ev({ k: 'banner', text: this.world.helper.leaveText, hint: true });
         }
       } else if (--hp.fade <= 0) this.helper = null;
