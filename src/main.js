@@ -99,24 +99,10 @@
   const THANKS = ['고마워!', '덕분이야 💛', '정말 고마워요', '너 최고야!', '살았다~', '고마워, 친구야', '복 받을 거야', '힘이 났어!'];
   const VISIT = ['지난번엔 고마웠어!', '은혜 갚으러 왔어 💛', '이거 받아!', '또 만났네!'];
   function thanks(x, y, list) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: 0, max: 80 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
-  /** 마을 밝히기: 선행 점수만큼 꽃·화분·불빛이 늘어난다 (가장자리 위주라 플레이를 가리지 않음) */
+  /** 마을 밝히기: 선행 점수만큼 화면이 아주 살짝 따뜻한 색이 된다 (장식은 넣지 않음 — 화면이 산만해지지 않게) */
   function makeTown(worldId, score) {
-    const n = Math.min(44, Math.floor(score / 5));
-    if (n <= 0) return null;
-    const c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2;
-    const g = c.getContext('2d'); g.scale(2, 2); g.textAlign = 'center'; g.textBaseline = 'middle';
-    let h = 7; for (const ch of worldId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    const rnd = EchoSim.mulberry32(h);
-    const deco = ['🌸', '🌼', '🌷', '🌻', '🪴', '🌱', '🏮', '✨'];
-    for (let i = 0; i < n; i++) {
-      const side = rnd();
-      let x, y;
-      if (side < 0.35) { x = 6 + rnd() * 22; y = 60 + rnd() * (H - 120); } else if (side < 0.7) { x = W - 6 - rnd() * 22; y = 60 + rnd() * (H - 120); } else { x = 20 + rnd() * (W - 40); y = PLAY_BOTTOM + 10 + rnd() * 110; }
-      const d = deco[Math.floor(rnd() * (i < 10 ? 5 : deco.length))];
-      if (d === '🏮' || d === '✨') { const lg = g.createRadialGradient(x, y, 1, x, y, 26); lg.addColorStop(0, 'rgba(255,214,140,.28)'); lg.addColorStop(1, 'rgba(255,214,140,0)'); g.fillStyle = lg; g.fillRect(x - 26, y - 26, 52, 52); }
-      g.globalAlpha = 0.6; g.font = `${11 + Math.floor(rnd() * 5)}px sans-serif`; g.fillText(d, x, y); g.globalAlpha = 1;
-    }
-    return { canvas: c, tint: Math.min(0.07, score / 4000) };
+    const tint = Math.min(0.06, score / 4000);
+    return tint > 0.004 ? { tint } : null;
   }
   let headFlash = [];   // 새로 얻은 아이템: 주인공 머리 위에서 잠깐 반짝 {icon, t}
   // 보스 극복 연출: 슬로모션 → 부풀며 빛남 → 폭발·충격파·색종이 → 화면 번쩍
@@ -602,7 +588,7 @@
     }
     if (!sim) return;
     const now = performance.now();
-    if (town) { ctx.drawImage(town.canvas, 0, 0, W, H); if (town.tint) { ctx.fillStyle = `rgba(255,210,160,${town.tint})`; ctx.fillRect(0, 0, W, H); } }
+    if (town) { ctx.fillStyle = `rgba(255,210,160,${town.tint})`; ctx.fillRect(0, 0, W, H); }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
     for (const g of sim.gems) {
