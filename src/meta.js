@@ -11,16 +11,73 @@
   const SAVE_VERSION = 1;
 
   /* ---------- 캐릭터 ---------- */
-  // mods: maxhp(+), dmgMul, speedMul, cooldownMul(<1이 빠름), regen(초당), startStats(시작 아이템 레벨)
+  // mods: maxhp(+), dmgMul, speedMul, cooldownMul(<1이 빠름), regen(초당), magnet(+), xpMul, echoPower(+), startStats(시작 아이템 레벨)
+  // rarity: common 일반 · rare 희귀 · hero 영웅 · legend 전설. req: 학점 말고도 갖춰야 할 조건 (업적)
+  const visited = (w) => (sv) => ((sv.worlds && sv.worlds.clears) || {})[w] >= 1;
   const CHARACTERS = {
-    student: { id: 'student', emoji: '🧑‍🎓', name: '학생',   cost: 0,   desc: '균형 잡힌 기본 캐릭터', mods: {} },
-    athlete: { id: 'athlete', emoji: '🏃',   name: '운동부', cost: 900, desc: '체력 +20, 이동속도 +15%, 공격은 조금 느림 · 운동화 Lv1 시작',
-               mods: { maxhp: 20, speedMul: 1.15, cooldownMul: 1.1, startStats: { speed: 1 } } },
-    genius:  { id: 'genius',  emoji: '🤓',   name: '전교 1등', cost: 1800, desc: '공격력 +25%, 체력 -20 · 시험 만점 Lv1 시작',
-               mods: { maxhp: -20, dmgMul: 1.25, startStats: { crit: 1 } } },
-    nurse:   { id: 'nurse',   emoji: '🧑‍⚕️', name: '보건 도우미', cost: 3000, desc: '체력 +10, 초당 체력 재생 +0.7 · 급식 시간 Lv1 시작',
-               mods: { maxhp: 10, regen: 0.7, startStats: { regen: 1 } } },
+    student:  { id: 'student',  emoji: '🧑‍🎓', name: '학생',       rarity: 'common', cost: 0,
+                desc: '균형 잡힌 기본 캐릭터 · 레벨마다 체력 +6, 공격 +4%', mods: { maxhp: 6, dmgMul: 1.04 }, lvOnly: true },
+    athlete:  { id: 'athlete',  emoji: '🏃',   name: '운동부',     rarity: 'common', cost: 900,
+                desc: '체력 +20, 이동 +15%, 공격 간격 +10% · 운동화 시작', mods: { maxhp: 20, speedMul: 1.15, cooldownMul: 1.1, startStats: { speed: 1 } } },
+    genius:   { id: 'genius',   emoji: '🤓',   name: '전교 1등',   rarity: 'common', cost: 1800,
+                desc: '공격 +25%, 체력 -20 · 시험 만점(치명타) 시작', mods: { maxhp: -20, dmgMul: 1.25, startStats: { crit: 1 } } },
+    nurse:    { id: 'nurse',    emoji: '🧑‍⚕️', name: '보건 도우미', rarity: 'common', cost: 3000,
+                desc: '체력 +10, 초당 재생 +0.7 · 급식 시간 시작', mods: { maxhp: 10, regen: 0.7, startStats: { regen: 1 } } },
+    artist:   { id: 'artist',   emoji: '🎨',   name: '미술부',     rarity: 'rare',   cost: 6000,
+                desc: '구슬 흡수 범위 +40, 경험치 +15% · 자석 필통 시작', mods: { magnet: 40, xpMul: 1.15, startStats: { magnet: 1 } },
+                req: { text: '📖 학원 극복', test: visited('academy') } },
+    caster:   { id: 'caster',   emoji: '🎤',   name: '방송부',     rarity: 'rare',   cost: 8000,
+                desc: '에코 공격 +20% · 에코 응원 시작', mods: { echoPower: 0.2, startStats: { echo: 1 } },
+                req: { text: '💛 선행 점수 40', test: (sv) => deedScore(sv) >= 40 } },
+    cook:     { id: 'cook',     emoji: '🧑‍🍳', name: '요리부',     rarity: 'rare',   cost: 10000,
+                desc: '체력 +35, 재생 +0.4, 이동 -5%', mods: { maxhp: 35, regen: 0.4, speedMul: 0.95 },
+                req: { text: '🎮 30판 플레이', test: (sv) => sv.stats.runs >= 30 } },
+    scientist:{ id: 'scientist',emoji: '🧑‍🔬', name: '과학부',     rarity: 'rare',   cost: 12000,
+                desc: '공격 간격 -12%, 체력 -10 · 관통 시작', mods: { cooldownMul: 0.88, maxhp: -10, startStats: { pierce: 1 } },
+                req: { text: '💼 회사 극복', test: visited('office') } },
+    president:{ id: 'president',emoji: '🏅',   name: '학생회장',   rarity: 'hero',   cost: 30000,
+                desc: '공격 +15%, 에코 공격 +15%, 체력 +15', mods: { dmgMul: 1.15, echoPower: 0.15, maxhp: 15 },
+                req: { text: '🔁 2회차 열기', test: (sv) => topCycle(sv) >= 1 } },
+    explorer: { id: 'explorer', emoji: '🧭',   name: '탐험가',     rarity: 'hero',   cost: 40000,
+                desc: '이동 +20%, 흡수 범위 +30, 경험치 +10% · 운동화 시작', mods: { speedMul: 1.2, magnet: 30, xpMul: 1.1, startStats: { speed: 1 } },
+                req: { text: '🏖️ 바닷가 극복', test: visited('beach') } },
+    hero:     { id: 'hero',     emoji: '🦸',   name: '모두의 영웅', rarity: 'legend', cost: 150000,
+                desc: '공격 +20%, 체력 +30, 재생 +0.5, 에코 공격 +20%', mods: { dmgMul: 1.2, maxhp: 30, regen: 0.5, echoPower: 0.2 },
+                req: { text: '🎭 꿈의 무대 극복 · ☀️ 선행 250', test: (sv) => visited('stage')(sv) && deedScore(sv) >= 250 } },
+    star:     { id: 'star',     emoji: '🌟',   name: '전설의 나',   rarity: 'legend', cost: 400000,
+                desc: '모든 능력 조금씩 + 공격 간격 -10% · 시험 만점·에코 응원 시작', mods: { dmgMul: 1.15, maxhp: 20, speedMul: 1.1, cooldownMul: 0.9, magnet: 20, xpMul: 1.1, echoPower: 0.15, startStats: { crit: 1, echo: 1 } },
+                req: { text: '🔁 3회차 열기', test: (sv) => topCycle(sv) >= 2 } },
   };
+  const RARITY = { common: { name: '일반', color: '#9fb3c8' }, rare: { name: '희귀', color: '#4fc3f7' }, hero: { name: '영웅', color: '#b388ff' }, legend: { name: '전설', color: '#ffd54f' } };
+  const CHAR_MAX_LV = 5;
+  /** 캐릭터 레벨: 좋은 효과(+)가 레벨마다 25%씩 강해진다 (나쁜 효과는 그대로). Lv3·Lv5에 시작 아이템 +1 */
+  function charMods(save, id) {
+    const c = CHARACTERS[id] || CHARACTERS.student, lv = charLevel(save, c.id), k = c.lvOnly ? lv - 1 : 1 + 0.25 * (lv - 1), m = c.mods, o = {};   // lvOnly: Lv2부터 레벨마다 효과
+    for (const key of ['maxhp', 'regen', 'magnet', 'echoPower']) if (m[key]) o[key] = m[key] > 0 ? m[key] * k : m[key];
+    for (const key of ['dmgMul', 'speedMul', 'xpMul']) if (m[key]) o[key] = m[key] > 1 ? 1 + (m[key] - 1) * k : m[key];
+    if (m.cooldownMul) o.cooldownMul = m.cooldownMul < 1 ? 1 - (1 - m.cooldownMul) * k : m.cooldownMul;
+    const ss = Object.assign({}, m.startStats || {}), extra = (lv >= 3 ? 1 : 0) + (lv >= 5 ? 1 : 0);
+    if (extra && !c.lvOnly) { const first = Object.keys(ss)[0] || 'dmg'; ss[first] = (ss[first] || 0) + extra; }
+    o.startStats = ss;
+    return o;
+  }
+  function charLevel(save, id) { return save.chars.unlocked.indexOf(id) < 0 ? 0 : Math.max(1, Math.min(CHAR_MAX_LV, (save.chars.levels || {})[id] || 1)); }
+  /** 레벨 올리는 값: 캐릭터 값(기본 600)의 40% x 레벨, 회차가 높을수록 그 회차 수입만큼 비싸짐 */
+  function charLevelCost(save, id) {
+    const c = CHARACTERS[id], lv = charLevel(save, id);
+    return Math.round(Math.max(600, c.cost) * 0.4 * lv * Worlds.rewardMul('school', topCycle(save)));
+  }
+  function charReqMet(save, id) { const c = CHARACTERS[id]; return !c.req || !!c.req.test(save); }
+  function levelUpCharacter(save, id) {
+    const lv = charLevel(save, id);
+    if (!lv) return { ok: false, reason: 'locked' };
+    if (lv >= CHAR_MAX_LV) return { ok: false, reason: 'max' };
+    const cost = charLevelCost(save, id);
+    if (save.coins < cost) return { ok: false, reason: 'coins', cost };
+    save.coins -= cost; save.chars.levels = save.chars.levels || {}; save.chars.levels[id] = lv + 1;
+    return { ok: true, cost, level: lv + 1 };
+  }
+
 
   /* ---------- 영구 강화 (상점) ---------- */
   const SHOP = [
@@ -147,7 +204,7 @@
       v: SAVE_VERSION,
       coins: 0,
       shop: {},                                   // id -> level
-      chars: { unlocked: ['student'], selected: 'student' },
+      chars: { unlocked: ['student'], selected: 'student', levels: {} },   // levels: 캐릭터 레벨 (1~5)
       stats: { runs: 0, kills: 0, gems: 0, clears: 0, bestTime: 0, bestLevel: 0, totalCoins: 0, helped: 0 },
       ach: {},                                    // id -> true
       daily: { date: '', missions: [] },
@@ -201,6 +258,7 @@
       const un = Array.isArray(raw.chars.unlocked) ? raw.chars.unlocked.filter((id) => CHARACTERS[id]) : [];
       d.chars.unlocked = Array.from(new Set(['student'].concat(un)));
       d.chars.selected = d.chars.unlocked.indexOf(raw.chars.selected) >= 0 ? raw.chars.selected : 'student';
+      if (raw.chars.levels && typeof raw.chars.levels === 'object') for (const id of d.chars.unlocked) { const v = raw.chars.levels[id]; if (isNum(v) && v > 1) d.chars.levels[id] = Math.min(CHAR_MAX_LV, Math.floor(v)); }
     }
     if (raw.stats && typeof raw.stats === 'object') {
       for (const k in d.stats) if (isNum(raw.stats[k]) && raw.stats[k] >= 0) d.stats[k] = raw.stats[k];
@@ -280,7 +338,7 @@
   /** 상점 + 선택 캐릭터를 합친, 시뮬레이션에 전달할 보너스 */
   function bonusFor(save) {
     const lv = (id) => shopLevel(save, id) * SHOP_BY_ID[id].per;
-    const mods = (CHARACTERS[save.chars.selected] || CHARACTERS.student).mods;
+    const mods = charMods(save, save.chars.selected);
     const gt = gearTotals(save);
     const teamMul = Math.pow(GEAR.atkPer, gt.atk);
     return {
@@ -290,10 +348,10 @@
       takenMul: Math.pow(1 / GEAR.defPer, gt.def),
       speedMul: (1 + lv('speed')) * (mods.speedMul || 1),
       cooldownMul: mods.cooldownMul || 1,
-      magnet: lv('magnet'),
-      xpMul: 1 + lv('xp'),
+      magnet: lv('magnet') + (mods.magnet || 0),
+      xpMul: (1 + lv('xp')) * (mods.xpMul || 1),
       regen: lv('regen') + (mods.regen || 0),
-      echoPower: lv('echo'),
+      echoPower: lv('echo') + (mods.echoPower || 0),
       startStats: Object.assign({}, mods.startStats || {}),
     };
   }
@@ -327,6 +385,7 @@
     const c = CHARACTERS[id];
     if (!c) return { ok: false, reason: 'unknown' };
     if (save.chars.unlocked.indexOf(id) >= 0) return { ok: false, reason: 'owned' };
+    if (!charReqMet(save, id)) return { ok: false, reason: 'req', req: c.req.text };
     if (save.coins < c.cost) return { ok: false, reason: 'coins', cost: c.cost };
     save.coins -= c.cost; save.chars.unlocked.push(id);
     return { ok: true, cost: c.cost };
@@ -545,6 +604,7 @@
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopMax, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
+    RARITY, CHAR_MAX_LV, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,
     OUTFITS: Worlds.OUTFITS, outfitCycle, pickOutfit, topCycle, selectCycle, deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };

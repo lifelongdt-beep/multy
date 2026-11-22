@@ -401,3 +401,22 @@ test('복장 고르기: 얻은 복장(열린 회차까지)만 입을 수 있고,
   M.pickOutfit(s, null);
   assert.strictEqual(M.outfitCycle(s), 7, '자동으로 돌아감');
 });
+
+test('캐릭터: 등급별 조건(업적)을 갖춰야 살 수 있고, 레벨을 올리면 효과가 커진다', () => {
+  const s = M.defaultSave(); s.coins = 1e9;
+  assert.strictEqual(Object.keys(M.CHARACTERS).length, 12);
+  assert.strictEqual(M.unlockCharacter(s, 'artist').reason, 'req', '학원을 넘어야 미술부');
+  s.worlds.clears.academy = 1;
+  assert.strictEqual(M.unlockCharacter(s, 'artist').ok, true);
+  assert.strictEqual(M.charLevel(s, 'artist'), 1);
+  M.selectCharacter(s, 'artist');
+  const m1 = M.bonusFor(s).magnet;
+  for (let i = 0; i < 4; i++) assert.strictEqual(M.levelUpCharacter(s, 'artist').ok, true);
+  assert.strictEqual(M.levelUpCharacter(s, 'artist').reason, 'max');
+  assert.ok(M.bonusFor(s).magnet > m1 * 1.9, 'Lv5는 Lv1의 2배 효과');
+  assert.ok(M.bonusFor(s).startStats.magnet >= 3, 'Lv3·Lv5에 시작 아이템 +1');
+  assert.strictEqual(M.sanitize(JSON.parse(JSON.stringify(s))).chars.levels.artist, 5);
+  // 기본 학생은 Lv1이면 보너스 없음 (기존 밸런스 그대로)
+  const b = M.bonusFor(M.defaultSave()); assert.strictEqual(b.maxhp, 0); assert.strictEqual(b.dmgMul, 1);
+  assert.strictEqual(M.unlockCharacter(s, 'star').reason, 'req', '전설은 3회차부터');
+});

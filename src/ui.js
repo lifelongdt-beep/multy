@@ -59,7 +59,7 @@
     const big = el('canvas'); big.width = 320; big.height = 400; box.appendChild(big);
     box.appendChild(el('div', 'ln', `👕 ${of.name} ${'★'.repeat(of.stars)}`));
     const t = M.titleOf(M.deedScore(save)).title;
-    box.appendChild(el('small', '', `${ch.emoji} ${ch.name}${of.variant ? ` · 🎨 색 ${of.variant + 1}` : ''}${M.deedScore(save) > 0 ? ` · ${t.icon} ${t.name}` : ''}`));
+    box.appendChild(el('small', '', `${ch.emoji} ${ch.name} Lv${M.charLevel(save, ch.id)}${of.variant ? ` · 🎨 색 ${of.variant + 1}` : ''}${M.deedScore(save) > 0 ? ` · ${t.icon} ${t.name}` : ''}`));
     if (show !== cur) {
       box.appendChild(el('small', '', '👀 미리보기 중'));
       const row = el('div', 'row');
@@ -240,23 +240,47 @@
   }
 
   /* ---------- 캐릭터 ---------- */
-  /** 캐릭터 고르기 (내 캐릭터 화면 아래쪽에 붙는다) */
+  /** 캐릭터 고르기 (내 캐릭터 화면 아래쪽에 붙는다): 등급별로 묶고, 조건(업적)·학점·레벨을 보여 준다 */
   function renderChars(body) {
-    body.appendChild(el('div', 'msg', '🧑 캐릭터 고르기'));
-    for (const id in M.CHARACTERS) {
-      const c = M.CHARACTERS[id];
-      const owned = save.chars.unlocked.indexOf(id) >= 0;
-      const selected = save.chars.selected === id;
-      const row = item(c.emoji, c.name, c.desc, { done: owned && !selected, sel: selected });
-      const b = el('button', '', selected ? '사용 중' : owned ? '선택' : `🎓 ${M.fmtNum(c.cost)}`);
-      b.disabled = selected || (!owned && save.coins < c.cost);
-      b.onclick = () => {
-        if (!owned) { if (!M.unlockCharacter(save, id).ok) return; Sfx.play('levelup'); }
-        M.selectCharacter(save, id); Sfx.play('click'); commit(); rerender();
-      };
-      row.appendChild(b); body.appendChild(row);
+    const owned = save.chars.unlocked.length, total = Object.keys(M.CHARACTERS).length;
+    body.appendChild(el('div', 'msg', `🧑 캐릭터 ${owned} / ${total} · 학점을 모아 사고, 레벨을 올려 더 강하게 (최대 Lv ${M.CHAR_MAX_LV})`));
+    for (const rk of Object.keys(M.RARITY)) {
+      const R = M.RARITY[rk];
+      const head = el('div', 'msg', `◆ ${R.name}`); head.style.color = R.color; head.style.alignSelf = 'flex-start'; head.style.fontWeight = '700';
+      body.appendChild(head);
+      for (const id in M.CHARACTERS) {
+        const c = M.CHARACTERS[id]; if (c.rarity !== rk) continue;
+        const has = save.chars.unlocked.indexOf(id) >= 0, selected = save.chars.selected === id, lv = M.charLevel(save, id);
+        const reqOk = M.charReqMet(save, id);
+        // 보이는 정보: 가진 캐릭터는 레벨과 효과, 못 가진 캐릭터는 조건과 값
+        const stars = has ? ' ' + '★'.repeat(lv) + '☆'.repeat(M.CHAR_MAX_LV - lv) : '';
+        let sub = c.desc;
+        if (!has && c.req) sub += `\n${reqOk ? '✅' : '🔒'} 조건: ${c.req.text}`;
+        if (has && lv < M.CHAR_MAX_LV) sub += c.lvOnly ? '\n⬆ 다음 레벨: 체력 +6, 공격 +4%' : `\n⬆ 다음 레벨: 좋은 효과 +25%${lv + 1 === 3 || lv + 1 === 5 ? ' · 시작 아이템 +1' : ''}`;
+        const row = item(c.emoji, `${c.name}${stars}`, sub, { done: has && !selected, sel: selected });
+        row.style.borderColor = selected ? '' : (has ? '' : R.color + '88');
+        row.querySelector('small').style.whiteSpace = 'pre-line';
+        const btns = el('div', ''); btns.style.display = 'flex'; btns.style.flexDirection = 'column'; btns.style.gap = '4px';
+        if (!has) {
+          const b = el('button', '', reqOk ? `🎓 ${M.fmtNum(c.cost)}` : '🔒 잠김');
+          b.disabled = !reqOk || save.coins < c.cost;
+          b.onclick = () => { if (M.unlockCharacter(save, id).ok) { M.selectCharacter(save, id); Sfx.play('levelup'); commit(); rerender(); } };
+          btns.appendChild(b);
+        } else {
+          const sel = el('button', '', selected ? '사용 중' : '선택'); sel.disabled = selected;
+          sel.onclick = () => { M.selectCharacter(save, id); Sfx.play('click'); commit(); rerender(); };
+          btns.appendChild(sel);
+          if (lv < M.CHAR_MAX_LV) {
+            const cost = M.charLevelCost(save, id), up = el('button', 'sub', `⬆ 🎓${M.fmtNum(cost)}`);
+            up.disabled = save.coins < cost; up.style.fontSize = '11px'; up.style.padding = '5px 6px';
+            up.onclick = () => { if (M.levelUpCharacter(save, id).ok) { Sfx.play('levelup'); commit(); rerender(); } };
+            btns.appendChild(up);
+          }
+        }
+        row.appendChild(btns); body.appendChild(row);
+      }
     }
-    body.appendChild(el('div', 'msg', '※ 시작 아이템은 에코에게도 그대로 전달됩니다.'));
+    body.appendChild(el('div', 'msg', '※ 시작 아이템은 에코에게도 그대로 전달돼요'));
   }
 
   /* ---------- 도전 과제 · 일일 미션 ---------- */
