@@ -86,6 +86,7 @@
 
   /* ---------- 연출 상태 ---------- */
   let shake = 0;
+  let windPhase = 0;   // 바람 줄기 위치
   let edgeFlash = 0;   // 무리가 몰려올 때 화면 테두리 주황 번쩍임 (본 게임은 글 대신 이것만)
   let hurtFlash = 0;   // 피격 시 화면 가장자리 붉은 번쩍임 (진동이 안 되는 기기에서도 피격을 알 수 있게)
   // 내 에너지가 깎이면 진동: 피해량이 클수록 길게 (미지원 기기는 조용히 무시)
@@ -807,10 +808,20 @@
     // 바람 월드: 지금 바람 방향 표시
     const wind = sim.world.rules.wind;
     if (wind) {
-      const wx = Math.sin((sim.tick / (wind.period * TICK)) * Math.PI * 2);
-      ctx.globalAlpha = Math.min(0.8, Math.abs(wx)); ctx.fillStyle = '#cfefff'; ctx.textAlign = 'center'; ctx.font = 'bold 13px sans-serif';
-      ctx.fillText(wx > 0 ? '🌬️ →' : '← 🌬️', W / 2, 92);
-      ctx.globalAlpha = 1;
+      // 글자 대신 화면을 가로지르는 얇은 바람 줄기: 바람이 셀수록 진하고 빠르게, 방향이 바뀌면 줄기도 반대로 흐른다
+      const wx = Math.sin((sim.tick / (wind.period * TICK)) * Math.PI * 2), strength = Math.abs(wx);
+      if (strength > 0.08) {
+        windPhase += wx * 3.2;
+        ctx.strokeStyle = '#e6f6ff'; ctx.lineCap = 'round';
+        for (let i = 0; i < 14; i++) {
+          const y = 70 + ((i * 97) % (H - 120)), len = 26 + (i % 4) * 12, speed = 0.7 + (i % 3) * 0.25;
+          const x = ((((i * 131) + windPhase * speed) % (W + 120)) + (W + 120)) % (W + 120) - 60;
+          const wob = Math.sin(now / 300 + i) * 2.5;
+          ctx.globalAlpha = strength * (0.22 + (i % 3) * 0.07); ctx.lineWidth = 1 + (i % 2) * 0.6;
+          ctx.beginPath(); ctx.moveTo(x, y + wob); ctx.quadraticCurveTo(x - Math.sign(wx) * len * 0.5, y + wob - 3, x - Math.sign(wx) * len, y + wob); ctx.stroke();
+        }
+        ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+      }
     }
 
     // HUD
