@@ -78,7 +78,7 @@
     helperStay: 11,          // 도우미가 기다려 주는 시간(초)
     choiceAutoSec: 3,
     // ---- 선행(좋은 일)을 하면 아이템 ----
-    enemyLifeSec: 6,         // 일반 방해 요소는 이 시간(초)이 지나면 스르르 사라진다 (화면이 붐비지 않게). 보스·구조 대상 곁의 방해 요소는 제외
+    enemyLifeSec: 10,        // 일반 방해 요소는 이 시간(초)이 지나면 스르르 사라진다 (화면이 붐비지 않게). 보스·구조 대상 곁의 방해 요소는 제외
     enemyFadeTicks: 30,      //   사라지기 전 흐려지는 시간(틱)
     deedRescueFirst: 18,     // 어려움에 처한 사람: 첫 등장(초)
     deedRescueEvery: 26,     //   이후 간격(초)
@@ -321,7 +321,7 @@
     /** 레벨을 올리고 고를 카드 3장을 뽑는다 */
     _rollLevel() {
       const p = this.player;
-      p.level += 1; p.xp -= p.need; p.need = Math.max(2, Math.round((4 + p.level * 2.8) * 0.36));   // 짧은 판에서도 비슷하게 성장
+      p.level += 1; p.xp -= p.need; p.need = Math.max(2, Math.round((4 + p.level * 2.8) * 0.42));   // 짧은 판에서도 비슷하게 성장
       return this._rollPicks();
     }
     /** 아이템 카드 3장 (레벨업·선행 보상 공용) */
