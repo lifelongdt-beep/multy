@@ -171,6 +171,28 @@
     }
   }
 
+  /** 필터 잡음 (바람·물·덜컹 소리용): f0→f1로 필터를 움직이고, 천천히 커졌다 작아짐 */
+  function fnoise(dur, vol, type, f0, f1, delay, attack) {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime + (delay || 0), n = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = buf; f.type = type; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+    const a = attack === undefined ? dur * 0.4 : attack;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.max(0.01, a)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur + 0.02);
+  }
+  /** 옆으로 지나가는 위험물마다 다른 경고음 (열차는 빵빵, 나머지는 그 물건다운 소리) */
+  const WARN = {
+    '🚆': () => { tone(220, 220, 0.25, 'sawtooth', 0.09); tone(277, 277, 0.25, 'sawtooth', 0.07); tone(220, 200, 0.25, 'sawtooth', 0.09, 0.3); tone(277, 250, 0.25, 'sawtooth', 0.07, 0.3); },   // 빵빵
+    '🌊': () => { fnoise(1.1, 0.16, 'lowpass', 260, 1800, 0, 0.75); tone(70, 55, 1.0, 'sine', 0.06); fnoise(0.5, 0.05, 'bandpass', 2400, 900, 0.75, 0.05); },                                   // 쏴아아 (밀려오는 파도)
+    '📚': () => { for (let i = 0; i < 3; i++) { tone(1568, 1568, 0.12, 'triangle', 0.06, i * 0.14); tone(2093, 2093, 0.08, 'sine', 0.03, i * 0.14 + 0.02); } fnoise(0.4, 0.03, 'highpass', 3000, 5000, 0, 0.05); },   // 딸랑딸랑 + 바퀴 끽
+    '🏐': () => { [0, 0.24, 0.42, 0.54].forEach((d, i) => tone(240 - i * 20, 90, 0.1, 'sine', 0.14 - i * 0.02, d)); },                                                                     // 통·통·통 (튀어 오는 공)
+    '🛒': () => { tone(1250, 1250, 0.07, 'square', 0.04); tone(1250, 1250, 0.07, 'square', 0.04, 0.11); fnoise(0.45, 0.05, 'bandpass', 900, 600, 0.05, 0.03); },                              // 삐빅 + 덜컹
+    '🛏️': () => { tone(880, 880, 0.35, 'sine', 0.07); tone(660, 660, 0.45, 'sine', 0.07, 0.3); },                                                                                         // 딩-동 (병원 안내음)
+    '💡': () => { tone(110, 110, 0.35, 'sawtooth', 0.04); tone(120, 125, 0.35, 'square', 0.025); tone(400, 1600, 0.18, 'square', 0.03, 0.3); },                                              // 지지직 + 슈웅 (조명 장치)
+  };
+
   const DEF = {
     shoot:    { gap: 110, fn: () => tone(700, 420, 0.05, 'square', 0.025) },
     hit:      { gap: 60,  fn: () => tone(220, 130, 0.04, 'sawtooth', 0.02) },
@@ -201,7 +223,8 @@
       d.fn();
     },
     /** 지나가는 소리 (열차는 무겁게, 공·파도·카트 등은 바람 소리만) */
-    pass(dir, heavy) { if (muted) return; const now = (root.performance || Date).now(); if (last.pass && now - last.pass < 250) return; last.pass = now; passSound(dir >= 0 ? 1 : -1, !!heavy); },
+    warn(emoji) { if (muted) return; const now = (root.performance || Date).now(); if (last.warn && now - last.warn < 400) return; last.warn = now; (WARN[emoji] || WARN['🚆'])(); },
+    pass(dir, heavy, water) { if (muted) return; const now = (root.performance || Date).now(); if (last.pass && now - last.pass < 250) return; last.pass = now; if (water) { fnoise(1.3, 0.2, 'lowpass', 1400, 300, 0, 0.35); fnoise(0.9, 0.06, 'highpass', 4000, 2500, 0.1, 0.2); return; } passSound(dir >= 0 ? 1 : -1, !!heavy); },
     unlock() { ac(); },
     setMuted(m) { muted = !!m; if (root.Music) root.Music.setMuted(muted); },
     /** 배경음악(music.js)용: 같은 AudioContext와 출력 */

@@ -81,14 +81,14 @@
 
   /* ---------- 영구 강화 (상점) ---------- */
   const SHOP = [
-    { id: 'hp',     icon: '❤️', name: '튼튼한 체력',   max: 5, grow: true, base: 120, per: 7,    fmt: (v) => `체력 +${v}` },
-    { id: 'dmg',    icon: '💪', name: '단련된 필기',   max: 5, grow: true, base: 150, per: 0.06, fmt: (v) => `공격력 +${Math.round(v * 100)}%` },
-    { id: 'speed',  icon: '👟', name: '가벼운 발걸음', max: 5, base: 120, per: 0.04, fmt: (v) => `이동속도 +${Math.round(v * 100)}%` },
-    { id: 'magnet', icon: '🧲', name: '넓은 자석',     max: 5, base: 90, per: 8,    fmt: (v) => `구슬 흡수 범위 +${v}` },
-    { id: 'xp',     icon: '📚', name: '빠른 습득',     max: 5, base: 180, per: 0.08, fmt: (v) => `경험치 +${Math.round(v * 100)}%` },
-    { id: 'regen',  icon: '🍱', name: '든든한 도시락', max: 5, grow: true, base: 210, per: 0.25,  fmt: (v) => `체력 재생 +${v.toFixed(1)}/초` },
-    { id: 'echo',   icon: '👻', name: '에코 단련',     max: 5, grow: true, base: 240, per: 0.05, fmt: (v) => `에코 공격력 +${Math.round(v * 100)}%` },
-    { id: 'coin',   icon: '🎓', name: '장학금',        max: 5, base: 270, per: 0.10, fmt: (v) => `학점 획득 +${Math.round(v * 100)}%` },
+    { id: 'hp',     icon: '❤️', name: '튼튼한 체력',   max: 5, grow: true, base: 240, per: 7,    fmt: (v) => `체력 +${v}` },
+    { id: 'dmg',    icon: '💪', name: '단련된 필기',   max: 5, grow: true, base: 300, per: 0.06, fmt: (v) => `공격력 +${Math.round(v * 100)}%` },
+    { id: 'speed',  icon: '👟', name: '가벼운 발걸음', max: 5, base: 240, per: 0.04, fmt: (v) => `이동속도 +${Math.round(v * 100)}%` },
+    { id: 'magnet', icon: '🧲', name: '넓은 자석',     max: 5, base: 180, per: 8,    fmt: (v) => `구슬 흡수 범위 +${v}` },
+    { id: 'xp',     icon: '📚', name: '빠른 습득',     max: 5, base: 360, per: 0.08, fmt: (v) => `경험치 +${Math.round(v * 100)}%` },
+    { id: 'regen',  icon: '🍱', name: '든든한 도시락', max: 5, grow: true, base: 420, per: 0.25,  fmt: (v) => `체력 재생 +${v.toFixed(1)}/초` },
+    { id: 'echo',   icon: '👻', name: '에코 단련',     max: 5, grow: true, base: 480, per: 0.05, fmt: (v) => `에코 공격력 +${Math.round(v * 100)}%` },
+    { id: 'coin',   icon: '🎓', name: '장학금',        max: 5, base: 540, per: 0.10, fmt: (v) => `학점 획득 +${Math.round(v * 100)}%` },
   ];
   const SHOP_BY_ID = {}; SHOP.forEach((s) => { SHOP_BY_ID[s.id] = s; });
 

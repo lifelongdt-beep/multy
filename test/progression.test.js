@@ -220,7 +220,7 @@ test('끝없는 회차: 몇 회차가 되어도 권장 장비를 살 수 있고,
       const cost = Wd.gearCost('atk', rec.atk) + Wd.gearCost('def', rec.def);
       const income = 200 * Wd.rewardMul(w, c);
       const ratio = cost / income;
-      assert.ok(Number.isFinite(ratio) && ratio > 0.3 && ratio < 3, `c${c} ${w}: 장비값/수입 ${ratio.toFixed(2)}`);
+      assert.ok(Number.isFinite(ratio) && ratio > 0.3 && ratio < 4.5, `c${c} ${w}: 장비값/수입 ${ratio.toFixed(2)}`);
       if (prevRatio !== null) assert.ok(Math.abs(ratio / prevRatio - 1) < 0.6, '비율이 갑자기 튀지 않음');
       prevRatio = ratio;
     }

@@ -532,7 +532,7 @@
     levelsPerStage: 3,     // 단계 1당 필요한 장비 레벨 (⚔, 🛡 각각)
     maxBase: 5,            // 1회차 장비 최대 레벨 (월드 장비 하나당)
     maxPerLoop: 5,         // 회차마다 최대 레벨 +5 (필요한 장비보다 항상 넉넉하게)
-    costBase: 200,         // 장비 가격 = costBase x atkPer^(산 ⚔ 레벨 합) — 🛡은 defPer^(산 🛡 레벨 합)
+    costBase: 350,         // 장비 가격 = costBase x atkPer^(산 ⚔ 레벨 합) — 🛡은 defPer^(산 🛡 레벨 합)
     loopHp: 1.1,           // 회차마다 적 체력 추가 x1.1 ("조금씩 더 어렵게")
     loopSpeed: 0.05,       // 회차마다 적 이동 +5%
     loopSpawn: 0.08,       // 회차마다 적 스폰 +8%
