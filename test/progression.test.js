@@ -137,7 +137,7 @@ test('매점 장비: 월드마다 ⚔·🛡 하나씩, 도착한 월드만 살 �
   assert.strictEqual(M.GEAR_ITEMS.length, 24);
   const s = M.defaultSave(); s.coins = 1e7;
   assert.strictEqual(M.buyGear(s, 'academy:atk').reason, 'locked', '아직 학원에 못 감');
-  for (let i = 0; i < 5; i++) assert.strictEqual(M.buyGear(s, 'school:atk').ok, true);
+  s.coins = 1e15; for (let i = 0; i < 30; i++) assert.strictEqual(M.buyGear(s, 'school:atk').ok, true);
   assert.strictEqual(M.buyGear(s, 'school:atk').reason, 'max');
   assert.strictEqual(M.buyGear(s, 'nope').reason, 'unknown');
   s.worlds.cycleClears.school = 1;
@@ -180,12 +180,12 @@ test('회차: 12번째 월드를 극복하면 2회차 — 학교부터 다시, �
   assert.strictEqual(M.worldUnlocked(s, 'academy'), false, '2회차는 다시 학교부터 차례로');
   assert.strictEqual(M.selectCycle(s, 2), false, '안 열린 회차는 못 고름');
   assert.strictEqual(M.selectCycle(s, 0), true, '지난 회차로 돌아갈 수 있다');
-  assert.strictEqual(M.gearMax(s), 10, '지난 회차로 가도 장비 최대 레벨은 그대로');
+  assert.strictEqual(M.gearMax(s), 30, '지난 회차로 가도 장비 최대 레벨은 그대로');
   assert.strictEqual(M.recordRun(s, clearRun('stage'), '2026-11-20').newCycle, null, '지난 회차를 다시 깨도 새 회차는 안 열림');
   M.selectCycle(s, 1);
   assert.strictEqual(s.worlds.clears.stage, 2, '전체 기록은 남는다 (1회차를 두 번 극복)');
   assert.ok(r.newAch.some((a) => a.id === 'cycle_2') && r.newAch.some((a) => a.id === 'clear_stage'));
-  assert.strictEqual(M.gearMax(s), 10);
+  assert.strictEqual(M.gearMax(s), 30);
   assert.strictEqual(M.gearAvailable(s, 'stage'), true, '한 바퀴 돈 뒤에는 모든 월드 장비를 살 수 있다');
 });
 
@@ -198,9 +198,9 @@ test('회차가 높을수록 학점을 더 받는다', () => {
 
 test('저장 정리: 장비 레벨은 회차 최대치로 제한, 옛 저장은 기존 극복 기록으로 이번 회차 진행을 이어간다', () => {
   const s = M.sanitize({ cycle: 0, gear: { 'school:atk': 99, 'zzz:atk': 3, 'gym:def': -1, 'home:def': 2.7 } });
-  assert.deepStrictEqual(s.gear, { 'school:atk': 5, 'home:def': 2 });
-  const s2 = M.sanitize({ cycle: 1, gear: { 'school:atk': 99 } });
-  assert.strictEqual(s2.gear['school:atk'], 10);
+  assert.deepStrictEqual(s.gear, { 'school:atk': 30, 'home:def': 2 });
+  const s2 = M.sanitize({ cycle: 8, gear: { 'school:atk': 99 } });
+  assert.strictEqual(s2.gear['school:atk'], 45);
   const old = M.sanitize({ stats: { runs: 9 }, worlds: { selected: 'office', clears: { school: 3, academy: 1 } } });
   assert.deepStrictEqual(old.worlds.cycleClears, { school: 3, academy: 1 });
   assert.strictEqual(old.worlds.selected, 'office', '옛 저장도 열려 있던 월드는 그대로');

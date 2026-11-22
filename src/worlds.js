@@ -559,7 +559,8 @@
       def: Math.max(0, Math.ceil(Math.log(m.dmg) / Math.log(GEAR.defPer) - 1e-9)),
     };
   }
-  function gearMaxLevel(cycle) { return GEAR.maxBase + GEAR.maxPerLoop * Math.max(0, cycle | 0); }
+  /** 장비 최대 레벨: 처음부터 30까지 살 수 있고, 회차가 높아지면 그보다 더 (5 + 5x회차) */
+  function gearMaxLevel(cycle) { return Math.max(30, GEAR.maxBase + GEAR.maxPerLoop * Math.max(0, cycle | 0)); }
   /** 다음 장비 1레벨의 가격: 그 종류(atk/def)를 지금까지 몇 레벨 샀는지로 정해진다 (어느 월드 장비든 같은 값) */
   function gearCost(kind, ownedTotal) { return Math.round(GEAR.costBase * Math.pow(kind === 'def' ? GEAR.defPer : GEAR.atkPer, Math.max(0, ownedTotal | 0))); }
   /** 학점 배율: 적이 강한 단계일수록 많이 번다 (= 적 체력 배율) */

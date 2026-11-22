@@ -93,9 +93,13 @@
   const SHOP_BY_ID = {}; SHOP.forEach((s) => { SHOP_BY_ID[s.id] = s; });
 
   /** 기본 강화 가격: 회차마다 그 회차 수입만큼 비싸진다 (학교 단계의 학점 배율). 레벨은 5개 묶음마다 다시 기본가부터 */
-  function shopCost(id, level, cycle) { return Math.round(SHOP_BY_ID[id].base * Math.pow(1.85, level % 5) * Worlds.rewardMul('school', cycle || 0)); }
+  /** 가격: Lv5까지는 x1.85씩, 그 뒤로는 x1.15씩 오른다 (Lv30 근처에서 더는 안 오름) · 회차 수입만큼 비싸짐 */
+  function shopCost(id, level, cycle) { return Math.round(SHOP_BY_ID[id].base * Math.pow(1.85, Math.min(level, 4)) * Math.pow(1.15, Math.min(25, Math.max(0, level - 4))) * Worlds.rewardMul('school', cycle || 0)); }
+  const SHOP_CAP = 30;
+  /** 효과: 키울 수 있는 강화(체력·공격·재생·에코)는 레벨마다 그대로, 나머지(이동·자석·경험치·장학금)는 Lv5 뒤로 1/4씩 */
+  function shopEffect(id, lv) { const it = SHOP_BY_ID[id]; return it.grow ? it.per * lv : it.per * (Math.min(lv, it.max) + Math.max(0, lv - it.max) * 0.25); }
   /** 최대 레벨: 체력·공격력·재생·에코처럼 계속 키울 수 있는 강화는 회차마다 +5 */
-  function shopMax(save, id) { const it = SHOP_BY_ID[id]; return it.grow ? it.max * (Math.min(9999, topCycle(save)) + 1) : it.max; }
+  function shopMax(save, id) { const it = SHOP_BY_ID[id]; return it.grow ? Math.max(SHOP_CAP, it.max * (Math.min(9999, topCycle(save)) + 1)) : SHOP_CAP; }
   /** 지금까지 열린 가장 높은 회차 (장비·강화의 최대 레벨과 가격은 이 기준: 낮은 회차로 돌아가도 그대로) */
   /** 입고 있는 복장의 회차: 골라 입은 복장이 있으면 그것, 아니면 지금 회차 복장 */
   function outfitCycle(save) { const p = save.outfitPick; return isNum(p) && p >= 0 && p <= topCycle(save) ? p : (save.cycle || 0); }
@@ -337,7 +341,7 @@
 
   /** 상점 + 선택 캐릭터를 합친, 시뮬레이션에 전달할 보너스 */
   function bonusFor(save) {
-    const lv = (id) => shopLevel(save, id) * SHOP_BY_ID[id].per;
+    const lv = (id) => shopEffect(id, shopLevel(save, id));
     const mods = charMods(save, save.chars.selected);
     const gt = gearTotals(save);
     const teamMul = Math.pow(GEAR.atkPer, gt.atk);
@@ -355,7 +359,7 @@
       startStats: Object.assign({}, mods.startStats || {}),
     };
   }
-  function coinMul(save) { return 1 + shopLevel(save, 'coin') * SHOP_BY_ID.coin.per; }
+  function coinMul(save) { return 1 + shopEffect('coin', shopLevel(save, 'coin')); }
   /** 이 월드·회차에서의 학점 배율 (적이 강할수록 많이) */
   function rewardMul(worldId, cycle) { return Worlds.rewardMul(worldId, cycle); }
 
@@ -603,7 +607,7 @@
     SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld, echoesForWorld,
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
-    shopCost, shopMax, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
+    shopCost, shopMax, shopEffect, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
     RARITY, CHAR_MAX_LV, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,
     OUTFITS: Worlds.OUTFITS, outfitCycle, pickOutfit, topCycle, selectCycle, deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,

@@ -24,12 +24,12 @@ test('상점: 재화가 부족하면 구매 실패, 충분하면 차감되고 �
   assert.ok(M.shopCost('hp', 1) > M.shopCost('hp', 0), '레벨이 오를수록 비싸야 함');
 });
 
-test('상점: 최대 레벨(5)을 넘어 살 수 없고, 모르는 항목은 거부', () => {
-  const s = M.defaultSave(); s.coins = 1e6;
-  for (let i = 0; i < 5; i++) assert.strictEqual(M.buyUpgrade(s, 'dmg').ok, true);
+test('상점: 최대 레벨(30)을 넘어 살 수 없고, 모르는 항목은 거부', () => {
+  const s = M.defaultSave(); s.coins = 1e12;
+  for (let i = 0; i < 30; i++) assert.strictEqual(M.buyUpgrade(s, 'dmg').ok, true);
   assert.strictEqual(M.buyUpgrade(s, 'dmg').reason, 'max');
   assert.strictEqual(M.buyUpgrade(s, 'nope').reason, 'unknown');
-  assert.strictEqual(s.shop.dmg, 5);
+  assert.strictEqual(s.shop.dmg, 30);
 });
 
 test('캐릭터: 해금 비용 차감, 중복 해금/미보유 선택 거부', () => {
@@ -142,7 +142,7 @@ test('저장/불러오기: localStorage 왕복, 깨진 데이터는 기본값으
   store.d[M.SAVE_KEY] = JSON.stringify({ coins: -5, shop: { hp: 99, xx: 3 }, chars: { unlocked: ['genius', 'zzz'], selected: 'zzz' }, stats: { runs: 'a' }, ach: { first_run: 1 } });
   const c = M.load(store);
   assert.strictEqual(c.coins, 0);
-  assert.strictEqual(c.shop.hp, 5, '최대 레벨로 보정');
+  assert.strictEqual(c.shop.hp, 30, '최대 레벨로 보정');
   assert.ok(!('xx' in c.shop));
   assert.deepStrictEqual(c.chars.unlocked.sort(), ['genius', 'student']);
   assert.strictEqual(c.chars.selected, 'student');
@@ -373,11 +373,13 @@ test('선행 기록: 도감·찾아올 사람·칭호', () => {
 
 test('기본 강화: 회차마다 비싸지고, 키울 수 있는 강화는 최대 레벨이 회차마다 +5', () => {
   const s = M.defaultSave();
-  assert.strictEqual(M.shopMax(s, 'hp'), 5);
-  assert.strictEqual(M.shopMax(s, 'speed'), 5);
-  s.cycle = 2;
-  assert.strictEqual(M.shopMax(s, 'hp'), 15);
-  assert.strictEqual(M.shopMax(s, 'speed'), 5, '이동속도처럼 한계가 있는 강화는 그대로');
+  assert.strictEqual(M.shopMax(s, 'hp'), 30);
+  assert.strictEqual(M.shopMax(s, 'speed'), 30);
+  s.cycle = 7;
+  assert.strictEqual(M.shopMax(s, 'hp'), 40, '키울 수 있는 강화는 높은 회차에서 30 넘게');
+  assert.strictEqual(M.shopMax(s, 'speed'), 30, '이동속도처럼 한계가 있는 강화는 30');
+  assert.ok(M.shopEffect('speed', 30) < M.SHOP.find((x) => x.id === 'speed').per * 12, 'Lv5 뒤로는 효과가 1/4씩');
+  assert.strictEqual(M.shopEffect('hp', 30), M.SHOP.find((x) => x.id === 'hp').per * 30);
   assert.ok(M.shopCost('hp', 0, 1) > M.shopCost('hp', 0, 0) * 5, '회차가 오르면 크게 비싸짐');
   assert.ok(M.shopCost('hp', 0, 2) > M.shopCost('hp', 0, 1));
   // 회차 수입과 같은 비율로 오른다
@@ -386,8 +388,8 @@ test('기본 강화: 회차마다 비싸지고, 키울 수 있는 강화는 최�
   s.shop.hp = 5; s.coins = 1e12;
   assert.strictEqual(M.buyUpgrade(s, 'hp').ok, true);
   assert.strictEqual(s.shop.hp, 6);
-  assert.strictEqual(M.sanitize({ cycle: 0, shop: { hp: 12 } }).shop.hp, 5);
-  assert.strictEqual(M.sanitize({ cycle: 3, shop: { hp: 12 } }).shop.hp, 12);
+  assert.strictEqual(M.sanitize({ cycle: 0, shop: { hp: 99 } }).shop.hp, 30);
+  assert.strictEqual(M.sanitize({ cycle: 9, shop: { hp: 45 } }).shop.hp, 45);
 });
 
 test('복장 고르기: 얻은 복장(열린 회차까지)만 입을 수 있고, 저장·자동 복귀된다', () => {

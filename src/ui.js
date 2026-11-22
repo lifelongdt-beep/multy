@@ -205,7 +205,7 @@
       const mx = M.shopMax(save, it.id), maxed = lv >= mx;
       const cost = maxed ? 0 : M.shopCost(it.id, lv, M.topCycle(save));
       const row = item(it.icon, `${it.name}  Lv ${lv}/${mx}`,
-        `${it.fmt(it.per * lv)} → ${maxed ? (it.grow ? '최대 (다음 회차에 +5)' : '최대') : it.fmt(it.per * (lv + 1))}`, { done: maxed, progress: lv / mx });
+        `${it.fmt(M.shopEffect(it.id, lv))} → ${maxed ? (it.grow ? '최대 (회차가 오르면 더)' : '최대') : it.fmt(M.shopEffect(it.id, lv + 1))}`, { done: maxed, progress: lv / mx });
       const b = el('button', '', maxed ? '최대' : `🎓 ${M.fmtNum(cost)}`);
       b.disabled = maxed || save.coins < cost;
       b.onclick = () => { if (M.buyUpgrade(save, it.id).ok) { Sfx.play('levelup'); commit(); rerender(); } };
