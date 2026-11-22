@@ -41,6 +41,17 @@
   .cyc .cv small{display:block;font-weight:400;font-size:11px;opacity:.75}
   .cyc button{min-width:0;padding:8px 12px;font-size:14px}
   .cyc button:disabled{opacity:.35}
+  .look{display:flex;flex-direction:column;align-items:center;gap:2px;background:radial-gradient(circle at 50% 45%,#3a4272,#222845 70%);border:2px solid #ffd34d;border-radius:16px;padding:10px;width:100%;box-sizing:border-box}
+  .look canvas{width:160px;height:200px;background:transparent;border-radius:0}
+  .look .ln{font-size:17px;font-weight:800;color:#ffe58a}
+  .look small{font-size:12px;opacity:.8}
+  .omap{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%}
+  .omap .oc{background:#222845;border:2px solid #3a4272;border-radius:10px;padding:3px 2px;display:flex;flex-direction:column;align-items:center;font-size:11px;line-height:1.2;cursor:pointer}
+  .omap .oc canvas{width:48px;height:60px;background:transparent;border-radius:0}
+  .omap .oc.cur{border-color:#ffd34d;box-shadow:0 0 8px #ffd34d88}
+  .omap .oc.lock{opacity:.6}
+  .omap .oc .st{color:#ffd34d;font-size:9px;letter-spacing:-1px}
+  .omap .oc small{font-size:9px;opacity:.7}
   .book .wn{font-size:12px;text-align:left;white-space:nowrap}
   .item button{min-width:78px;padding:8px 10px;font-size:13px}
   .item button:disabled{opacity:.4;cursor:default}
@@ -98,7 +109,7 @@
     <button id="bWorld" class="sub" style="min-width:200px;font-size:15px;padding:10px 14px">🗺️ 월드</button>
     <button id="go">시작</button>
     <div class="row"><button id="bShop" class="sub">🏪 상점</button><button id="bChar" class="sub">🧑 캐릭터</button><button id="bDeed" class="sub">💛 선행</button></div>
-    <div class="row"><button id="bQuest" class="sub">🏆 과제·미션</button><button id="bBackup" class="sub">💾 백업</button></div>
+    <div class="row"><button id="bLook" class="sub">👕 내 모습</button><button id="bQuest" class="sub">🏆 과제·미션</button><button id="bBackup" class="sub">💾 백업</button></div>
     <div class="row"><button id="bTutorial" class="sub">📘 튜토리얼</button><button id="reset" class="sub">에코 기록 초기화</button></div>
   </div>
 

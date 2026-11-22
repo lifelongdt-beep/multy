@@ -33,6 +33,54 @@
     $('titleLine').textContent = M.deedScore(save) > 0 ? `${t.icon} ${t.name}` : '';
   }
 
+  /* ---------- 내 모습: 지금 캐릭터 크게 + 복장 지도 ---------- */
+  /** 캔버스에 회차 cycle의 복장을 그린다. locked면 검은 실루엣 */
+  function paintOutfit(cv, cycle, scale, locked) {
+    const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
+    if (!window.Art) return;
+    const emo = (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji;
+    const k = cv.width / 56;   // 56 x 70 논리 크기 기준
+    c.setTransform(k, 0, 0, k, 0, 0); Art.drawKidPreview(c, 28, 38, emo, cycle, scale);
+    if (locked) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(10,12,24,.92)'; c.fillRect(0, 0, cv.width, cv.height); c.globalCompositeOperation = 'source-over'; }
+  }
+  let lookPreview = null;   // 지도에서 눌러 본 회차 (없으면 지금 회차)
+  function renderLook() {
+    const body = $('pbody'); body.innerHTML = '';
+    const top = M.topCycle(save), cur = save.cycle, show = lookPreview === null ? cur : lookPreview;
+    const of = EchoWorlds.outfitOf(show), ch = M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student;
+    // 1) 지금 내 캐릭터 크게
+    const box = el('div', 'look');
+    const big = el('canvas'); big.width = 320; big.height = 400; box.appendChild(big);
+    box.appendChild(el('div', 'ln', `👕 ${of.name} ${'★'.repeat(of.stars)}${'☆'.repeat(5 - of.stars)}`));
+    const t = M.titleOf(M.deedScore(save)).title;
+    box.appendChild(el('small', '', `${ch.emoji} ${ch.name} · 🔁 ${show + 1}회차${of.variant ? ` · 🎨 색 ${of.variant + 1}` : ''}${M.deedScore(save) > 0 ? ` · ${t.icon} ${t.name}` : ''}`));
+    if (show !== cur) {
+      box.appendChild(el('small', '', '👀 미리보기 중'));
+      const back = el('button', 'sub', '↩ 지금 내 모습'); back.onclick = () => { lookPreview = null; Sfx.play('click'); rerender(); }; box.appendChild(back);
+    }
+    body.appendChild(box);
+    paintOutfit(big, show, 1.3, false);
+    // 2) 복장 지도: 복장 20종 × 장식 5단계 = 100회차 (그 뒤로는 색만 바뀌어 다시)
+    const lap = Math.floor(top / 100), base = lap * 100;
+    const got = Math.min(100, top - base + 1);
+    body.appendChild(el('div', 'msg', `🗺️ 복장 지도 ${got} / 100${lap ? ` · 🎨 색 변형 ${lap + 1}/10` : ''} · 회차마다 장식 ★ 하나, 5회차마다 새 복장`));
+    const map = el('div', 'omap');
+    for (let s = 0; s < M.OUTFITS.length; s++) {
+      const first = base + s * 5, stars = Math.max(0, Math.min(5, top - first + 1)), locked = stars === 0;
+      const isCur = Math.floor((cur % 100) / 5) === s && Math.floor(cur / 100) === lap;
+      const card = el('div', 'oc' + (isCur ? ' cur' : '') + (locked ? ' lock' : ''));
+      const cv = el('canvas'); cv.width = 96; cv.height = 120; card.appendChild(cv);
+      card.appendChild(el('div', '', locked ? '❔ ???' : M.OUTFITS[s]));
+      card.appendChild(el('div', 'st', '★'.repeat(stars) + '☆'.repeat(5 - stars)));
+      card.appendChild(el('small', '', `${first + 1}~${first + 5}회차`));
+      paintOutfit(cv, locked ? first : first + stars - 1, 1, locked);
+      if (!locked) card.onclick = () => { lookPreview = first + stars - 1 === cur ? null : first + stars - 1; Sfx.play('click'); rerender(); $('panel').scrollTop = 0; };
+      map.appendChild(card);
+    }
+    body.appendChild(map);
+    body.appendChild(el('div', 'msg', '100회차 뒤에는 같은 복장이 색만 바뀌어 다시 나와요 (1000회차까지)'));
+  }
+
   /* ---------- 선행: 칭호 · 도감 ---------- */
   function renderDeeds() {
     const body = $('pbody'); body.innerHTML = '';
@@ -249,6 +297,8 @@
   $('bWorld').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🗺️ 월드 선택', renderWorlds); };
   $('bShop').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏪 상점', renderShop); };
   $('bChar').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🧑 캐릭터', renderChars); };
+  const openLook = () => { Sfx.unlock(); Sfx.play('click'); lookPreview = null; openPanel('👕 내 모습', renderLook); };
+  $('bLook').onclick = openLook; $('outfitPv').onclick = openLook; $('outfitPv').style.cursor = 'pointer';
   $('bDeed').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💛 선행', renderDeeds); };
   $('bQuest').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏆 과제 · 미션', renderQuests); };
   $('bBackup').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💾 백업', renderBackup); };
