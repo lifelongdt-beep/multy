@@ -73,6 +73,8 @@
     helperStay: 11,          // 도우미가 기다려 주는 시간(초)
     choiceAutoSec: 3,
     // ---- 선행(좋은 일)을 하면 아이템 ----
+    enemyLifeSec: 6,         // 일반 방해 요소는 이 시간(초)이 지나면 스르르 사라진다 (화면이 붐비지 않게). 보스·구조 대상 곁의 방해 요소는 제외
+    enemyFadeTicks: 30,      //   사라지기 전 흐려지는 시간(틱)
     deedRescueFirst: 18,     // 어려움에 처한 사람: 첫 등장(초)
     deedRescueEvery: 26,     //   이후 간격(초)
     deedRescueGuards: 6,     //   둘러싼 방해 요소 수 (모두 물리치면 "고마워!" + 아이템 카드)
@@ -314,7 +316,7 @@
     /** 레벨을 올리고 고를 카드 3장을 뽑는다 */
     _rollLevel() {
       const p = this.player;
-      p.level += 1; p.xp -= p.need; p.need = Math.round((4 + p.level * 2.8) * 0.62);   // 짧은 판에서도 비슷하게 성장
+      p.level += 1; p.xp -= p.need; p.need = Math.round((4 + p.level * 2.8) * 0.5);   // 짧은 판에서도 비슷하게 성장
       return this._rollPicks();
     }
     /** 아이템 카드 3장 (레벨업·선행 보상 공용) */
@@ -995,6 +997,15 @@
       for (let i = this.enemies.length - 1; i >= 0; i--) {
         const e = this.enemies[i];
         if (e.hp <= 0) { this._killEnemy(i); continue; }
+        // 오래된 방해 요소는 그냥 사라진다 (구슬 없음)
+        if (e.type !== 'boss' && !(e.guard && e.guard.state === 'wait')) {
+          e.age = (e.age || 0) + 1;
+          if (e.age >= TUNING.enemyLifeSec * TICK) {
+            this.fx.push({ x: e.x, y: e.y, t: 16, kind: 'vanish' });
+            this.enemies[i] = this.enemies[this.enemies.length - 1]; this.enemies.pop();
+            continue;
+          }
+        }
         if (e.flash > 0) e.flash -= 1;
         if (e.ocd > 0) e.ocd -= 1;
         const bt = e.def;

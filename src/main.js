@@ -95,15 +95,9 @@
   let autoFlash = [];
   let bubbles = [];     // 고마움 말풍선·하트 {text, x, y, t, max, small}
   let warmFx = [];      // 선행 순간 퍼지는 따뜻한 빛 {x, y, r, t}
-  let town = null;      // 선행이 쌓일수록 밝아지는 마을 (꽃·불빛) — 판 시작 때 한 번 그려 둔다
   const THANKS = ['고마워!', '덕분이야 💛', '정말 고마워요', '너 최고야!', '살았다~', '고마워, 친구야', '복 받을 거야', '힘이 났어!'];
   const VISIT = ['지난번엔 고마웠어!', '은혜 갚으러 왔어 💛', '이거 받아!', '또 만났네!'];
   function thanks(x, y, list) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: 0, max: 80 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
-  /** 마을 밝히기: 선행 점수만큼 화면이 아주 살짝 따뜻한 색이 된다 (장식은 넣지 않음 — 화면이 산만해지지 않게) */
-  function makeTown(worldId, score) {
-    const tint = Math.min(0.06, score / 4000);
-    return tint > 0.004 ? { tint } : null;
-  }
   let headFlash = [];   // 새로 얻은 아이템: 주인공 머리 위에서 잠깐 반짝 {icon, t}
   // 보스 극복 연출: 슬로모션 → 부풀며 빛남 → 폭발·충격파·색종이 → 화면 번쩍
   let bossFx = null, slowmo = 0, whiteFlash = 0;
@@ -297,7 +291,6 @@
       clearedEchoes = syncEchoes(GameUI.worldId());
       sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId(), cycle: GameUI.cycle(), visitor: GameUI.takeVisitor() });
     }
-    town = makeTown(sim.world.id, tutorial ? 0 : GameUI.deedScore());
     playerEmoji = GameUI.emoji();
     if (window.Art) Art.setOutfit(GameUI.cycle());   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
@@ -588,7 +581,6 @@
     }
     if (!sim) return;
     const now = performance.now();
-    if (town) { ctx.fillStyle = `rgba(255,210,160,${town.tint})`; ctx.fillRect(0, 0, W, H); }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
     for (const g of sim.gems) {
@@ -661,7 +653,9 @@
     drawDeeds(useArt);
 
     // 적
+    const lifeT = EchoSim.TUNING.enemyLifeSec * TICK, fadeT = EchoSim.TUNING.enemyFadeTicks;
     for (const e of sim.enemies) {
+      ctx.globalAlpha = e.age > lifeT - fadeT ? Math.max(0.1, (lifeT - e.age) / fadeT) : 1;   // 곧 사라질 방해 요소는 흐려진다
       if (useArt && Art.hasEnemy(e)) Art.drawEnemy(ctx, e, now, sim.player.x);
       else {
       if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
@@ -676,6 +670,7 @@
         ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText(`${e.label} · ${e.phase}/3`, W / 2, 63);
       }
     }
+    ctx.globalAlpha = 1;
 
     // 탄환 / 형광펜 / 적 탄환
     if (useArt) Art.drawParticles(ctx);
