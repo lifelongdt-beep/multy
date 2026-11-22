@@ -389,3 +389,15 @@ test('기본 강화: 회차마다 비싸지고, 키울 수 있는 강화는 최�
   assert.strictEqual(M.sanitize({ cycle: 0, shop: { hp: 12 } }).shop.hp, 5);
   assert.strictEqual(M.sanitize({ cycle: 3, shop: { hp: 12 } }).shop.hp, 12);
 });
+
+test('복장 고르기: 얻은 복장(열린 회차까지)만 입을 수 있고, 저장·자동 복귀된다', () => {
+  const s = M.defaultSave(); s.cycle = 7; s.maxCycle = 12;
+  assert.strictEqual(M.outfitCycle(s), 7, '기본은 지금 회차 복장');
+  assert.strictEqual(M.pickOutfit(s, 13), false, '안 얻은 복장은 못 입음');
+  assert.strictEqual(M.pickOutfit(s, 11), true);
+  assert.strictEqual(M.outfitCycle(s), 11);
+  assert.strictEqual(M.sanitize(JSON.parse(JSON.stringify(s))).outfitPick, 11, '저장 후에도 유지');
+  assert.strictEqual(M.sanitize({ cycle: 2, maxCycle: 3, outfitPick: 50 }).outfitPick, null, '잘못된 값은 무시');
+  M.pickOutfit(s, null);
+  assert.strictEqual(M.outfitCycle(s), 7, '자동으로 돌아감');
+});

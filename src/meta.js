@@ -40,6 +40,10 @@
   /** 최대 레벨: 체력·공격력·재생·에코처럼 계속 키울 수 있는 강화는 회차마다 +5 */
   function shopMax(save, id) { const it = SHOP_BY_ID[id]; return it.grow ? it.max * (Math.min(9999, topCycle(save)) + 1) : it.max; }
   /** 지금까지 열린 가장 높은 회차 (장비·강화의 최대 레벨과 가격은 이 기준: 낮은 회차로 돌아가도 그대로) */
+  /** 입고 있는 복장의 회차: 골라 입은 복장이 있으면 그것, 아니면 지금 회차 복장 */
+  function outfitCycle(save) { const p = save.outfitPick; return isNum(p) && p >= 0 && p <= topCycle(save) ? p : (save.cycle || 0); }
+  /** 얻은 복장 중 하나 입기 (null이면 회차 복장 자동) */
+  function pickOutfit(save, c) { if (c === null) { save.outfitPick = null; return true; } c = Math.floor(c); if (!(c >= 0 && c <= topCycle(save))) return false; save.outfitPick = c; return true; }
   function topCycle(save) { return Math.max(save.cycle || 0, save.maxCycle || 0); }
 
   /* ---------- 월드 매점 장비 ----------
@@ -152,6 +156,7 @@
       gear: {},                                   // 월드 매점 장비 'world:atk|def' -> level
       cycle: 0,                                   // 지금 플레이하는 회차(0=1회차). 월드 메뉴에서 열린 회차 중 고를 수 있다
       maxCycle: 0,                                // 열린 가장 높은 회차. 12개 월드를 모두 극복하면 +1
+      outfitPick: null,                           // 골라 입은 복장(그 복장을 얻은 회차 번호). null = 지금 회차 복장 자동
       deeds: { people: 0, escorts: 0, spots: 0, book: {}, visitor: null },   // 선행 기록: 도운 사람 · 지켜 준 친구 · 작은 선행 · 도감('world:kind' -> 횟수) · 다음 판에 찾아올 사람
     };
   }
@@ -212,6 +217,7 @@
     }
     if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(9999, Math.floor(raw.cycle));
     d.maxCycle = Math.max(d.cycle, isNum(raw.maxCycle) && raw.maxCycle >= 0 ? Math.min(9999, Math.floor(raw.maxCycle)) : 0);
+    if (isNum(raw.outfitPick) && raw.outfitPick >= 0 && raw.outfitPick <= d.maxCycle) d.outfitPick = Math.floor(raw.outfitPick);
     if (raw.gear && typeof raw.gear === 'object') {
       const max = Worlds.gearMaxLevel(d.maxCycle);
       for (const g of GEAR_ITEMS) { const lv = raw.gear[g.id]; if (isNum(lv) && lv > 0) d.gear[g.id] = Math.min(max, Math.floor(lv)); }
@@ -539,7 +545,7 @@
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopMax, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
-    OUTFITS: Worlds.OUTFITS, topCycle, selectCycle, deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
+    OUTFITS: Worlds.OUTFITS, outfitCycle, pickOutfit, topCycle, selectCycle, deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

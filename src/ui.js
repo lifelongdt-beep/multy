@@ -24,10 +24,10 @@
   /** 시작 화면: 이번 회차 복장 미리보기 + 이름 (회차마다 장식이 늘고, 5회차마다 새 복장) */
   function drawOutfit() {
     const cv = $('outfitPv'); if (!cv || !window.Art || !window.EchoWorlds) return;
-    const of = EchoWorlds.outfitOf(save.cycle);
+    const of = EchoWorlds.outfitOf(M.outfitCycle(save));
     const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
     const emo = (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji;
-    c.setTransform(2, 0, 0, 2, 0, 0); Art.drawKidPreview(c, 28, 38, emo, save.cycle, 1.15);
+    c.setTransform(2, 0, 0, 2, 0, 0); Art.drawKidPreview(c, 28, 38, emo, M.outfitCycle(save), 1.15);
     $('outfitName').textContent = `👕 ${of.name} ${'★'.repeat(of.stars)}${of.variant ? ` · 색 ${of.variant + 1}` : ''}`;
     const t = M.titleOf(M.deedScore(save)).title;
     $('titleLine').textContent = M.deedScore(save) > 0 ? `${t.icon} ${t.name}` : '';
@@ -46,17 +46,28 @@
   let lookPreview = null;   // 지도에서 눌러 본 회차 (없으면 지금 회차)
   function renderLook() {
     const body = $('pbody'); body.innerHTML = '';
-    const top = M.topCycle(save), cur = save.cycle, show = lookPreview === null ? cur : lookPreview;
+    const top = M.topCycle(save), cur = M.outfitCycle(save), show = lookPreview === null ? cur : lookPreview;
     const of = EchoWorlds.outfitOf(show), ch = M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student;
     // 1) 지금 내 캐릭터 크게
     const box = el('div', 'look');
     const big = el('canvas'); big.width = 320; big.height = 400; box.appendChild(big);
     box.appendChild(el('div', 'ln', `👕 ${of.name} ${'★'.repeat(of.stars)}`));
     const t = M.titleOf(M.deedScore(save)).title;
-    box.appendChild(el('small', '', `${ch.emoji} ${ch.name} · 🔁 ${show + 1}회차${of.variant ? ` · 🎨 색 ${of.variant + 1}` : ''}${M.deedScore(save) > 0 ? ` · ${t.icon} ${t.name}` : ''}`));
+    box.appendChild(el('small', '', `${ch.emoji} ${ch.name}${of.variant ? ` · 🎨 색 ${of.variant + 1}` : ''}${M.deedScore(save) > 0 ? ` · ${t.icon} ${t.name}` : ''}`));
     if (show !== cur) {
       box.appendChild(el('small', '', '👀 미리보기 중'));
-      const back = el('button', 'sub', '↩ 지금 내 모습'); back.onclick = () => { lookPreview = null; Sfx.play('click'); rerender(); }; box.appendChild(back);
+      const row = el('div', 'row');
+      const wear = el('button', '', '👕 이 옷 입기'); wear.style.minWidth = '0'; wear.style.padding = '8px 14px'; wear.style.fontSize = '14px';
+      wear.onclick = () => { M.pickOutfit(save, show); lookPreview = null; Sfx.play('levelup'); commit(); rerender(); };
+      const back = el('button', 'sub', '↩ 돌아가기'); back.onclick = () => { lookPreview = null; Sfx.play('click'); rerender(); };
+      row.append(wear, back); box.appendChild(row);
+    } else {
+      box.appendChild(el('small', '', save.outfitPick === null ? '✅ 입는 중 · 회차 복장 자동' : '✅ 입는 중 · 직접 고른 복장'));
+      if (save.outfitPick !== null) {
+        const auto = el('button', 'sub', '🔁 회차 복장으로 (자동)');
+        auto.onclick = () => { M.pickOutfit(save, null); Sfx.play('click'); commit(); rerender(); };
+        box.appendChild(auto);
+      }
     }
     body.appendChild(box);
     paintOutfit(big, show, 1.3, false);
@@ -318,6 +329,8 @@
     /** 지난 판에 도와준 사람이 이번 판에 찾아온다 (한 번만) */
     takeVisitor() { const v = M.takeVisitor(save); if (v) commit(); return v; },
     cycle() { return save.cycle; },
+    /** 입고 있는 복장(회차 번호) */
+    outfitCycle() { return M.outfitCycle(save); },
     /** 회차 고르기 (결과 화면의 "다음 회차로" 버튼 등) */
     selectCycle(c) { const ok = M.selectCycle(save, c); if (ok) { if (window.GameEchoes && GameEchoes.world() !== save.worlds.selected) GameEchoes.reset(save.worlds.selected); commit(); } return ok; },
     /** 시작하려는 월드에 장비가 모자라면 {atk, def} 부족분, 충분하면 null */
