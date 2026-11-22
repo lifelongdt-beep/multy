@@ -158,7 +158,7 @@ test('지하철 규칙: 열차가 주기적으로 등장하고 보스전 직전�
   }
   const school = new Sim({ seed: 5, events: true, world: 'school' });
   for (let i = 0; i < 3000; i++) { school.player.hp = 1e9; if (school.choices) school.choose(school.choices[0].id); school.step({ dx: 0, dy: 0 }); }
-  assert.strictEqual(school.hazards.length, 0, '학교에는 열차 없음');
+  assert.strictEqual(school.hazards.filter((h) => h.kind !== 'drop').length, 0, '학교에는 열차 없음 (떨어지는 공만)');
 });
 
 test('회사 규칙: 적을 잡으면 커피가 나오고 먹으면 체력이 회복된다', () => {
@@ -495,12 +495,12 @@ test('필요 에코 수: 에코가 그 수만큼 있어야 목표 시간에 잡�
       return s.enemies[0].maxhp / s._firepower();
     };
     const atNeed = killTime(need);
-    assert.ok(Math.abs(atNeed / def.fightSec - 1) < 1e-9, `${id}: 에코 ${need}명이면 정확히 ${def.fightSec}초 (실제 ${atNeed.toFixed(2)}초)`);
+    assert.ok(Math.abs(atNeed / (def.fightSec * TUNING.bossHpMul) - 1) < 1e-9, `${id}: 에코 ${need}명이면 정확히 ${(def.fightSec * TUNING.bossHpMul)}초 (실제 ${atNeed.toFixed(2)}초)`);
     // 필요 에코가 적은 앞 월드(학교 2명 등)는 1명 부족해도 조금만 길어진다. 많이 필요한 월드는 1명이면 몇 배로 오래 걸림
-    if (need >= 5) assert.ok(killTime(1) > def.fightSec * 3, `${id}: 에코 1명이면 ${killTime(1).toFixed(0)}초 (목표의 3배 이상)`);
-    else assert.ok(killTime(0) > def.fightSec * 1.4, `${id}: 에코 없이 ${killTime(0).toFixed(0)}초 (목표보다 확실히 김)`);
-    assert.ok(killTime(need - 2) > def.fightSec * 1.15, `${id}: 에코 ${need - 2}명이면 눈에 띄게 오래 걸림`);
-    assert.ok(killTime(E.MAX_ECHOES) < def.fightSec * 0.95 || need === E.MAX_ECHOES, `${id}: 에코가 가득이면 더 수월`);
+    if (need >= 5) assert.ok(killTime(1) > (def.fightSec * TUNING.bossHpMul) * 3, `${id}: 에코 1명이면 ${killTime(1).toFixed(0)}초 (목표의 3배 이상)`);
+    else assert.ok(killTime(0) > (def.fightSec * TUNING.bossHpMul) * 1.4, `${id}: 에코 없이 ${killTime(0).toFixed(0)}초 (목표보다 확실히 김)`);
+    assert.ok(killTime(need - 2) > (def.fightSec * TUNING.bossHpMul) * 1.15, `${id}: 에코 ${need - 2}명이면 눈에 띄게 오래 걸림`);
+    assert.ok(killTime(E.MAX_ECHOES) < (def.fightSec * TUNING.bossHpMul) * 0.95 || need === E.MAX_ECHOES, `${id}: 에코가 가득이면 더 수월`);
     assert.ok(killTime(0) > killTime(1) && killTime(1) > killTime(need), '에코가 많을수록 빨리 잡힘');
   }
 });
@@ -704,4 +704,30 @@ test('월드마다 큰 도전이 여러 종류: 1회차도 같은 판 안에서 
   const pool = Sim.bossPool();
   assert.ok(pool.length >= 39, `전체 큰 도전 ${pool.length}종`);
   assert.strictEqual(new Set(pool.map((b) => b.name)).size, pool.length, '이름이 겹치지 않음');
+});
+
+test('모든 월드에 피해야 하는 위험 미션이 있다 (가로로 지나가는 것 또는 떨어지는 것)', () => {
+  for (const id of ORDER) { const r = WORLDS[id].rules; assert.ok(r.trains || r.drops, `${id}: 위험 미션 없음`); }
+});
+
+test('떨어지는 물건: 빨간 원 경고 동안은 안전하고, 떨어지면 범위 안에서 피해 · 방해 요소도 사라진다', () => {
+  const s = new Sim({ seed: 3, events: true, world: 'office' });
+  s.hazards.push({ kind: 'drop', x: s.player.x, y: s.player.y, r: TUNING.dropR, state: 'warn', t: 0, warn: 30 });
+  s._make(Object.keys(WORLDS.office.enemies)[0], s.player.x + 10, s.player.y);
+  const e = s.enemies[s.enemies.length - 1]; e.speed = 0; e.dmg = 0;
+  const hp0 = s.player.hp;
+  for (let i = 0; i < 29; i++) { s.player.inv = 0; s.step({ dx: 0, dy: 0 }); }
+  assert.ok(s.player.hp >= hp0 - 30, '경고 중에는 낙하 피해 없음');
+  const before = s.player.hp; s.player.inv = 0; s.step({ dx: 0, dy: 0 }); s.step({ dx: 0, dy: 0 });
+  assert.ok(s.player.hp < before, '떨어지면 피해');
+  assert.ok(s.drainEvents().some((v) => v.k === 'dropHit'));
+  assert.ok(e.hp <= 0 || s.enemies.indexOf(e) < 0, '방해 요소도 사라짐');
+});
+
+test('열차가 출발할 때 지나가는 소리용 이벤트(방향 포함)가 나온다', () => {
+  const s = new Sim({ seed: 3, events: true, world: 'subway' });
+  s._spawnTrain(100, -1, 10);
+  let pass = null;
+  for (let i = 0; i < 20 && !pass; i++) { s.step({ dx: 0, dy: 0 }); pass = s.drainEvents().find((v) => v.k === 'trainPass'); }
+  assert.ok(pass); assert.strictEqual(pass.dir, -1);
 });

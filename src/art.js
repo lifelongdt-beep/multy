@@ -566,6 +566,15 @@
 
     /** 질주하는 위험물: 🚆 열차(지하철·보스) · 🛒 수하물 카트(공항) · 💡 조명 장치(꿈의 무대). 앞쪽이 진행 방향(dir) */
     drawHazard(ctx, h, kind, now) {
+      if (kind !== '🚆' && kind !== '🛒' && kind !== '💡') {   // 책수레·공·파도·이동 침대: 큰 그림 + 속도선
+        ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 2;
+        for (let i = -1; i <= 1; i++) { const bx = h.x - h.dir * (60 + (now / 8 + i * 17) % 30); ctx.beginPath(); ctx.moveTo(bx, h.y + i * 12); ctx.lineTo(bx - h.dir * 26, h.y + i * 12); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(h.x, h.y + 20, 60, 6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '40px sans-serif';
+        const spin = kind === '🏐' ? now / 60 * h.dir : 0;
+        for (let k = -1; k <= 1; k++) { ctx.save(); ctx.translate(h.x + k * 42, h.y + Math.sin(now / 90 + k) * 2); if (spin) ctx.rotate(spin); ctx.fillText(kind, 0, 0); ctx.restore(); }
+        return;
+      }
       const key = kind === '🛒' ? 'cart' : kind === '💡' ? 'light' : 'train';
       const c = sprite('hz:' + key, 168, 56, (g) => HAZARD[key](g));
       const shake = Math.sin(now / 25) * 0.8;

@@ -154,6 +154,9 @@
           else if (ev.what === 'allyBye') bubbles.push({ text: '안녕~ 👋', x: ev.x, y: ev.y - 30, t: 0, max: 60, small: true });
           else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') Sfx.play('heal');
           break;
+        case 'trainPass': { const em = (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'; Sfx.pass(ev.dir, em === '🚆' || em === '🛒' || em === '🛏️'); break; }
+        case 'dropWarn': Sfx.play('dropWarn'); break;
+        case 'dropHit': Sfx.play('dropHit'); shake = Math.max(shake, 4); if (artOn()) Art.burst(ev.x, ev.y, '#d7c7a5', 8, false); break;
         case 'train': Sfx.play('train'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': if (tutorial) banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
         case 'gotItem': headFlash.push({ icon: ev.icon, t: 50 }); if (headFlash.length > 3) headFlash.shift(); break;
@@ -594,6 +597,23 @@
     }
     // 열차 (경고 줄 → 질주)
     for (const h of sim.hazards) {
+      if (h.kind === 'drop') {   // 떨어지는 물건: 빨간 원(점점 진해짐) + 위에서 떨어지는 그림자·물건 → 쿵
+        const em = (sim.world.rules.drops && sim.world.rules.drops.emoji) || '📦';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        if (h.state === 'warn') {
+          const k = h.t / h.warn;
+          ctx.fillStyle = `rgba(255,60,80,${0.12 + 0.25 * k})`; ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, 7); ctx.fill();
+          ctx.strokeStyle = 'rgba(255,170,170,.9)'; ctx.lineWidth = 2; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+          ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(h.x, h.y, h.r * (1 - k) + 2, 0, 7); ctx.stroke();   // 좁혀 오는 원 = 남은 시간
+          ctx.fillStyle = `rgba(0,0,0,${0.15 + 0.3 * k})`; ctx.beginPath(); ctx.ellipse(h.x, h.y + 4, 6 + 12 * k, 3 + 5 * k, 0, 0, 7); ctx.fill();
+          if (k > 0.45) { const fall = (1 - k) / 0.55; emoji(em, h.x, h.y - fall * 160, 26); }
+        } else {
+          const k = h.t / 18;
+          ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffd7a0'; ctx.lineWidth = 4 * (1 - k) + 1; ctx.beginPath(); ctx.arc(h.x, h.y, h.r * (0.6 + 0.6 * k), 0, 7); ctx.stroke();
+          ctx.globalAlpha = Math.min(1, 1.6 - k); emoji(em, h.x, h.y, 26); ctx.globalAlpha = 1;
+        }
+        continue;
+      }
       if (h.state === 'warn') {
         const k = h.t / h.warn, blink = 0.35 + 0.3 * Math.sin(h.t * 0.5);
         ctx.fillStyle = `rgba(255,60,80,${blink * (0.5 + 0.5 * k)})`; ctx.fillRect(0, h.y - h.h / 2, W, h.h);

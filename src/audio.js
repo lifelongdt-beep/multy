@@ -138,6 +138,39 @@
     s.connect(g); g.connect(master); s.start();
   }
 
+  /** 열차(카트·파도 등)가 왼쪽↔오른쪽으로 지나가는 소리: 바람 소리(필터 걸린 잡음)가 다가왔다 멀어지며 좌우로 이동 + 덜컹덜컹 + 낮은 굉음.
+   *  dir: 1 = 왼→오, -1 = 오→왼. heavy: 열차처럼 무거운 것(덜컹 소리) */
+  function passSound(dir, heavy) {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime, dur = 1.25;
+    const pan = c.createStereoPanner ? c.createStereoPanner() : null;
+    if (pan) { pan.pan.setValueAtTime(-0.9 * dir, t); pan.pan.linearRampToValueAtTime(0.9 * dir, t + dur); pan.connect(master); }
+    const out = pan || master;
+    // 바람: 잡음 → 대역 필터(가까워질수록 높아졌다 낮아짐 = 도플러 느낌)
+    const n = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(); src.buffer = buf;
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.9;
+    bp.frequency.setValueAtTime(380, t); bp.frequency.exponentialRampToValueAtTime(1300, t + dur * 0.45); bp.frequency.exponentialRampToValueAtTime(260, t + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(heavy ? 0.22 : 0.16, t + dur * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp); bp.connect(g); g.connect(out); src.start(t); src.stop(t + dur + 0.02);
+    if (!heavy) return;
+    // 낮은 굉음
+    const o = c.createOscillator(), og = c.createGain(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(58, t); o.frequency.linearRampToValueAtTime(70, t + dur * 0.45); o.frequency.linearRampToValueAtTime(48, t + dur);
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 220;
+    og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.09, t + dur * 0.45); og.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(og); og.connect(out); o.start(t); o.stop(t + dur + 0.02);
+    // 덜컹덜컹 (바퀴가 이음매를 지나는 소리)
+    for (let k = 0; k < 6; k++) {
+      const tk = t + 0.12 + k * 0.17 + (k % 2) * 0.05, near = 1 - Math.abs(k - 2.5) / 3;
+      const ko = c.createOscillator(), kg = c.createGain(); ko.type = 'square';
+      ko.frequency.setValueAtTime(140, tk); ko.frequency.exponentialRampToValueAtTime(70, tk + 0.05);
+      kg.gain.setValueAtTime(0.05 * (0.4 + near), tk); kg.gain.exponentialRampToValueAtTime(0.0001, tk + 0.06);
+      ko.connect(kg); kg.connect(out); ko.start(tk); ko.stop(tk + 0.08);
+    }
+  }
+
   const DEF = {
     shoot:    { gap: 110, fn: () => tone(700, 420, 0.05, 'square', 0.025) },
     hit:      { gap: 60,  fn: () => tone(220, 130, 0.04, 'sawtooth', 0.02) },
@@ -154,6 +187,8 @@
     train:    { gap: 400, fn: () => { tone(220, 220, 0.25, 'sawtooth', 0.09); tone(277, 277, 0.25, 'sawtooth', 0.07); tone(220, 200, 0.25, 'sawtooth', 0.09, 0.3); tone(277, 250, 0.25, 'sawtooth', 0.07, 0.3); } },
     bossDown: { gap: 300, fn: bossDownSound },
     click:    { gap: 0,   fn: () => tone(500, 700, 0.06, 'triangle', 0.05) },
+    dropWarn: { gap: 300, fn: () => { tone(880, 660, 0.12, 'sine', 0.04); tone(880, 660, 0.12, 'sine', 0.04, 0.16); } },
+    dropHit:  { gap: 90,  fn: () => { tone(160, 50, 0.22, 'sine', 0.16); noise(0.12, 0.05); } },
   };
 
   root.Sfx = {
@@ -165,6 +200,8 @@
       last[name] = now;
       d.fn();
     },
+    /** 지나가는 소리 (열차는 무겁게, 공·파도·카트 등은 바람 소리만) */
+    pass(dir, heavy) { if (muted) return; const now = (root.performance || Date).now(); if (last.pass && now - last.pass < 250) return; last.pass = now; passSound(dir >= 0 ? 1 : -1, !!heavy); },
     unlock() { ac(); },
     setMuted(m) { muted = !!m; if (root.Music) root.Music.setMuted(muted); },
     /** 배경음악(music.js)용: 같은 AudioContext와 출력 */

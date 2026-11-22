@@ -41,12 +41,17 @@
     bossAtkMul: 1.25,        // 보스전 중 받는 피해 배율 (팽팽한 승부)
     refSoloFp: 40,           // [기준값] 보스가 나올 때 "평균적인 나"의 화력 추정치 (실측)
     refEchoFp: 47,           // [기준값] 에코 1명의 화력 추정치 (실측: 에코는 피하느라 쉬지 않고 쏨)
-    bossAdaptExp: 0.85,      // 내 화력이 기준보다 세면 보스도 (비율)^0.5 만큼만 단단해짐 (절반만 반영)
-    bossAdaptMin: 0.7, bossAdaptMax: 2.5,   // 상점·아이템으로 강해져도 보스가 거의 따라온다 → 큰 도전은 에코가 있어야 넘는다
+    bossAdaptExp: 0.9,       // 내 화력이 기준보다 세면 보스도 (비율)^0.9 만큼 단단해짐 (아이템만으로는 못 넘게)
+    bossAdaptMin: 0.7, bossAdaptMax: 4,     // 상점·아이템으로 강해져도 보스가 거의 따라온다 → 큰 도전은 에코가 있어야 넘는다
     bossDmgExp: 0.8,         // 보스전 피해 배율 = (최대체력/기본체력)^0.8 (체력이 높을수록 한 방이 더 아프다)
     baseHp: 110,             // 기본 최대 체력
     trainMinDmg: 40,         // 열차에 치이면 최소 이만큼, 또는 최대 체력의 trainHpFrac 중 큰 쪽 (치명적!)
     trainHpFrac: 0.4,
+    dropMinDmg: 22,          // 떨어지는 물건(낙하물)에 맞으면 최소 이만큼, 또는 최대 체력의 dropHpFrac 중 큰 쪽
+    dropHpFrac: 0.2,
+    dropR: 34,               //   낙하 범위 반지름
+    dropWarn: 66,            //   빨간 원 경고 시간(틱)
+    bossHpMul: 1.3,          // 큰 도전(보스) 체력 추가 배율
     boonHealFrac: 0.5,       // 도우미의 "체력 회복" 카드: 최대 체력의 50%
     coffeeHeal: 12,
     bossRegenMul: 0.4,       // 보스전 중 체력 재생 배율
@@ -77,7 +82,7 @@
     enemyFadeTicks: 30,      //   사라지기 전 흐려지는 시간(틱)
     deedRescueFirst: 18,     // 어려움에 처한 사람: 첫 등장(초)
     deedRescueEvery: 26,     //   이후 간격(초)
-    deedRescueGuards: 6,     //   둘러싼 방해 요소 수 (모두 물리치면 "고마워!" + 아이템 카드)
+    deedRescueGuards: 4,     //   둘러싼 방해 요소 수 (모두 물리치면 "고마워!" + 아이템 카드)
     deedRescueStay: 15,      //   기다려 주는 시간(초) — 못 도와줘도 벌은 없음
     deedEscortFirst: 34,     // 친구 지켜주기: 첫 등장(초)
     deedEscortEvery: 34,     //   이후 간격(초)
@@ -316,7 +321,7 @@
     /** 레벨을 올리고 고를 카드 3장을 뽑는다 */
     _rollLevel() {
       const p = this.player;
-      p.level += 1; p.xp -= p.need; p.need = Math.round((4 + p.level * 2.8) * 0.5);   // 짧은 판에서도 비슷하게 성장
+      p.level += 1; p.xp -= p.need; p.need = Math.max(2, Math.round((4 + p.level * 2.8) * 0.36));   // 짧은 판에서도 비슷하게 성장
       return this._rollPicks();
     }
     /** 아이템 카드 3장 (레벨업·선행 보상 공용) */
@@ -415,7 +420,7 @@
       const base = (refSolo + def.needEchoes * refEcho) * def.fightSec * (1 + T.bossLaterFight * idx);
       const solo = this._fp(this.player.stats, this.bonus, 1);
       const adapt = Math.min(T.bossAdaptMax, Math.max(T.bossAdaptMin, Math.pow(solo / refSolo, T.bossAdaptExp)));
-      return Math.max(def.hp * this.mul.hp * T.bossFloorMul * (1 + T.bossLaterFight * idx), base * adapt);
+      return T.bossHpMul * Math.max(def.hp * this.mul.hp * T.bossFloorMul * (1 + T.bossLaterFight * idx), base * adapt);
     }
 
     _make(type, x, y, idx) {
@@ -490,6 +495,17 @@
           this.bossIdx += 1; this.bossAlive = true; this.bossSpawned = true;
           this._ev({ k: 'boss', text: this._bossAt(this.bossIdx - 1).startText + (this.bossCount > 1 ? ` (${this.bossIdx}/${this.bossCount})` : '') });
         }
+      }
+      // 월드 고유 규칙: 떨어지는 물건 (보스 등장 전까지) — 내 근처에 빨간 원이 생기고 잠시 뒤 떨어진다
+      const dr = rules.drops;
+      if (dr && t >= dr.first * TICK && t < w.boss.times[0] * TICK - 120 && (t - dr.first * TICK) % (dr.every * TICK) === 0) {
+        const p = this.player;
+        for (let k = 0; k < dr.n; k++) {
+          const a = this.rng() * Math.PI * 2, d = k === 0 ? this.rng() * 30 : 50 + this.rng() * 90;
+          this.hazards.push({ kind: 'drop', x: Math.max(30, Math.min(W - 30, p.x + Math.cos(a) * d)), y: Math.max(70, Math.min(H - 40, p.y + Math.sin(a) * d)), r: TUNING.dropR, state: 'warn', t: 0, warn: TUNING.dropWarn + k * 10 });
+        }
+        if (dr.text && this.tick < (dr.first + 1) * TICK) this._ev({ k: 'banner', text: dr.text, hint: true });
+        this._ev({ k: 'dropWarn' });
       }
       // 월드 고유 규칙: 지하철 열차 (보스 등장 전까지)
       const tr = rules.trains;
@@ -601,6 +617,7 @@
     }
 
     _summon(e, type, n) {
+      n = Math.max(1, Math.ceil(n * 0.5));   // 화면이 붐비지 않게 소환 수는 절반
       for (let i = 0; i < n; i++) {
         if (this.enemies.length >= MAX_ENEMIES) break;
         const a = (i / n) * Math.PI * 2;
@@ -853,8 +870,17 @@
       for (let i = this.hazards.length - 1; i >= 0; i--) {
         const h = this.hazards[i];
         h.t += 1;
+        if (h.kind === 'drop') {   // 낙하물: 빨간 원 경고 → 쿵! (범위 안 피해, 방해 요소도 사라짐) → 잠깐 흔적
+          if (h.state === 'warn' && h.t >= h.warn) {
+            h.state = 'boom'; h.t = 0;
+            if (p.inv === 0 && Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r) this._hurtPlayer(Math.max(TUNING.dropMinDmg, p.maxhp * TUNING.dropHpFrac), true);
+            for (const e of this.enemies) if (e.def.ai !== 'boss' && e.hp > 0 && Math.hypot(e.x - h.x, e.y - h.y) < h.r + e.r) e.hp = 0;
+            this._ev({ k: 'dropHit', x: h.x, y: h.y });
+          } else if (h.state === 'boom' && h.t >= 18) { this.hazards[i] = this.hazards[this.hazards.length - 1]; this.hazards.pop(); }
+          continue;
+        }
         if (h.state === 'warn') {
-          if (h.t >= h.warn) { h.state = 'go'; }
+          if (h.t >= h.warn) { h.state = 'go'; this._ev({ k: 'trainPass', dir: h.dir }); }
           continue;
         }
         h.x += h.dir * h.speed;

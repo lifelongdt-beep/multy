@@ -38,7 +38,7 @@
       ruleText: '특별한 규칙 없음 · 숙제는 미리미리! · 담임 선생님께 도움을 청할 수 있어요',
       theme: { bg: '#161a2e', grid: 'rgba(255,255,255,.04)', deco: 'none' },
       // 첫 월드는 쉽게: 방해 요소가 덜 아프고(atkMul), 조금 덜 단단하고, 덜 몰려온다. 큰 도전도 에코 2명이면 넘을 수 있게
-      rules: { hpMul: 0.85, xpMul: 1.0, speedMul: 0.95, spawnMul: 0.85, atkMul: 0.6, rageMul: 0.8 },
+      rules: { hpMul: 0.85, xpMul: 1.0, speedMul: 0.95, spawnMul: 0.85, atkMul: 0.6, rageMul: 0.8, drops: { first: 22, every: 11, n: 1, emoji: '🏀', text: '🏀 공이 떨어져요! 빨간 원을 피하세요' } },
       enemies: {
         hw:     { name: '미루기',   emoji: '🐌', hp: 3,  speed: 0.7,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         test:   { name: '걱정',     emoji: '😰', hp: 2,  speed: 1.1,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -76,7 +76,7 @@
       ruleText: '빡센 진도: 경험치 +30% · 방해 요소가 더 단단하고 많이 나옴 · 원거리 적 多',
       unlock: { world: 'school' },
       theme: { bg: '#1d1530', grid: 'rgba(190,140,255,.07)', deco: 'ruled' },
-      rules: { hpMul: 1.05, xpMul: 1.3, speedMul: 1.0, spawnMul: 1.0, atkMul: 0.65 },
+      rules: { hpMul: 1.05, xpMul: 1.3, speedMul: 1.0, spawnMul: 1.0, atkMul: 0.65, trains: { first: 30, every: 40, emoji: '📚', text: '📚 책수레 질주! 빨간 줄을 피하세요' } },
       enemies: {
         book:  { name: '조급함',            emoji: '😖', hp: 4,  speed: 0.75, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         quiz:  { name: '불안',              emoji: '😟', hp: 3,  speed: 1.2,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -114,7 +114,7 @@
       ruleText: '야근 커피: 방해 요소를 잡으면 가끔 ☕ 떨어짐(체력 +12) · 일이 몰려 방해가 많이 나옴 · 방해 요소가 더 단단함',
       unlock: { world: 'academy' },
       theme: { bg: '#172229', grid: 'rgba(140,200,220,.07)', deco: 'tiles' },
-      rules: { hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, atkMul: 0.7 },
+      rules: { hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, atkMul: 0.7, drops: { first: 18, every: 9, n: 2, emoji: '📦', text: '📦 택배 상자가 떨어져요! 빨간 원을 피하세요' } },
       enemies: {
         doc:     { name: '스트레스',      emoji: '😫', hp: 4,  speed: 0.8,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         mail:    { name: '압박감',        emoji: '💢', hp: 2,  speed: 1.25, r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -190,7 +190,7 @@
       ruleText: '깊은 밤: 어두워서 조준 거리가 짧아짐(가까운 적만 자동 공격) · 방해 요소가 더 단단함',
       unlock: { world: 'subway' },
       theme: { bg: '#0f1224', grid: 'rgba(160,170,255,.05)', deco: 'stars' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, sight: 190, atkMul: 0.78 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, sight: 190, atkMul: 0.78, drops: { first: 16, every: 8, n: 2, emoji: '🧺', text: '🧺 빨래 바구니가 떨어져요! 빨간 원을 피하세요' } },
       enemies: {
         snack:  { name: '야식 유혹',     emoji: '🍜', hp: 5,  speed: 0.85, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         game:   { name: '게임 한 판만',  emoji: '🎮', hp: 6,  speed: 0.65, r: 9,  dmg: 8,  xp: 2, ai: 'dash', dashCd: 105 },
@@ -228,7 +228,7 @@
       ruleText: '땀 흘린 만큼: 경험치 +15% · 방해 요소가 15% 더 자주 나옴',
       unlock: { world: 'home' },
       theme: { bg: '#22161a', grid: 'rgba(255,150,150,.06)', deco: 'tiles' },
-      rules: { hpMul: 1.15, xpMul: 1.15, speedMul: 1.0, spawnMul: 1.15, atkMul: 0.8 },
+      rules: { hpMul: 1.15, xpMul: 1.15, speedMul: 1.0, spawnMul: 1.15, atkMul: 0.8, trains: { first: 24, every: 34, emoji: '🏐', text: '🏐 공이 굴러와요! 빨간 줄을 피하세요' } },
       enemies: {
         lazy:   { name: '귀찮음',     emoji: '🫠', hp: 5,  speed: 0.8,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         ache:   { name: '근육통',     emoji: '💥', hp: 9,  speed: 0.6,  r: 11, dmg: 8,  xp: 2, ai: 'chase' },
@@ -267,7 +267,7 @@
       ruleText: '조용한 집중: 경험치 +20% · 방해 요소를 잡으면 가끔 🍫(체력 +12) · 시야가 조금 좁음',
       unlock: { world: 'gym' },
       theme: { bg: '#1c1a12', grid: 'rgba(255,220,150,.06)', deco: 'ruled' },
-      rules: { hpMul: 1.15, xpMul: 1.2, speedMul: 1.0, spawnMul: 1.0, sight: 220, coffeeChance: 0.03, dropEmoji: '🍫', atkMul: 0.76 },
+      rules: { hpMul: 1.15, xpMul: 1.2, speedMul: 1.0, spawnMul: 1.0, sight: 220, coffeeChance: 0.03, dropEmoji: '🍫', atkMul: 0.76, drops: { first: 14, every: 7, n: 3, emoji: '📚', text: '📚 책이 쏟아져요! 빨간 원을 피하세요' } },
       enemies: {
         nod:    { name: '꾸벅꾸벅',      emoji: '💤', hp: 5,  speed: 0.9,  r: 9,  dmg: 6,  xp: 1, ai: 'zig' },
         tempt:  { name: '스마트폰 유혹', emoji: '📲', hp: 6,  speed: 0.7,  r: 8,  dmg: 8,  xp: 2, ai: 'dash', dashCd: 100 },
@@ -306,7 +306,7 @@
       ruleText: '바닷바람: 바람이 좌우로 번갈아 불어 캐릭터가 밀림 · 방해 요소가 더 단단함',
       unlock: { world: 'library' },
       theme: { bg: '#0f2230', grid: 'rgba(120,220,255,.06)', deco: 'waves' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.05, wind: { amp: 0.75, period: 5}, atkMul: 0.8 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.05, wind: { amp: 0.75, period: 5}, atkMul: 0.8, trains: { first: 22, every: 32, emoji: '🌊', text: '🌊 큰 파도가 밀려와요! 빨간 줄을 피하세요' } },
       enemies: {
         sun:    { name: '뙤약볕',        emoji: '☀️', hp: 6,  speed: 0.75, r: 10, dmg: 6,  xp: 1, ai: 'chase' },
         mosq:   { name: '모기',          emoji: '🦟', hp: 3,  speed: 1.25, r: 7,  dmg: 5,  xp: 1, ai: 'zig' },
@@ -382,7 +382,7 @@
       ruleText: '회복의 힘: 방해 요소를 잡으면 가끔 💊(체력 +12) · 방해 요소가 5% 더 빠름',
       unlock: { world: 'airport' },
       theme: { bg: '#162628', grid: 'rgba(160,255,230,.06)', deco: 'tiles' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.05, spawnMul: 1.05, coffeeChance: 0.05, dropEmoji: '💊', atkMul: 0.88 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.05, spawnMul: 1.05, coffeeChance: 0.05, dropEmoji: '💊', atkMul: 0.88, trains: { first: 22, every: 30, emoji: '🛏️', text: '🛏️ 이동 침대가 지나가요! 빨간 줄을 피하세요' } },
       enemies: {
         germ:   { name: '감기 기운',     emoji: '🦠', hp: 5,  speed: 0.95, r: 8,  dmg: 6,  xp: 1, ai: 'zig' },
         cough:  { name: '콜록콜록',      emoji: '🤧', hp: 7,  speed: 0.7,  r: 9,  dmg: 6,  xp: 2, ai: 'chase' },
@@ -421,7 +421,7 @@
       ruleText: '산바람 + 안개: 바람이 세게 불어 캐릭터가 밀리고, 시야가 좁아 가까운 적만 조준',
       unlock: { world: 'hospital' },
       theme: { bg: '#1a2420', grid: 'rgba(200,255,200,.05)', deco: 'diag' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, wind: { amp: 0.95, period: 4}, atkMul: 0.92, sight: 210 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, wind: { amp: 0.95, period: 4}, atkMul: 0.92, sight: 210, drops: { first: 12, every: 6, n: 3, emoji: '🪨', text: '🪨 낙석 주의! 빨간 원을 피하세요' } },
       enemies: {
         slope:  { name: '가파른 오르막',       emoji: '⛰️', hp: 16, speed: 0.45, r: 13, dmg: 9,  xp: 3, ai: 'chase' },
         rock:   { name: '굴러오는 돌',         emoji: '🪨', hp: 7,  speed: 0.7,  r: 9,  dmg: 9,  xp: 2, ai: 'dash', dashCd: 90 },
@@ -502,6 +502,9 @@
     // 큰 도전이 여러 번인 월드: 첫 보스 뒤로는 10초 간격 (앞 보스를 극복해야 다음이 나오므로 실제로는 극복 직후 연달아)
     { const n = w.boss.times.length, t0 = Math.max(26, sc(w.boss.times[0]) - 6 * (n - 1)); w.boss.times = w.boss.times.map((_, i) => t0 + i * 10); }
     w.boss.fightSec = Math.max(10, Math.round(w.boss.fightSec * 0.8));
+    if (w.rules.drops) { w.rules.drops.first = sc(w.rules.drops.first); }   // 낙하물 간격은 이미 짧은 판 기준
+    for (const wv of w.waves) { if (wv.n >= 2) wv.n -= 1; wv.interval = Math.round(wv.interval * (id === 'school' ? 1.25 : 1.55)); }   // 동시에 나오는 적 줄이기
+    for (const sw of w.swarms) sw.n = Math.max(4, Math.round(sw.n * 0.6));
     if (w.rules.trains) { w.rules.trains.first = Math.round(w.rules.trains.first * 0.45); w.rules.trains.every = Math.max(9, Math.round(w.rules.trains.every * 0.3)); }
   }
   const ORDER = ['school', 'academy', 'office', 'subway', 'home', 'gym', 'library', 'beach', 'airport', 'hospital', 'mountain', 'stage'];
