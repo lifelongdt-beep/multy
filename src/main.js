@@ -438,7 +438,7 @@
       '🏪 상점: 학점으로 기본 강화와 월드 장비를 사요. 뒤 월드일수록 장비가 더 필요해요.',
       '👕 내 캐릭터: 캐릭터를 고르고, 지금까지 얻은 복장 중에서 골라 입어요.',
       '🔁 12개 월드를 모두 넘으면 다음 회차가 열리고 새 복장 장식을 얻어요.',
-    ].forEach((t) => { const d = document.createElement('div'); d.textContent = t; d.style.marginBottom = '4px'; $('reward').appendChild(d); });
+    ].forEach((t) => { const d = document.createElement('div'); d.textContent = t; d.className = 'wide'; $('reward').appendChild(d); });
     $('cheer').textContent = `👻 ${sim.world.name}의 왕은 에코 ${sim.world.boss.needEchoes}명이 모이면 넘을 수 있어요. 시작 버튼 아래 "👻 에코 0 / ${sim.world.boss.needEchoes}명"을 확인해 보세요!`;
     $('again').textContent = '이제 진짜 시작! ▶';
     $('end').classList.remove('hidden');
@@ -498,7 +498,7 @@
       if (short) lines.push(`🧰 장비 부족: ${short.atk ? `⚔ 공격 ${short.atk}레벨 ` : ''}${short.def ? `🛡 방어 ${short.def}레벨 ` : ''}더 필요 (상점)`);
     }
     $('reward').innerHTML = '';
-    lines.forEach((t) => { const d = document.createElement('div'); d.textContent = t; $('reward').appendChild(d); });
+    lines.forEach((t) => { const d = document.createElement('div'); d.textContent = t; if (t.length > 18) d.className = 'wide'; $('reward').appendChild(d); });   // 짧은 결과는 한 줄에 2~3개, 긴 안내는 한 줄 전체
     if (sum.newAch.length || sum.missionsDone.length || sum.newWorld || sum.newCycle !== null || sum.newTitle) Sfx.play('levelup');
     $('end').classList.remove('hidden');
   }
