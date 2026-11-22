@@ -86,6 +86,7 @@
 
   /* ---------- 연출 상태 ---------- */
   let shake = 0;
+  let edgeFlash = 0;   // 무리가 몰려올 때 화면 테두리 주황 번쩍임 (본 게임은 글 대신 이것만)
   let hurtFlash = 0;   // 피격 시 화면 가장자리 붉은 번쩍임 (진동이 안 되는 기기에서도 피격을 알 수 있게)
   // 내 에너지가 깎이면 진동: 피해량이 클수록 길게 (미지원 기기는 조용히 무시)
   function vibrate(dmg) {
@@ -140,7 +141,8 @@
         case 'echoDown': Sfx.play('echoDown'); break;
         case 'heal': Sfx.play('heal'); break;
         case 'banner': if (!ev.hint || tutorial) banner = { text: ev.text, t: 150 }; break;   // 설명성 문구는 튜토리얼에서만
-        case 'boss': banner = { text: ev.text || '보스 등장!', t: 150 }; shake = 10; Sfx.play('boss'); break;
+        case 'swarm': edgeFlash = 40; Sfx.play('boss'); break;
+        case 'boss': banner = { text: ev.text || '보스 등장!', t: 90 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
         case 'helped': Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y + (Math.random() - 0.5) * 24, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
         case 'warm': warmFx.push({ x: ev.x, y: ev.y, r: ev.r, t: 0 }); break;
@@ -300,7 +302,7 @@
     playerEmoji = GameUI.emoji();
     if (window.Art) Art.setOutfit(GameUI.outfitCycle());   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = [];
+    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = [];
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -679,9 +681,10 @@
     drawDeeds(useArt);
 
     // 적
-    const lifeT = EchoSim.TUNING.enemyLifeSec * TICK, fadeT = EchoSim.TUNING.enemyFadeTicks;
+    const lifeT = EchoSim.TUNING.enemyLifeSec * TICK, fadeT = EchoSim.TUNING.enemyFadeTicks, darkWorld = !!sim.world.rules.sight;
     for (const e of sim.enemies) {
       ctx.globalAlpha = e.age > lifeT - fadeT ? Math.max(0.1, (lifeT - e.age) / fadeT) : 1;   // 곧 사라질 방해 요소는 흐려진다
+      if (darkWorld && e.type !== 'boss') { ctx.strokeStyle = 'rgba(255,120,140,.95)'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 4, 0, 7); ctx.stroke(); }   // 어두운 월드: 밝은 테두리로 잘 보이게
       if (useArt && Art.hasEnemy(e)) Art.drawEnemy(ctx, e, now, sim.player.x);
       else {
       if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
@@ -877,13 +880,17 @@
     // 배너 / 시너지 토스트
     if (banner.t > 0) {
       ctx.globalAlpha = Math.min(1, banner.t / 30);
-      ctx.textAlign = 'center'; ctx.fillStyle = /^[⚠]/.test(banner.text) ? '#ff5d73' : '#ffe58a'; fitText(banner.text, W / 2, 100, 18);
+      ctx.textAlign = 'center'; ctx.fillStyle = /^[⚠]/.test(banner.text) ? '#ff5d73' : '#ffe58a'; fitText(banner.text, W / 2, H * 0.36, 18);   // 화면 위쪽(보스 체력 막대·HUD)과 겹치지 않게 가운데 쪽에
       ctx.globalAlpha = 1;
     }
     if (toast.t > 0) {
       ctx.globalAlpha = Math.min(1, toast.t / 30);
-      ctx.textAlign = 'center'; ctx.fillStyle = '#ffd34d'; fitText(toast.text, W / 2, 130, 15);
+      ctx.textAlign = 'center'; ctx.fillStyle = '#ffd34d'; fitText(toast.text, W / 2, H * 0.36 + 28, 15);
       ctx.globalAlpha = 1;
+    }
+    if (edgeFlash > 0) {
+      ctx.globalAlpha = (edgeFlash / 40) * (0.5 + 0.5 * Math.abs(Math.sin(edgeFlash / 4)));
+      ctx.strokeStyle = '#ffa53a'; ctx.lineWidth = 10; ctx.strokeRect(5, 5, W - 10, H - 10); ctx.globalAlpha = 1;
     }
     if (hurtFlash > 0) {
       const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.62);
@@ -917,6 +924,7 @@
     if (state === 'paused') { render(); requestAnimationFrame(frame); return; }   // 멈춘 동안 연출도 멈춘다
     if (shake > 0) shake = Math.max(0, shake - 0.4);
     if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - 0.06);
+    if (edgeFlash > 0) edgeFlash -= 1;
     for (const f of floats) f.t -= 1;
     floats = floats.filter((f) => f.t > 0);
     for (const a of autoFlash) a.t -= 1;

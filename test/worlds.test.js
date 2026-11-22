@@ -408,8 +408,8 @@ const stepTo = (s, cond, max) => { for (let i = 0; i < max && !cond(); i++) { s.
 
 test('월드가 높을수록 보스가 더 여러 번 등장한다 (1, 2, 3, 4번 … 최대 4번)', () => {
   const counts = ORDER.map((id) => WORLDS[id].boss.times.length);
-  assert.deepStrictEqual(counts.slice(0, 4), [1, 2, 3, 4]);
-  for (const c of counts.slice(4)) assert.ok(c >= 3 && c <= 4, `5번째 월드부터 3~4번: ${counts}`);
+  assert.deepStrictEqual(counts.slice(0, 3), [1, 2, 3]);
+  for (const c of counts.slice(3)) assert.ok(c >= 3 && c <= 4, `4번째 월드부터 3~4번: ${counts}`);
   assert.strictEqual(counts[counts.length - 1], 4, '마지막 월드는 4번');
   for (const id of ORDER) {
     const t = WORLDS[id].boss.times;
@@ -458,11 +458,11 @@ test('학교는 보스 1번: 극복하면 바로 클리어 (숨 돌리기 없음
 });
 
 test('다음 보스일수록 더 빠르고, 짧은 판을 위해 전투는 조금씩 짧다', () => {
-  const s = new Sim({ seed: 33, events: false, world: 'subway' });
+  const s = new Sim({ seed: 33, events: false, world: 'beach' });
   s.player.hp = 1e9;
   const hp = [], sp = [];
   for (let i = 0; i < 4; i++) { s._make('boss', 100, 100, i); const b = s.enemies[s.enemies.length - 1]; hp.push(b.maxhp); sp.push(b.speed); }
-  for (let i = 1; i < 4; i++) { assert.ok(hp[i] < hp[i - 1] && hp[i] > hp[0] * 0.5, `체력 ${hp.map((x) => x | 0)}`); assert.ok(sp[i] > sp[i - 1]); }
+  for (let i = 1; i < 4; i++) { assert.ok(hp[i] < hp[i - 1] && hp[i] > hp[0] * 0.35, `체력 ${hp.map((x) => x | 0)}`); assert.ok(sp[i] > sp[i - 1]); }
   const labels = []; s._make('boss', 0, 0, 2); labels.push(s.enemies[s.enemies.length - 1].label);
   assert.ok(labels[0].includes('3/4'), labels[0]);
 });
@@ -495,12 +495,12 @@ test('필요 에코 수: 에코가 그 수만큼 있어야 목표 시간에 잡�
       return s.enemies[0].maxhp / s._firepower();
     };
     const atNeed = killTime(need);
-    assert.ok(Math.abs(atNeed / (def.fightSec * TUNING.bossHpMul) - 1) < 1e-9, `${id}: 에코 ${need}명이면 정확히 ${(def.fightSec * TUNING.bossHpMul)}초 (실제 ${atNeed.toFixed(2)}초)`);
+    assert.ok(Math.abs(atNeed / (def.fightSec * TUNING.bossHpMul * (WORLDS[id].rules.bossHp || 1)) - 1) < 1e-9, `${id}: 에코 ${need}명이면 정확히 ${(def.fightSec * TUNING.bossHpMul * (WORLDS[id].rules.bossHp || 1))}초 (실제 ${atNeed.toFixed(2)}초)`);
     // 필요 에코가 적은 앞 월드(학교 2명 등)는 1명 부족해도 조금만 길어진다. 많이 필요한 월드는 1명이면 몇 배로 오래 걸림
-    if (need >= 5) assert.ok(killTime(1) > (def.fightSec * TUNING.bossHpMul) * 3, `${id}: 에코 1명이면 ${killTime(1).toFixed(0)}초 (목표의 3배 이상)`);
-    else assert.ok(killTime(0) > (def.fightSec * TUNING.bossHpMul) * 1.4, `${id}: 에코 없이 ${killTime(0).toFixed(0)}초 (목표보다 확실히 김)`);
-    assert.ok(killTime(need - 2) > (def.fightSec * TUNING.bossHpMul) * 1.15, `${id}: 에코 ${need - 2}명이면 눈에 띄게 오래 걸림`);
-    assert.ok(killTime(E.MAX_ECHOES) < (def.fightSec * TUNING.bossHpMul) * 0.95 || need === E.MAX_ECHOES, `${id}: 에코가 가득이면 더 수월`);
+    if (need >= 5) assert.ok(killTime(1) > (def.fightSec * TUNING.bossHpMul * (WORLDS[id].rules.bossHp || 1)) * 3, `${id}: 에코 1명이면 ${killTime(1).toFixed(0)}초 (목표의 3배 이상)`);
+    else assert.ok(killTime(0) > (def.fightSec * TUNING.bossHpMul * (WORLDS[id].rules.bossHp || 1)) * 1.4, `${id}: 에코 없이 ${killTime(0).toFixed(0)}초 (목표보다 확실히 김)`);
+    assert.ok(killTime(need - 2) > (def.fightSec * TUNING.bossHpMul * (WORLDS[id].rules.bossHp || 1)) * 1.15, `${id}: 에코 ${need - 2}명이면 눈에 띄게 오래 걸림`);
+    assert.ok(killTime(E.MAX_ECHOES) < (def.fightSec * TUNING.bossHpMul * (WORLDS[id].rules.bossHp || 1)) * 0.95 || need === E.MAX_ECHOES, `${id}: 에코가 가득이면 더 수월`);
     assert.ok(killTime(0) > killTime(1) && killTime(1) > killTime(need), '에코가 많을수록 빨리 잡힘');
   }
 });
@@ -652,10 +652,10 @@ test('도우미: 짧게(약 1.2초) 머물러도 조언을 받고, 한 판에 �
   assert.ok((helpedAt / 60) - arrivals[1] < 1.5, `머문 지 ${((helpedAt / 60) - arrivals[1]).toFixed(2)}초 만에 조언`);
 });
 
-test('보스 횟수: 지하철 이후는 모두 4번 (다시 줄어들지 않음)', () => {
+test('보스 횟수: 지하철 이후는 3~4번 (다시 줄어들지 않음)', () => {
   const counts = ORDER.map((id) => WORLDS[id].boss.times.length);
   for (let i = 1; i < counts.length; i++) assert.ok(counts[i] >= counts[i - 1], `횟수가 줄어들면 안 됨: ${counts}`);
-  for (const id of ORDER.slice(3)) assert.strictEqual(WORLDS[id].boss.times.length, 4, id);
+  for (const id of ORDER.slice(3)) assert.ok(WORLDS[id].boss.times.length >= 3, id);
 });
 
 test('꿈의 무대(1회차): 앞 월드의 큰 도전들이 차례로 나오고, 마지막은 무대 공포증', () => {

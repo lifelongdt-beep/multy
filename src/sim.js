@@ -32,7 +32,7 @@
     echoMinPower: 0.6,       // 최저 배율
     echoHpScale: 0.12,       // 에코 1명당 일반 적 체력 +12% (에코 화력 증가를 따라가도록, 10명이면 +120%)
     bossFloorMul: 0.5,       // 보스 최소 체력 = 정의 체력 x 0.5 (화력이 약해도 너무 물렁하지 않게)
-    bossLaterFight: -0.12,   // n번째 보스일수록 목표 전투 시간 -12%씩 (짧은 판: 여러 번 나오는 월드도 한 판이 길어지지 않게)
+    bossLaterFight: -0.2,    // n번째 보스일수록 목표 전투 시간 -20%씩 (여러 번 나오는 월드도 90초 안팎에 끝나게)
     bossLaterSpeed: 0.08,    // n번째 보스일수록 이동 +8%씩
     bossHitFactor: 0.5,      // 화력 추정 시 실제 명중률 보정
     rageRamp: 0.15,          // 격앙 이후 초당 피해 +15% (전투가 길어질수록 급격히 치명적 → 에코가 부족하면 못 버팀)
@@ -420,7 +420,7 @@
       const base = (refSolo + def.needEchoes * refEcho) * def.fightSec * (1 + T.bossLaterFight * idx);
       const solo = this._fp(this.player.stats, this.bonus, 1);
       const adapt = Math.min(T.bossAdaptMax, Math.max(T.bossAdaptMin, Math.pow(solo / refSolo, T.bossAdaptExp)));
-      return T.bossHpMul * Math.max(def.hp * this.mul.hp * T.bossFloorMul * (1 + T.bossLaterFight * idx), base * adapt);
+      return T.bossHpMul * (this.world.rules.bossHp || 1) * Math.max(def.hp * this.mul.hp * T.bossFloorMul * (1 + T.bossLaterFight * idx), base * adapt);
     }
 
     _make(type, x, y, idx) {
@@ -464,7 +464,7 @@
         const a = (i / s.n) * Math.PI * 2;
         this._make(s.type, p.x + Math.cos(a) * 360, p.y + Math.sin(a) * 360);
       }
-      this._ev({ k: 'banner', text: '⚠ ' + s.text });
+      this._ev({ k: 'banner', text: '⚠ ' + s.text, hint: true }); this._ev({ k: 'swarm' });   // 문구는 튜토리얼에서만, 본 게임은 화면 테두리 번쩍임
     }
 
     /** 열차 한 대: 경고(warn틱) 후 y 높이의 가로 띠를 가로질러 달린다 */
@@ -1092,6 +1092,7 @@
         }
         if (e.calm > 0) { e.calm -= 1; mvx *= 0.35; mvy *= 0.35; }   // 따뜻한 빛을 받아 순해짐
         e.x += mvx; e.y += mvy;
+        if (e.type === 'boss' && e.t > 90 && e.y < 125) e.y = 125;   // 보스는 화면 위 끝(체력 막대·HUD 아래)에 숨지 않게
         if (p.inv === 0 && dist < e.r + p.r && !(e.calm > 0)) this._hurtPlayer(e.dmg);
         for (const ec of this.echoes) {   // 적에게 닿은 에코도 에너지가 준다
           if (!ec.alive || ec.down || ec.inv) continue;

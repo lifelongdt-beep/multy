@@ -167,7 +167,7 @@
         leaveText: '도움이 필요하면 언제든 말씀하세요',
         boons: { heal: '잠깐 쉬어가기', power: '빠른 환승 길', focus: '졸음 깨우기', team: '함께 가는 길' },
       },
-      boss:  { name: '급행열차', emoji: '🚆', hp: 950, times: [75, 110, 145, 180], needEchoes: 6, fightSec: 14, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'lane', warnText: '⚠ 급행열차가 들어와요 ⚠', startText: '🚆 급행열차를 피해 집으로!', summon: 'sleepy',
+      boss:  { name: '급행열차', emoji: '🚆', hp: 950, times: [75, 110, 145], needEchoes: 6, fightSec: 14, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'lane', warnText: '⚠ 급행열차가 들어와요 ⚠', startText: '🚆 급행열차를 피해 집으로!', summon: 'sleepy',
               minis: [{ name: '멀미', emoji: '🤢', pattern: 'spiral', warnText: '⚠ 덜컹덜컹… 멀미가 와요 ⚠', startText: '🤢 멀미, 창밖을 보며 버텨요!' }, { name: '환승 미로', emoji: '🧭', pattern: 'lane', warnText: '⚠ 어디로 가야 하지? 환승 미로 ⚠', startText: '🧭 환승 미로, 표지판을 따라가요!' }, { name: '졸음 쓰나미', emoji: '🌊', pattern: 'charge', warnText: '⚠ 졸음이 파도처럼 밀려와요 ⚠', startText: '🌊 졸음 쓰나미, 정신 차려요!' }] },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { sleepy: 7, bag: 3 } },
@@ -205,7 +205,7 @@
         leaveText: '힘들 땐 언제든 이야기해요',
         boons: { heal: '따뜻한 밥 한 끼', power: '든든한 응원', focus: '일찍 자기', team: '가족과 함께' },
       },
-      boss: { name: '불면증', emoji: '😵‍💫', hp: 1000, times: [75, 105, 135, 165], needEchoes: 6, fightSec: 18, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 40, ai: 'boss', pattern: 'spiral', warnText: '⚠ 잠이 오지 않아요… 불면증이 찾아와요 ⚠', startText: '😵‍💫 불면증, 천천히 숨 쉬며 극복해요!', summon: 'scroll',
+      boss: { name: '불면증', emoji: '😵‍💫', hp: 1000, times: [75, 105, 135], needEchoes: 6, fightSec: 18, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 40, ai: 'boss', pattern: 'spiral', warnText: '⚠ 잠이 오지 않아요… 불면증이 찾아와요 ⚠', startText: '😵‍💫 불면증, 천천히 숨 쉬며 극복해요!', summon: 'scroll',
               minis: [{ name: '야식 폭주', emoji: '🍕', pattern: 'charge', warnText: '⚠ 냉장고 문이 열려요… 야식 폭주 ⚠', startText: '🍕 야식 폭주, 물 한 잔으로 이겨내요!' }, { name: '무한 영상', emoji: '📺', pattern: 'spiral', warnText: '⚠ 다음 영상이 자동 재생돼요 ⚠', startText: '📺 무한 영상, 화면을 끄고 극복해요!' }, { name: '어질러진 마음', emoji: '🌪️', pattern: 'exam', warnText: '⚠ 마음이 어수선해요 ⚠', startText: '🌪️ 어질러진 마음, 하나씩 정리해요!' }] },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { snack: 6, scroll: 3 } },
@@ -244,7 +244,7 @@
         leaveText: '꾸준함이 최고의 비결이에요',
         boons: { heal: '물 한 모금', power: '바른 자세', focus: '호흡법', team: '운동 메이트' },
       },
-      boss: { name: '작심삼일', emoji: '🗓️', hp: 1050, times: [75, 105, 135, 165], needEchoes: 7, fightSec: 18, refMul: 0.55, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'charge', warnText: '⚠ 오늘만 쉴까…? 작심삼일이 다가와요 ⚠', startText: '🗓️ 작심삼일, 오늘도 해내요!', summon: 'lazy',
+      boss: { name: '작심삼일', emoji: '🗓️', hp: 1050, times: [75, 105, 135], needEchoes: 7, fightSec: 18, refMul: 0.55, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'charge', warnText: '⚠ 오늘만 쉴까…? 작심삼일이 다가와요 ⚠', startText: '🗓️ 작심삼일, 오늘도 해내요!', summon: 'lazy',
               minis: [{ name: '근육통 대왕', emoji: '💢', pattern: 'charge', warnText: '⚠ 온몸이 쑤셔요… 근육통 대왕 ⚠', startText: '💢 근육통 대왕, 스트레칭으로 극복!' }, { name: '귀차니즘', emoji: '🛋️', pattern: 'spiral', warnText: '⚠ 소파가 나를 부르고 있어요 ⚠', startText: '🛋️ 귀차니즘, 일어나서 움직여요!' }, { name: '정체기', emoji: '🧊', pattern: 'exam', warnText: '⚠ 아무리 해도 그대로인 것 같아요 ⚠', startText: '🧊 정체기, 꾸준함이 답이에요!' }] },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { lazy: 6, sweat: 3 } },
@@ -283,7 +283,7 @@
         leaveText: '궁금한 건 언제든 물어보세요',
         boons: { heal: '잠깐 산책', power: '딱 맞는 참고서', focus: '뽀모도로 공부법', team: '스터디 친구' },
       },
-      boss: { name: '집중력 저하', emoji: '😵', hp: 1100, times: [75, 105, 135, 165], needEchoes: 7, fightSec: 17, refMul: 0.55, speed: 0.4, r: 30, dmg: 14, xp: 44, ai: 'boss', pattern: 'exam', warnText: '⚠ 글자가 눈에 안 들어와요… 집중력 저하 ⚠', startText: '😵 집중력 저하, 한 줄씩 차근차근!', summon: 'nod',
+      boss: { name: '집중력 저하', emoji: '😵', hp: 1100, times: [75, 105, 135], needEchoes: 7, fightSec: 17, refMul: 0.55, speed: 0.4, r: 30, dmg: 14, xp: 44, ai: 'boss', pattern: 'exam', warnText: '⚠ 글자가 눈에 안 들어와요… 집중력 저하 ⚠', startText: '😵 집중력 저하, 한 줄씩 차근차근!', summon: 'nod',
               minis: [{ name: '잡념 소용돌이', emoji: '🌀', pattern: 'spiral', warnText: '⚠ 생각이 빙글빙글 돌아요 ⚠', startText: '🌀 잡념 소용돌이, 한 줄에 집중해요!' }, { name: '졸음 마왕', emoji: '😪', pattern: 'charge', warnText: '⚠ 눈꺼풀이 천근만근… 졸음 마왕 ⚠', startText: '😪 졸음 마왕, 기지개 켜고 극복!' }, { name: '비교의 늪', emoji: '🕳️', pattern: 'exam', warnText: '⚠ 남과 비교하는 마음이 커져요 ⚠', startText: '🕳️ 비교의 늪, 어제의 나와 비교해요!' }] },
       waves: [
         { from: 0,  to: 20,  interval: 46, n: 1, w: { nod: 6, hurry: 3 } },
@@ -494,8 +494,11 @@
   /* 한 판 길이 압축: 월드 데이터의 시각(초)은 2분 판 기준으로 적혀 있고, 실제로는 TIME_SCALE배로 줄여 쓴다 (약 72초 판).
    * 스폰 간격도 같이 줄여 1초당 적 밀도는 그대로 유지한다. */
   const TIME_SCALE = 0.6;
+  // 월드별 큰 도전 체력 보정 (봇 실측: 필요한 에코 수를 갖추면 5번 중 3~4번 넘도록). 어두운 월드는 조준 거리가 짧아 화력이 낮다
+  const BOSS_HP_TUNE = { office: 0.9, home: 0.68, airport: 0.82, mountain: 0.8, stage: 0.85, subway: 1.08, gym: 1.05, hospital: 1.08 };
   for (const id in WORLDS) {
     const w = WORLDS[id], sc = (v) => Math.round(v * TIME_SCALE);
+    if (BOSS_HP_TUNE[id]) w.rules.bossHp = BOSS_HP_TUNE[id];
     for (const wv of w.waves) { wv.from = sc(wv.from); wv.to = sc(wv.to); wv.interval = Math.max(10, Math.round(wv.interval * 0.85)); }
     for (const sw of w.swarms) sw.t = sc(sw.t);
     if (w.helper) w.helper.t = sc(w.helper.t);
