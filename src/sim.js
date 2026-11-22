@@ -14,11 +14,11 @@
   const W = 360, H = 640;
   const TICK = 60;
   const PLAY_BOTTOM = H - 140;   // UI 전용: 이 아래를 '추천 조작 영역'으로 표시 (캐릭터 이동은 제한하지 않음)
-  const RUN_TICKS = 120 * TICK;
-  const BOSS_TICK = 90 * TICK;
+  const RUN_TICKS = 72 * TICK;       // 한 판 72초 (짧고 굵게)
+  const BOSS_TICK = 54 * TICK;
   const MAX_ECHOES = 10;  // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
   const MAX_ENEMIES = 260;
-  const OVERTIME_TICKS = 60 * TICK;   // 120초가 지나도 보스가 살아 있으면 최대 60초 연장 (보스를 잡을 시간)
+  const OVERTIME_TICKS = 15 * TICK;   // 72초가 지나도 보스가 살아 있으면 최대 15초 연장 (에코 없이 버티기만으로는 못 넘게)
   const MAX_LEVEL = 5;
 
   /* ---- 밸런스 튜닝 값 (여기만 만지면 됨) ---- */
@@ -32,17 +32,17 @@
     echoMinPower: 0.6,       // 최저 배율
     echoHpScale: 0.12,       // 에코 1명당 일반 적 체력 +12% (에코 화력 증가를 따라가도록, 10명이면 +120%)
     bossFloorMul: 0.5,       // 보스 최소 체력 = 정의 체력 x 0.5 (화력이 약해도 너무 물렁하지 않게)
-    bossLaterFight: 0.12,    // n번째 보스일수록 목표 전투 시간 +12%씩 (더 단단함)
+    bossLaterFight: -0.12,   // n번째 보스일수록 목표 전투 시간 -12%씩 (짧은 판: 여러 번 나오는 월드도 한 판이 길어지지 않게)
     bossLaterSpeed: 0.08,    // n번째 보스일수록 이동 +8%씩
     bossHitFactor: 0.5,      // 화력 추정 시 실제 명중률 보정
     rageRamp: 0.15,          // 격앙 이후 초당 피해 +15% (전투가 길어질수록 급격히 치명적 → 에코가 부족하면 못 버팀)
     rageMax: 6.0,
-    enrageSec: 32,           // 보스전이 이 시간을 넘기면 보스가 거세짐 (피해 +40%, 이동 +25%)
+    enrageSec: 24,           // 보스전이 이 시간을 넘기면 보스가 거세짐 (피해 +40%, 이동 +25%)
     bossAtkMul: 1.25,        // 보스전 중 받는 피해 배율 (팽팽한 승부)
     refSoloFp: 40,           // [기준값] 보스가 나올 때 "평균적인 나"의 화력 추정치 (실측)
     refEchoFp: 47,           // [기준값] 에코 1명의 화력 추정치 (실측: 에코는 피하느라 쉬지 않고 쏨)
-    bossAdaptExp: 0.5,       // 내 화력이 기준보다 세면 보스도 (비율)^0.5 만큼만 단단해짐 (절반만 반영)
-    bossAdaptMin: 0.7, bossAdaptMax: 1.5,
+    bossAdaptExp: 0.85,      // 내 화력이 기준보다 세면 보스도 (비율)^0.5 만큼만 단단해짐 (절반만 반영)
+    bossAdaptMin: 0.7, bossAdaptMax: 2.5,   // 상점·아이템으로 강해져도 보스가 거의 따라온다 → 큰 도전은 에코가 있어야 넘는다
     bossDmgExp: 0.8,         // 보스전 피해 배율 = (최대체력/기본체력)^0.8 (체력이 높을수록 한 방이 더 아프다)
     baseHp: 110,             // 기본 최대 체력
     trainMinDmg: 40,         // 열차에 치이면 최소 이만큼, 또는 최대 체력의 trainHpFrac 중 큰 쪽 (치명적!)
@@ -51,7 +51,7 @@
     coffeeHeal: 12,
     bossRegenMul: 0.4,       // 보스전 중 체력 재생 배율
     bossBreatherHeal: 0.25,  // 보스 한 번 극복할 때마다 체력 회복 비율 (마지막 보스 제외)
-    bossGapSec: 6,           // 보스 극복 후 다음 보스가 나오기까지 최소 간격(초)
+    bossGapSec: 4,           // 보스 극복 후 다음 보스가 나오기까지 최소 간격(초)
     hpGrowth: 1.6,           // 진행도에 따른 적 체력 증가
     healAmount: 35,
     // ---- 아이템(업그레이드) 1레벨당 효과 ----
@@ -67,26 +67,26 @@
     hurtInvTicks: 50,        // 피격 후 무적 시간(틱)
     enemySpeedGrowth: 0.15,  // 진행도에 따른 적 속도 증가
     // ---- 도우미(선생님 등) · 나중에 보상형 광고로 바꿀 자리 ----
-    helperEvery: 25,         // 첫 등장(월드의 helper.t초) 뒤 이 간격(초)마다 다시 찾아옴 (앞 도우미가 떠난 뒤)
+    helperEvery: 16,         // 첫 등장(월드의 helper.t초) 뒤 이 간격(초)마다 다시 찾아옴 (앞 도우미가 떠난 뒤)
     helperNeed: 70,          // 곁에 이만큼(틱, 60=1초) 머물면 조언 카드 (이전 150틱=2.5초 → 약 1.2초)
     helperDecay: 1,          // 곁을 벗어나면 게이지가 틱당 이만큼 줄어듦 (이전 2: 잠깐 벗어나도 덜 깎임)
-    helperStay: 15,          // 도우미가 기다려 주는 시간(초)
+    helperStay: 11,          // 도우미가 기다려 주는 시간(초)
     choiceAutoSec: 3,
     // ---- 선행(좋은 일)을 하면 아이템 ----
-    deedRescueFirst: 32,     // 어려움에 처한 사람: 첫 등장(초)
-    deedRescueEvery: 40,     //   이후 간격(초)
+    deedRescueFirst: 18,     // 어려움에 처한 사람: 첫 등장(초)
+    deedRescueEvery: 26,     //   이후 간격(초)
     deedRescueGuards: 6,     //   둘러싼 방해 요소 수 (모두 물리치면 "고마워!" + 아이템 카드)
-    deedRescueStay: 22,      //   기다려 주는 시간(초) — 못 도와줘도 벌은 없음
-    deedEscortFirst: 58,     // 친구 지켜주기: 첫 등장(초)
-    deedEscortEvery: 55,     //   이후 간격(초)
+    deedRescueStay: 15,      //   기다려 주는 시간(초) — 못 도와줘도 벌은 없음
+    deedEscortFirst: 34,     // 친구 지켜주기: 첫 등장(초)
+    deedEscortEvery: 34,     //   이후 간격(초)
     friendHp: 100,           //   친구 체력 (방해 요소에 닿으면 줄어듦)
     friendSpeed: 0.75,       //   친구가 걷는 속도 (내가 곁에 있을 때만 걸음)
     friendWaitDist: 130,     //   이보다 멀면 친구가 무서워서 멈춰 기다림
-    deedSpotEvery: 5,        // 작은 선행 거리(쓰레기·쓰러진 화분·떨어진 인형)가 생기는 간격(초)
+    deedSpotEvery: 3,        // 작은 선행 거리(쓰레기·쓰러진 화분·떨어진 인형)가 생기는 간격(초)
     deedSpotMax: 3,
-    deedSpotLife: 14,        //   사라지기까지(초)
+    deedSpotLife: 10,        //   사라지기까지(초)
     deedGaugeNeed: 5,        //   이만큼 모으면 아이템 카드
-    allySec: 14,             // 도와준 사람이 곁에서 응원하며 함께하는 시간(초)
+    allySec: 10,             // 도와준 사람이 곁에서 응원하며 함께하는 시간(초)
     allyEvery: 34,           //   하트를 던지는 간격(틱)
     allyDmg: 0.8,            //   하트 위력 (내 총알 위력 대비)
     warmR: 150,              // 선행 순간 퍼지는 따뜻한 빛 반경
@@ -314,7 +314,7 @@
     /** 레벨을 올리고 고를 카드 3장을 뽑는다 */
     _rollLevel() {
       const p = this.player;
-      p.level += 1; p.xp -= p.need; p.need = Math.round(4 + p.level * 2.8);
+      p.level += 1; p.xp -= p.need; p.need = Math.round((4 + p.level * 2.8) * 0.62);   // 짧은 판에서도 비슷하게 성장
       return this._rollPicks();
     }
     /** 아이템 카드 3장 (레벨업·선행 보상 공용) */
@@ -1087,7 +1087,7 @@
 
       if (p.hp <= 0) { this.over = true; this.result = 'dead'; }
       else if (this.bossDead) { this.over = true; this.result = 'clear'; }
-      else if (this.tick >= RUN_TICKS && (!(this.bossIdx < this.bossCount || this.bossAlive) || this.tick >= RUN_TICKS + OVERTIME_TICKS + (this.bossCount - 1) * 30 * TICK)) { this.over = true; this.result = 'survive'; }
+      else if (this.tick >= RUN_TICKS && (!(this.bossIdx < this.bossCount || this.bossAlive) || this.tick >= RUN_TICKS + OVERTIME_TICKS + (this.bossCount - 1) * 12 * TICK)) { this.over = true; this.result = 'survive'; }
     }
 
     /** 이번 판을 다음 판의 에코로 내보낸다. */

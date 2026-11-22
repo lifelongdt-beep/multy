@@ -38,7 +38,7 @@
       ruleText: '특별한 규칙 없음 · 숙제는 미리미리! · 담임 선생님께 도움을 청할 수 있어요',
       theme: { bg: '#161a2e', grid: 'rgba(255,255,255,.04)', deco: 'none' },
       // 첫 월드는 쉽게: 방해 요소가 덜 아프고(atkMul), 조금 덜 단단하고, 덜 몰려온다. 큰 도전도 에코 2명이면 넘을 수 있게
-      rules: { hpMul: 0.85, xpMul: 1.0, speedMul: 0.95, spawnMul: 0.85, atkMul: 0.4, rageMul: 0.5 },
+      rules: { hpMul: 0.85, xpMul: 1.0, speedMul: 0.95, spawnMul: 0.85, atkMul: 0.6, rageMul: 0.8 },
       enemies: {
         hw:     { name: '미루기',   emoji: '🐌', hp: 3,  speed: 0.7,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         test:   { name: '걱정',     emoji: '😰', hp: 2,  speed: 1.1,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -76,7 +76,7 @@
       ruleText: '빡센 진도: 경험치 +30% · 방해 요소가 더 단단하고 많이 나옴 · 원거리 적 多',
       unlock: { world: 'school' },
       theme: { bg: '#1d1530', grid: 'rgba(190,140,255,.07)', deco: 'ruled' },
-      rules: { hpMul: 1.05, xpMul: 1.3, speedMul: 1.0, spawnMul: 1.0, atkMul: 0.45 },
+      rules: { hpMul: 1.05, xpMul: 1.3, speedMul: 1.0, spawnMul: 1.0, atkMul: 0.65 },
       enemies: {
         book:  { name: '조급함',            emoji: '😖', hp: 4,  speed: 0.75, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         quiz:  { name: '불안',              emoji: '😟', hp: 3,  speed: 1.2,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -114,7 +114,7 @@
       ruleText: '야근 커피: 방해 요소를 잡으면 가끔 ☕ 떨어짐(체력 +12) · 일이 몰려 방해가 많이 나옴 · 방해 요소가 더 단단함',
       unlock: { world: 'academy' },
       theme: { bg: '#172229', grid: 'rgba(140,200,220,.07)', deco: 'tiles' },
-      rules: { hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, atkMul: 0.5 },
+      rules: { hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, atkMul: 0.7 },
       enemies: {
         doc:     { name: '스트레스',      emoji: '😫', hp: 4,  speed: 0.8,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         mail:    { name: '압박감',        emoji: '💢', hp: 2,  speed: 1.25, r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -152,7 +152,7 @@
       ruleText: '열차 습격: 경고 줄이 뜬 뒤 열차가 가로질러 지나감 (치이면 최대 체력의 40%가 깎임! 방해 요소는 즉사)',
       unlock: { world: 'office' },
       theme: { bg: '#10201f', grid: 'rgba(255,255,255,.03)', deco: 'rails' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, trains: { first: 24, every: 36}, atkMul: 0.62 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, trains: { first: 24, every: 36}, atkMul: 0.75 },
       enemies: {
         sleepy:  { name: '졸음',          emoji: '😪', hp: 5,  speed: 0.9,  r: 9,  dmg: 6,  xp: 1, ai: 'zig' },
         bag:     { name: '무거운 가방',   emoji: '🎒', hp: 9,  speed: 0.6,  r: 11, dmg: 8,  xp: 2, ai: 'chase' },
@@ -190,7 +190,7 @@
       ruleText: '깊은 밤: 어두워서 조준 거리가 짧아짐(가까운 적만 자동 공격) · 방해 요소가 더 단단함',
       unlock: { world: 'subway' },
       theme: { bg: '#0f1224', grid: 'rgba(160,170,255,.05)', deco: 'stars' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, sight: 190, atkMul: 0.68 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, sight: 190, atkMul: 0.78 },
       enemies: {
         snack:  { name: '야식 유혹',     emoji: '🍜', hp: 5,  speed: 0.85, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         game:   { name: '게임 한 판만',  emoji: '🎮', hp: 6,  speed: 0.65, r: 9,  dmg: 8,  xp: 2, ai: 'dash', dashCd: 105 },
@@ -228,7 +228,7 @@
       ruleText: '땀 흘린 만큼: 경험치 +15% · 방해 요소가 15% 더 자주 나옴',
       unlock: { world: 'home' },
       theme: { bg: '#22161a', grid: 'rgba(255,150,150,.06)', deco: 'tiles' },
-      rules: { hpMul: 1.15, xpMul: 1.15, speedMul: 1.0, spawnMul: 1.15, atkMul: 0.72 },
+      rules: { hpMul: 1.15, xpMul: 1.15, speedMul: 1.0, spawnMul: 1.15, atkMul: 0.8 },
       enemies: {
         lazy:   { name: '귀찮음',     emoji: '🫠', hp: 5,  speed: 0.8,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         ache:   { name: '근육통',     emoji: '💥', hp: 9,  speed: 0.6,  r: 11, dmg: 8,  xp: 2, ai: 'chase' },
@@ -491,6 +491,19 @@
     },
   };
 
+  /* 한 판 길이 압축: 월드 데이터의 시각(초)은 2분 판 기준으로 적혀 있고, 실제로는 TIME_SCALE배로 줄여 쓴다 (약 72초 판).
+   * 스폰 간격도 같이 줄여 1초당 적 밀도는 그대로 유지한다. */
+  const TIME_SCALE = 0.6;
+  for (const id in WORLDS) {
+    const w = WORLDS[id], sc = (v) => Math.round(v * TIME_SCALE);
+    for (const wv of w.waves) { wv.from = sc(wv.from); wv.to = sc(wv.to); wv.interval = Math.max(10, Math.round(wv.interval * 0.85)); }
+    for (const sw of w.swarms) sw.t = sc(sw.t);
+    if (w.helper) w.helper.t = sc(w.helper.t);
+    // 큰 도전이 여러 번인 월드: 첫 보스 뒤로는 10초 간격 (앞 보스를 극복해야 다음이 나오므로 실제로는 극복 직후 연달아)
+    { const n = w.boss.times.length, t0 = Math.max(26, sc(w.boss.times[0]) - 6 * (n - 1)); w.boss.times = w.boss.times.map((_, i) => t0 + i * 10); }
+    w.boss.fightSec = Math.max(10, Math.round(w.boss.fightSec * 0.8));
+    if (w.rules.trains) { w.rules.trains.first = Math.round(w.rules.trains.first * 0.45); w.rules.trains.every = Math.max(9, Math.round(w.rules.trains.every * 0.3)); }
+  }
   const ORDER = ['school', 'academy', 'office', 'subway', 'home', 'gym', 'library', 'beach', 'airport', 'hospital', 'mountain', 'stage'];
 
   /* ================= 성장 구조: 월드가 뒤로 갈수록 강해지는 적 vs 월드별 매점 장비 =================
@@ -568,7 +581,7 @@
     team:  { icon: '🤝', desc: '에코 응원 Lv +1' },
   };
 
-  const api = { WORLDS, ORDER, BOONS, GEAR, worldIndex, stageOf, stageMul, recommendedGear, gearMaxLevel, gearCost, rewardMul, OUTFITS, outfitOf };
+  const api = { TIME_SCALE, WORLDS, ORDER, BOONS, GEAR, worldIndex, stageOf, stageMul, recommendedGear, gearMaxLevel, gearCost, rewardMul, OUTFITS, outfitOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoWorlds = api;
 })(typeof window !== 'undefined' ? window : globalThis);

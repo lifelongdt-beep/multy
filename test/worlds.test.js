@@ -457,12 +457,12 @@ test('학교는 보스 1번: 극복하면 바로 클리어 (숨 돌리기 없음
   assert.strictEqual(s.result, 'clear');
 });
 
-test('다음 보스일수록 더 단단하고 빠르다', () => {
+test('다음 보스일수록 더 빠르고, 짧은 판을 위해 전투는 조금씩 짧다', () => {
   const s = new Sim({ seed: 33, events: false, world: 'subway' });
   s.player.hp = 1e9;
   const hp = [], sp = [];
   for (let i = 0; i < 4; i++) { s._make('boss', 100, 100, i); const b = s.enemies[s.enemies.length - 1]; hp.push(b.maxhp); sp.push(b.speed); }
-  for (let i = 1; i < 4; i++) { assert.ok(hp[i] > hp[i - 1], `체력 ${hp.map((x) => x | 0)}`); assert.ok(sp[i] > sp[i - 1]); }
+  for (let i = 1; i < 4; i++) { assert.ok(hp[i] < hp[i - 1] && hp[i] > hp[0] * 0.5, `체력 ${hp.map((x) => x | 0)}`); assert.ok(sp[i] > sp[i - 1]); }
   const labels = []; s._make('boss', 0, 0, 2); labels.push(s.enemies[s.enemies.length - 1].label);
   assert.ok(labels[0].includes('3/4'), labels[0]);
 });
@@ -505,11 +505,11 @@ test('필요 에코 수: 에코가 그 수만큼 있어야 목표 시간에 잡�
   }
 });
 
-test('보스 체력은 내 화력을 절반만(제곱근) 따라간다 (상한/하한 있음)', () => {
+test('보스 체력은 내 화력을 대부분 따라간다 (상한/하한 있음)', () => {
   const hpAt = (solo) => { const s = new Sim({ seed: 41, events: false, world: 'school' }); s._fp = () => solo; s._make('boss', 0, 0, 0); return s.enemies[0].maxhp; };
   const R = TUNING.refSoloFp * WORLDS.school.boss.refMul;   // 이 월드의 "평균적인 나" 화력
   const ref = hpAt(R);
-  assert.ok(Math.abs(hpAt(R * 2) / ref - Math.sqrt(2)) < 1e-9, '내 화력 2배 → 보스 체력 √2배');
+  assert.ok(Math.abs(hpAt(R * 2) / ref - Math.pow(2, TUNING.bossAdaptExp)) < 1e-9, '내 화력 2배 → 보스 체력 2^exp배');
   assert.ok(Math.abs(hpAt(R * 100) / ref - TUNING.bossAdaptMax) < 1e-9, '상한');
   assert.ok(hpAt(R * 0.01) / ref <= TUNING.bossAdaptMin + 1e-9, '하한(최소 체력 이상)');
 });
@@ -619,7 +619,7 @@ test('격앙 이후에는 전투가 길어질수록 받는 피해가 계속 커�
   const s = new Sim({ seed: 42, events: false, world: 'academy' });   // 학교는 첫 월드라 격앙이 절반(rageMul)
   stepTo(s, () => s.bossAlive, 9000);
   const b = s.enemies.find((e) => e.type === 'boss'); b.hp = b.maxhp = 1e9;
-  const scaleAt = (sec) => { stepTo(s, () => b.t >= sec * 60, 20000); return s._bossDmgScale(); };
+  const scaleAt = (sec) => { b.t = sec * 60 - 1; s.player.hp = 1e9; s.step({ dx: 0, dy: 0 }); return s._bossDmgScale(); };   // 짧은 판이라 시간을 직접 맞춘다
   const a0 = scaleAt(TUNING.enrageSec - 2), a1 = scaleAt(TUNING.enrageSec + 10), a2 = scaleAt(TUNING.enrageSec + 20), a3 = scaleAt(TUNING.enrageSec + 40);
   assert.ok(a1 > a0 && a2 > a1, `${a0.toFixed(2)} < ${a1.toFixed(2)} < ${a2.toFixed(2)}`);
   assert.ok(Math.abs(a1 / a0 - (1 + TUNING.rageRamp * 10)) < 0.02, '초당 +15%');

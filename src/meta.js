@@ -85,8 +85,8 @@
     { id: 'runs_10',    icon: '📅', name: '개근상',        desc: '10판 플레이',                 reward: 60,  test: (s) => s.runs >= 10 },
     { id: 'kills_100',  icon: '🧹', name: '마음 정리',     desc: '방해 요소를 누적 100개 물리치기',           reward: 40,  test: (s) => s.kills >= 100 },
     { id: 'kills_1000', icon: '✨', name: '마음 대청소',        desc: '방해 요소를 누적 1000개 물리치기',          reward: 150, test: (s) => s.kills >= 1000 },
-    { id: 'survive_60', icon: '⏱️', name: '1분 버티기',    desc: '한 판에서 60초 생존',         reward: 40,  test: (s) => s.bestTime >= 60 },
-    { id: 'survive_90', icon: '🕰️', name: '90초의 벽',     desc: '한 판에서 90초 생존 (보스 등장)', reward: 80,  test: (s) => s.bestTime >= 90 },
+    { id: 'survive_60', icon: '⏱️', name: '30초 버티기',   desc: '한 판에서 30초 생존',         reward: 40,  test: (s) => s.bestTime >= 30 },
+    { id: 'survive_90', icon: '🕰️', name: '55초의 벽',     desc: '한 판에서 55초 생존 (보스 등장)', reward: 80,  test: (s) => s.bestTime >= 55 },
     { id: 'level_10',   icon: '📈', name: '우등생',        desc: '한 판에서 Lv 10 달성',        reward: 50,  test: (s) => s.bestLevel >= 10 },
     { id: 'level_20',   icon: '🏅', name: '수석',          desc: '한 판에서 Lv 20 달성',        reward: 120, test: (s) => s.bestLevel >= 20 },
     { id: 'clear_1',    icon: '🌈', name: '시험 불안 극복', desc: '학교 월드의 “시험 불안”을 극복',        reward: 200, test: (s) => s.clears >= 1 },
@@ -111,7 +111,7 @@
   const MISSION_TEMPLATES = [
     { id: 'kills',   kind: 'sum', field: 'kills',   targets: [[60, 30], [120, 55], [200, 90]],  text: (t) => `방해 요소 ${t}개 물리치기` },
     { id: 'gems',    kind: 'sum', field: 'gems',    targets: [[40, 30], [80, 50], [140, 80]],   text: (t) => `구슬 ${t}개 획득` },
-    { id: 'survive', kind: 'max', field: 'seconds', targets: [[45, 30], [75, 55], [100, 90]],   text: (t) => `한 판에서 ${t}초 생존` },
+    { id: 'survive', kind: 'max', field: 'seconds', targets: [[30, 30], [45, 55], [60, 90]],   text: (t) => `한 판에서 ${t}초 생존` },
     { id: 'level',   kind: 'max', field: 'level',   targets: [[6, 30], [10, 55], [15, 90]],     text: (t) => `한 판에서 Lv ${t} 달성` },
     { id: 'clear',   kind: 'sum', field: 'clear',   targets: [[1, 120]],                        text: () => '큰 도전(보스) 극복하기' },
     { id: 'help',    kind: 'sum', field: 'helped',  targets: [[1, 40], [2, 70]],                text: (t) => t === 1 ? '선생님·선배께 도움 청하기' : `도움을 ${t}번 청하기` },
@@ -363,7 +363,7 @@
     const newTitle = titleAfter !== titleBefore ? titleAfter : null;
 
     // 기본 보상
-    const base = Math.floor(run.kills * 0.4 + run.seconds * 0.5 + run.level * 3 + (run.result === 'clear' ? 100 : run.seconds >= 120 ? 40 : 0));
+    const base = Math.floor(run.kills * 0.4 + run.seconds * 0.9 + run.level * 3 + (run.result === 'clear' ? 100 : run.seconds >= 72 ? 40 : 0));
     const earned = Math.round(base * coinMul(save) * rewardMul(worldId, save.cycle));
     let total = earned;
 
