@@ -428,6 +428,7 @@
     tutorial = false;
     Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
     $('endTitle').textContent = sim.result === 'clear' ? `${sim.world.boss.name} 극복! 🎉` : '튜토리얼 끝!';
+    $('endBadge').textContent = sim.result === 'clear' ? '🏆 승리!' : '📘 튜토리얼 끝'; $('endBadge').style.background = sim.result === 'clear' ? '#1f9d63' : '#4a5bd6';
     $('endEchoes').textContent = '👻 에코 10명';
     $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}`;
     $('reward').innerHTML = '';
@@ -450,8 +451,12 @@
     echoes = addEcho(echoes, out, MAX_ECHOES).list; echoWorld = sim.world.id;
     save();
     const lastBoss = sim.bossLineup[sim.bossLineup.length - 1];
-    const title = { dead: '쓰러졌다… 하지만!', clear: `${lastBoss.name} 극복! 🎉`, survive: '끝까지 버텼어요!' }[sim.result];
-    Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
+    // 승리/패배를 한눈에: 큰 배지(색) + 이유 한 줄
+    const left = sim.bossCount - sim.bossDefeated;
+    const badge = { clear: ['🏆 승리!', '#1f9d63'], survive: ['⏱ 시간 초과 · 패배', '#d9822b'], dead: ['💔 패배', '#c0394b'] }[sim.result];
+    const title = { clear: `${lastBoss.name} 극복! 🎉`, survive: `왕 ${left}번을 못 넘었어요 (🏁 ${sim.bossDefeated}/${sim.bossCount})`, dead: '쓰러졌어요… 다음엔 에코와 함께!' }[sim.result];
+    Sfx.play(sim.result === 'clear' ? 'win' : 'lose');
+    $('endBadge').textContent = badge[0]; $('endBadge').style.background = badge[1];
     $('endTitle').textContent = title;
     $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;
     $('cheer').textContent = cheerMessage(sim.result, sim.helped, sim.echoes.length);   // 따뜻한 한마디 한 줄
@@ -486,9 +491,11 @@
       const of = EchoWorlds.outfitOf(sum.newCycle);
       lines.push(of.tier === 0 ? `👕 새 복장: ${of.name}` : `👕 ${of.name} ${'★'.repeat(of.stars)} 장식 추가`);
     }
-    if (sim.result !== 'clear') {
+    if (sim.result !== 'clear') {   // 다음 판을 위한 짧은 처방: 에코 수 · 장비
+      const need = sim.world.boss.needEchoes;
+      if (echoes.length < need) lines.push(`👻 에코 ${echoes.length}/${need}명 · ${need - echoes.length}판 더 하면 에코가 모여요`);
       const short = GameUI.gearShort(sim.world.id);
-      if (short) lines.push(`🧰 ⚔ -${short.atk} 🛡 -${short.def}`);
+      if (short) lines.push(`🧰 장비 부족: ${short.atk ? `⚔ 공격 ${short.atk}레벨 ` : ''}${short.def ? `🛡 방어 ${short.def}레벨 ` : ''}더 필요 (상점)`);
     }
     $('reward').innerHTML = '';
     lines.forEach((t) => { const d = document.createElement('div'); d.textContent = t; $('reward').appendChild(d); });
