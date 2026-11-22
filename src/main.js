@@ -170,7 +170,8 @@
   /* ---------- 선행 그리기: 곤란한 사람 · 지켜 줄 친구 · 작은 선행 거리 ---------- */
   const NPC_EMO = { child: '🧒', elder: '👵', friend: '🧑' };
   function drawNPC(useArt, kind, x, y) {
-    ctx.strokeStyle = 'rgba(255,140,190,.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y + 22, 13, 5, 0, 0, 7); ctx.stroke();   // 분홍 바닥 링 = 도와줄 사람
+    ctx.fillStyle = 'rgba(255,216,77,.22)'; ctx.beginPath(); ctx.ellipse(x, y + 22, 14, 5.5, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y + 22, 14, 5.5, 0, 0, 7); ctx.stroke();   // 노란 바닥 링 = 내 편인 사람 (적=빨강, 에코=파랑, 나=초록)
     if (useArt) Art.drawHelper(ctx, 'npc:' + kind, x, y); else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(NPC_EMO[kind] || '🧑', x, y, 28); }
   }
   function drawBubbles() {
@@ -239,7 +240,7 @@
         ctx.fillStyle = '#ff4d6d'; ctx.font = 'bold 13px sans-serif'; ctx.fillText('!', rs.x, by + 1);
         // 남은 시간: 말풍선 둘레
         const left = 1 - rs.t / (EchoSim.TUNING.deedRescueStay * TICK);
-        ctx.strokeStyle = '#ff8cc0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rs.x, by, 11, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rs.x, by, 11, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
       } else if (rs.state === 'done') emoji('💛', rs.x, by, 18);
       ctx.globalAlpha = 1;
     }
@@ -249,7 +250,7 @@
       ctx.globalAlpha = es.state === 'walk' ? 1 : Math.max(0, es.fade / 90);
       if (es.state === 'walk') {
         ctx.globalAlpha *= 0.5 + 0.3 * Math.sin(now / 300); emoji('🚩', es.goal, es.y - 10, 20); ctx.globalAlpha = 1;
-        ctx.strokeStyle = 'rgba(255,140,190,.35)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(es.x, es.y + 16); ctx.lineTo(es.goal, es.y + 16); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(255,216,77,.35)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(es.x, es.y + 16); ctx.lineTo(es.goal, es.y + 16); ctx.stroke(); ctx.setLineDash([]);
       }
       const step = es.state === 'walk' && !es.waiting ? Math.abs(Math.sin(now / 140)) * 2 : 0;
       if (es.inv > 0 && Math.floor(es.inv / 4) % 2) ctx.globalAlpha *= 0.4;
@@ -258,7 +259,7 @@
       if (es.state === 'walk') {
         const w = 26, f = Math.max(0, es.hp / es.maxhp);
         ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(es.x - w / 2, es.y - 30, w, 4);
-        ctx.fillStyle = f > 0.4 ? '#ff8cc0' : '#ff4d6d'; ctx.fillRect(es.x - w / 2, es.y - 30, w * f, 4);
+        ctx.fillStyle = f > 0.4 ? '#7dffb2' : '#ffd84d'; ctx.fillRect(es.x - w / 2, es.y - 30, w * f, 4);
         if (es.waiting) { ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('…', es.x + 14, es.y - 22); }
       } else if (es.state === 'done') emoji('💛', es.x, es.y - 34, 18);
       ctx.globalAlpha = 1;
