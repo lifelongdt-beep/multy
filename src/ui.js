@@ -51,7 +51,7 @@
     // 1) 지금 내 캐릭터 크게
     const box = el('div', 'look');
     const big = el('canvas'); big.width = 320; big.height = 400; box.appendChild(big);
-    box.appendChild(el('div', 'ln', `👕 ${of.name} ${'★'.repeat(of.stars)}${'☆'.repeat(5 - of.stars)}`));
+    box.appendChild(el('div', 'ln', `👕 ${of.name} ${'★'.repeat(of.stars)}`));
     const t = M.titleOf(M.deedScore(save)).title;
     box.appendChild(el('small', '', `${ch.emoji} ${ch.name} · 🔁 ${show + 1}회차${of.variant ? ` · 🎨 색 ${of.variant + 1}` : ''}${M.deedScore(save) > 0 ? ` · ${t.icon} ${t.name}` : ''}`));
     if (show !== cur) {
@@ -60,25 +60,26 @@
     }
     body.appendChild(box);
     paintOutfit(big, show, 1.3, false);
-    // 2) 복장 지도: 복장 20종 × 장식 5단계 = 100회차 (그 뒤로는 색만 바뀌어 다시)
-    const lap = Math.floor(top / 100), base = lap * 100;
-    const got = Math.min(100, top - base + 1);
-    body.appendChild(el('div', 'msg', `🗺️ 복장 지도 ${got} / 100${lap ? ` · 🎨 색 변형 ${lap + 1}/10` : ''} · 회차마다 장식 ★ 하나, 5회차마다 새 복장`));
+    // 2) 나의 업적: 지금까지 얻은 복장만 보여 준다 (앞으로 나올 복장은 비밀)
+    const owned = [];
+    for (let c = Math.min(top, 999); c >= 0; c--) {   // 복장(스타일·색)별로 가장 많이 꾸민 단계 하나씩
+      const o = EchoWorlds.outfitOf(c), id = o.style + '.' + o.variant;
+      if (!owned.some((x) => x.id === id)) owned.push({ id, cycle: c, o });
+    }
+    owned.sort((a, b) => a.cycle - b.cycle);
+    body.appendChild(el('div', 'msg', `🏅 지금까지 얻은 복장 ${owned.length}벌`));
     const map = el('div', 'omap');
-    for (let s = 0; s < M.OUTFITS.length; s++) {
-      const first = base + s * 5, stars = Math.max(0, Math.min(5, top - first + 1)), locked = stars === 0;
-      const isCur = Math.floor((cur % 100) / 5) === s && Math.floor(cur / 100) === lap;
-      const card = el('div', 'oc' + (isCur ? ' cur' : '') + (locked ? ' lock' : ''));
+    for (const it of owned) {
+      const isCur = EchoWorlds.outfitOf(cur).style === it.o.style && EchoWorlds.outfitOf(cur).variant === it.o.variant;
+      const card = el('div', 'oc' + (isCur ? ' cur' : ''));
       const cv = el('canvas'); cv.width = 96; cv.height = 120; card.appendChild(cv);
-      card.appendChild(el('div', '', locked ? '❔ ???' : M.OUTFITS[s]));
-      card.appendChild(el('div', 'st', '★'.repeat(stars) + '☆'.repeat(5 - stars)));
-      card.appendChild(el('small', '', `${first + 1}~${first + 5}회차`));
-      paintOutfit(cv, locked ? first : first + stars - 1, 1, locked);
-      if (!locked) card.onclick = () => { lookPreview = first + stars - 1 === cur ? null : first + stars - 1; Sfx.play('click'); rerender(); $('panel').scrollTop = 0; };
+      card.appendChild(el('div', '', it.o.name + (it.o.variant ? ` 🎨${it.o.variant + 1}` : '')));
+      card.appendChild(el('div', 'st', '★'.repeat(it.o.stars)));
+      paintOutfit(cv, it.cycle, 1, false);
+      card.onclick = () => { lookPreview = it.cycle === cur ? null : it.cycle; Sfx.play('click'); rerender(); $('panel').scrollTop = 0; };
       map.appendChild(card);
     }
     body.appendChild(map);
-    body.appendChild(el('div', 'msg', '100회차 뒤에는 같은 복장이 색만 바뀌어 다시 나와요 (1000회차까지)'));
   }
 
   /* ---------- 선행: 칭호 · 도감 ---------- */
