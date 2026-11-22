@@ -471,7 +471,14 @@
     for (const a of sum.newAch) lines.push(`🏆 ${a.name} +${a.reward}`);
     for (const m of sum.missionsDone) lines.push(`🎯 +${m.reward}`);
     if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 ${w.emoji} ${w.name}`); }
-    $('nextCycle').style.display = 'none';
+    $('nextCycle').style.display = 'none'; $('nextWorld').style.display = 'none';
+    // 왕을 넘었고 다음 월드가 열려 있으면: 바로 다음 월드로 가는 버튼 (마지막 월드는 '다음 회차' 버튼이 대신)
+    const order = EchoSim.WORLD_ORDER, nextId = order[order.indexOf(sim.world.id) + 1];
+    if (sim.result === 'clear' && nextId && Meta.worldUnlocked(GameUI.save, nextId)) {
+      const nw = EchoSim.WORLDS[nextId], nb = $('nextWorld');
+      nb.style.display = ''; nb.innerHTML = `▶ 다음 월드: ${nw.emoji} ${nw.name}<small style="display:block;font-size:11px;font-weight:400;opacity:.85">에코는 새 월드에서 0명부터 · 권장 에코 ${nw.boss.needEchoes}명</small>`;
+      nb.onclick = () => { if (GameUI.selectWorld(nextId)) { nb.style.display = 'none'; startRun(); } };
+    }
     if (sum.newCycle !== null && sum.newCycle !== undefined) {
       lines.push(`🔓 ${sum.newCycle + 1}회차가 열렸어요!`);
       const nb = $('nextCycle'); nb.style.display = ''; nb.textContent = `🔁 ${sum.newCycle + 1}회차로 넘어가기 ▶`;

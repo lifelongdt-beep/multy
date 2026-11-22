@@ -361,6 +361,8 @@
     /** 지난 판에 도와준 사람이 이번 판에 찾아온다 (한 번만) */
     takeVisitor() { const v = M.takeVisitor(save); if (v) commit(); return v; },
     cycle() { return save.cycle; },
+    /** 월드 고르기 (결과 화면의 "다음 월드" 버튼). 월드가 바뀌면 에코는 그 월드에서 새로 시작 */
+    selectWorld(id) { if (!M.selectWorld(save, id)) return false; if (window.GameEchoes && GameEchoes.world() !== id) GameEchoes.reset(id); commit(); return true; },
     /** 입고 있는 복장(회차 번호) */
     outfitCycle() { return M.outfitCycle(save); },
     /** 회차 고르기 (결과 화면의 "다음 회차로" 버튼 등) */
