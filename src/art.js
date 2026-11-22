@@ -375,7 +375,7 @@
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
   }
   function background(W, H, worldId) {
-    if (worldId && worldId !== 'school' && BG[worldId]) {
+    if (worldId && BG[worldId]) {   // art-bg.js 의 사실적인 배경 (학교 포함). 없으면 아래 기본 학교 배경
       return sprite(`bg:${worldId}:${W}x${H}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); vignette(g, W, H); });
     }
     return sprite(`bg:school:${W}x${H}`, W, H, (g) => {
