@@ -38,7 +38,7 @@
       ruleText: '특별한 규칙 없음 · 숙제는 미리미리! · 담임 선생님께 도움을 청할 수 있어요',
       theme: { bg: '#161a2e', grid: 'rgba(255,255,255,.04)', deco: 'none' },
       // 첫 월드는 쉽게: 방해 요소가 덜 아프고(atkMul), 조금 덜 단단하고, 덜 몰려온다. 큰 도전도 에코 2명이면 넘을 수 있게
-      rules: { hpMul: 0.85, xpMul: 1.0, speedMul: 0.95, spawnMul: 0.85, atkMul: 0.6, rageMul: 0.8, drops: { first: 22, every: 18, n: 1, emoji: '🏀', text: '🏀 공이 떨어져요! 빨간 원을 피하세요' } },
+      rules: { hpMul: 0.85, xpMul: 1.0, speedMul: 0.95, spawnMul: 0.85, atkMul: 0.6, rageMul: 0.8, drops: { first: 22, every: 18, n: 1, emoji: '🏀', text: '🏀 빨간 원이 생기면 곧 공이 떨어져요! 원 밖으로 피하세요' } },
       enemies: {
         hw:     { name: '미루기',   emoji: '🐌', hp: 3,  speed: 0.7,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         test:   { name: '걱정',     emoji: '😰', hp: 2,  speed: 1.1,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },

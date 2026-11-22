@@ -180,7 +180,8 @@
   /* ---------- 주인공 / 에코 / 선생님 ---------- */
   /* ---------- 주인공 복장 (회차마다 바뀜: worlds.js outfitOf) ---------- */
   // 캐릭터 고유 표시 (복장 위에 얹힘)
-  const CHAR = { '🤓': { glasses: true }, '🧑‍⚕️': { cross: true } };
+  // 캐릭터 고유 표시: 복장 장식(모자·목·겉옷·오라)과 겹치지 않는 자리에 그려서 어떤 복장을 입어도 구분된다
+  const CHAR = { '🏃': { shoe: '#2ee88a', bands: true, spiky: true }, '🤓': { glasses: true, book: true }, '🧑‍⚕️': { armband: true } };
   // 복장 20종: 몸·장식 색, 무늬, ★2 모자 · ★3 목 장식 · ★4 겉옷
   const STYLES = [
     { body: '#4561d6', trim: '#2c3f9a', pack: '#e2574c', pat: 'vneck',   head: 'cap',      hc: '#2c3f9a', neck: 'tie',    nc: '#e53935', outer: 'bag',     oc: '#e2574c' },   // 교복
@@ -300,8 +301,8 @@
       g.fillStyle = gl; g.fillRect(-15, -18, 30, 32);
     }
     if (o.outer) outerBack(g, o);
-    oval(g, -3.2 + step * 1.2, 12, 2.6, 1.8); fillStroke(g, '#2a2440', 1.4);
-    oval(g, 3.2 - step * 1.2, 12, 2.6, 1.8); fillStroke(g, '#2a2440', 1.4);
+    oval(g, -3.2 + step * 1.2, 12, 2.6, 1.8); fillStroke(g, o.shoe || '#2a2440', 1.4);
+    oval(g, 3.2 - step * 1.2, 12, 2.6, 1.8); fillStroke(g, o.shoe || '#2a2440', 1.4);
     if (o.outer === 'bag') { rrect(g, -9.5, -1, 5.5, 10.5, 2); fillStroke(g, o.oc, 1.6); g.fillStyle = '#ffd54f'; g.fillRect(-8.2, 3, 3, 1.4); }
     else if (!o.outer || o.outer === 'apron' || o.outer === 'jacket') { rrect(g, -8.5, -0.5, 4.5, 9, 1.8); fillStroke(g, o.pack, 1.6); }
     rrect(g, -5.8, 0, 11.6, 11.5, 4); fillStroke(g, o.body, 1.8);
@@ -310,10 +311,14 @@
     if (o.outer) outerFront(g, o);
     if (o.cross) { g.fillStyle = '#e2574c'; g.fillRect(-1, 5, 2, 5); g.fillRect(-2.5, 6.5, 5, 2); }
     if (o.neck) neckItem(g, o);
+    if (o.bands) { for (const x of [-7.3, 5.3]) { rrect(g, x, 6.2, 2, 2.8, 0.8); fillStroke(g, '#ffffff', 1); g.fillStyle = '#2ee88a'; g.fillRect(x + 0.3, 7.2, 1.4, 0.8); } }   // 운동부: 양 손목 밴드
+    if (o.book) { rrect(g, 3.6, 4.6, 5.2, 6.4, 1); fillStroke(g, '#43a047', 1.3); g.fillStyle = '#fff8e1'; g.fillRect(4.4, 5.4, 0.9, 4.8); }        // 전교 1등: 손에 든 책
+    if (o.armband) { rrect(g, 4.4, 1.2, 3.2, 4.2, 0.8); fillStroke(g, '#ffffff', 1.1); g.fillStyle = '#e53935'; g.fillRect(5.6, 1.9, 0.9, 2.8); g.fillRect(4.9, 2.85, 2.3, 0.9); }   // 보건 도우미: 팔 십자 완장
     if (o.head === 'hood') hoodBack(g, o);
     circle(g, 0, -6.5, 7.6); fillStroke(g, '#ffd9b8', 1.8);
     const hidesHair = ['space'].indexOf(o.head) < 0 && ['cap', 'detective', 'knight', 'explorer', 'pilot', 'fire'].indexOf(o.head) >= 0;
     if (!hidesHair) { g.beginPath(); g.arc(0, -7.2, 7.7, Math.PI * 1.02, Math.PI * 1.98); g.quadraticCurveTo(3, -9.5, -1, -8.5); g.quadraticCurveTo(-4, -8, -7.6, -6.5); g.closePath(); fillStroke(g, '#3b2b25', 1.6); }
+    if (o.spiky && !hidesHair && !o.head) { g.beginPath(); g.moveTo(-5, -12.6); g.lineTo(-3.6, -16.2); g.lineTo(-1.6, -13.6); g.lineTo(0.2, -16.8); g.lineTo(2, -13.6); g.lineTo(4.2, -15.8); g.lineTo(5.4, -12.2); g.closePath(); fillStroke(g, '#3b2b25', 1.4); }   // 운동부: 삐죽 머리 (모자를 쓰면 숨김)
     eye(g, -2.7, -4.6, 1.5, 'normal'); eye(g, 2.7, -4.6, 1.5, 'normal');
     if (o.glasses) { g.lineWidth = 1; g.strokeStyle = OL; circle(g, -2.7, -4.4, 2.3); g.stroke(); circle(g, 2.7, -4.4, 2.3); g.stroke(); g.beginPath(); g.moveTo(-0.4, -4.4); g.lineTo(0.4, -4.4); g.stroke(); }
     oval(g, -4.8, -2.2, 1.3, 0.8); g.fillStyle = 'rgba(255,120,120,.5)'; g.fill(); oval(g, 4.8, -2.2, 1.3, 0.8); g.fill();

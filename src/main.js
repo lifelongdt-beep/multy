@@ -315,7 +315,7 @@
   /** 튜토리얼 안내 문구를 시간에 맞춰 띄운다 */
   function tutorialTips() {
     const tips = EchoTutorial.TIPS;
-    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { toast = { text: tips[tipIdx].text, t: 300 }; tipIdx++; }
+    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { toast = { text: tips[tipIdx].text, t: 270 }; tipIdx++; }
   }
 
   /* ---------- 일시정지 ---------- */
@@ -431,12 +431,14 @@
     $('endEchoes').textContent = '👻 에코 10명';
     $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}`;
     $('reward').innerHTML = '';
-    [
-      '방금 함께 싸운 10명은 연습용 "과거의 나"였어요.',
-      '이제부터는 진짜 내 에코를 0명부터 쌓아요.',
-      '한 판이 끝날 때마다 그 판의 내가 에코가 되어 다음 판을 도와요.',
-    ].forEach((t) => { const d = document.createElement('div'); d.textContent = t; $('reward').appendChild(d); });
-    $('cheer').textContent = `👻 ${sim.world.name}의 큰 도전은 에코 ${sim.world.boss.needEchoes}명쯤 모이면 넘을 수 있어요. 차근차근 쌓아 봐요!`;
+    [   // 메뉴 안내: 실제 메뉴 이름 그대로
+      '방금 함께 싸운 10명은 연습용 "과거의 나"였어요. 이제 진짜 내 에코를 0명부터 쌓아요.',
+      '🗺️ 월드: 왕을 넘으면 다음 월드가 열려요. 월드를 바꾸면 에코는 그 월드에서 새로 모아요.',
+      '🏪 상점: 학점으로 기본 강화와 월드 장비를 사요. 뒤 월드일수록 장비가 더 필요해요.',
+      '👕 내 캐릭터: 캐릭터를 고르고, 지금까지 얻은 복장 중에서 골라 입어요.',
+      '🔁 12개 월드를 모두 넘으면 다음 회차가 열리고 새 복장 장식을 얻어요.',
+    ].forEach((t) => { const d = document.createElement('div'); d.textContent = t; d.style.marginBottom = '4px'; $('reward').appendChild(d); });
+    $('cheer').textContent = `👻 ${sim.world.name}의 왕은 에코 ${sim.world.boss.needEchoes}명이 모이면 넘을 수 있어요. 시작 버튼 아래 "👻 에코 0 / ${sim.world.boss.needEchoes}명"을 확인해 보세요!`;
     $('again').textContent = '이제 진짜 시작! ▶';
     $('end').classList.remove('hidden');
   }
@@ -889,7 +891,11 @@
     }
     if (toast.t > 0) {
       ctx.globalAlpha = Math.min(1, toast.t / 30);
-      ctx.textAlign = 'center'; ctx.fillStyle = '#ffd34d'; fitText(toast.text, W / 2, H * 0.36 + 28, 15);
+      ctx.textAlign = 'center'; ctx.fillStyle = '#ffd34d';
+      // 긴 안내는 ' · ' 에서 줄을 나눠 여러 줄로 (작아지거나 잘리지 않게), 뒤에 반투명 띠
+      const lines = toast.text.split(' · '), y0 = H * 0.36 + 30;
+      ctx.fillStyle = 'rgba(8,10,20,.55)'; ctx.fillRect(4, y0 - 13, W - 8, lines.length * 20 + 6);
+      ctx.fillStyle = '#ffd34d'; lines.forEach((ln, i) => fitText(ln, W / 2, y0 + i * 20, 14));
       ctx.globalAlpha = 1;
     }
     if (edgeFlash > 0) {
