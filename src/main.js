@@ -151,7 +151,7 @@
             if (ev.x !== undefined) thanks(ev.x, ev.y, THANKS);
           }
           else if (ev.what === 'visitGift') { Sfx.play('levelup'); thanks(ev.x, ev.y, VISIT); }
-          else if (ev.what === 'allyBye') bubbles.push({ text: '안녕~ 👋', x: ev.x, y: ev.y - 30, t: 0, max: 60, small: true });
+          else if (ev.what === 'allyBye') { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 34, y: ev.y + (Math.random() - 0.5) * 20, t: -i * 3, max: 50 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); }   // 하트가 반짝이며 사라짐
           else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') Sfx.play('heal');
           break;
         case 'trainPass': { const em = (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'; Sfx.pass(ev.dir, em === '🚆' || em === '🛒' || em === '🛏️'); break; }
@@ -221,7 +221,9 @@
     ctx.globalAlpha = 1;
     // 함께 싸우는 도와준 사람들
     for (const a of sim.allies) {
-      ctx.globalAlpha = a.t < 40 ? a.t / 40 : 1;
+      // 떠나기 1초 전부터 반짝반짝 깜빡이며 흐려지고 머리 위로 하트가 피어오른다
+      ctx.globalAlpha = a.t < 60 ? (a.t / 60) * (0.55 + 0.45 * Math.abs(Math.sin(now / 70))) : 1;
+      if (a.t < 60 && a.t % 8 === 0) bubbles.push({ heart: true, x: a.x + (Math.random() - 0.5) * 20, y: a.y - 14, t: 0, max: 40 });
       drawNPC(useArt, a.kind, a.x, a.y - Math.abs(Math.sin(now / 180 + a.ang)) * 3);
     }
     ctx.globalAlpha = 1;

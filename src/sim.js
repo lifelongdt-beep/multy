@@ -93,7 +93,7 @@
     deedSpotMax: 3,
     deedSpotLife: 10,        //   사라지기까지(초)
     deedGaugeNeed: 5,        //   이만큼 모으면 아이템 카드
-    allySec: 10,             // 도와준 사람이 곁에서 응원하며 함께하는 시간(초)
+    allySec: 5,              // 도와준 사람이 곁에서 응원하며 함께하는 시간(초)
     allyEvery: 34,           //   하트를 던지는 간격(틱)
     allyDmg: 0.8,            //   하트 위력 (내 총알 위력 대비)
     warmR: 150,              // 선행 순간 퍼지는 따뜻한 빛 반경
