@@ -161,11 +161,11 @@
       const clears = save.worlds.clears[id] || 0, best = Math.floor(save.worlds.best[id] || 0);
       const prev = w.unlock ? M.WORLDS[w.unlock.world] : null;
       const rec = M.recommendedGear(id, save.cycle), gt = M.gearTotals(save);
-      const gearLine = rec.atk + rec.def === 0 ? '🧰 장비 없이도 OK'
-        : `🧰 권장 장비 ⚔${rec.atk} 🛡${rec.def} (내 장비 ⚔${gt.atk} 🛡${gt.def})` + (gt.atk < rec.atk || gt.def < rec.def ? ' ⚠ 매점에서 장비를 더 사야 해요' : ' ✅');
+      // 글은 최소한: 왕 수 · 필요 에코 · 장비 상태 한 줄 (자세한 규칙은 게임 안에서)
+      const gearOk = gt.atk >= rec.atk && gt.def >= rec.def;
       const desc = open
-        ? `${w.desc}\n✨ ${w.ruleText}\n🏁 큰 도전 ${w.boss.times.length}번${save.cycle > 0 ? ' (🎲 무작위)' : ''} · 👻 권장 에코 ${w.boss.needEchoes}명+ · 🎓 학점 x${(() => { const rm = M.rewardMul(id, save.cycle); return rm >= 1000 ? M.fmtNum(rm) : rm.toFixed(1); })()} · 극복 ${clears}회 · 최장 ${best}초\n${gearLine}`
-        : `🔒 ${prev.emoji} ${prev.name}의 큰 도전 "${prev.boss.name}"을(를) 극복하면 열립니다`;
+        ? `🏁 왕 ${w.boss.times.length} · 👻 ${w.boss.needEchoes}명` + (rec.atk + rec.def ? ` · 🧰${gearOk ? '✅' : '⚠'}` : '') + (clears ? ` · ⭐${clears}` : '')
+        : `🔒 ${prev.emoji} ${prev.name} 극복 시 열림`;
       const row = item(open ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
       row.querySelector('small').style.whiteSpace = 'pre-line';
       const b = el('button', '', sel ? '선택됨' : open ? '선택' : '잠김');
@@ -193,7 +193,7 @@
       if (save.cycle < top) { const b = el('button', '', `🆕 ${top + 1}회차로 넘어가기 ▶`); b.style.background = '#ff8c42'; b.onclick = () => go(top); nodes.push(b); }
       nodes.reverse().forEach((n) => body.insertBefore(n, body.firstChild));
     }
-    body.appendChild(el('div', 'msg', `※ 에코는 월드를 옮기면 새로 시작해요. (지금 ${M.WORLDS[GameEchoes.world()].name}의 에코 ${GameEchoes.count()}명) 새 월드에서 다시 쌓아 보세요.`));
+    body.appendChild(el('div', 'msg', '※ 월드를 옮기면 에코는 새로 시작해요'));
   }
 
   /* ---------- 상점 ---------- */
