@@ -494,7 +494,11 @@
   // 처음 실행이면 튜토리얼 안내부터
   if (!GameUI.tutorialDone()) { $('start').classList.add('hidden'); $('tutorial').classList.remove('hidden'); }
   $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; };
-  $('reset').onclick = () => { echoes = []; runCount = 0; save(); $('reset').textContent = '초기화됨'; };
+  let resetArmed = false;   // 실수로 누르지 않게 두 번 눌러야 초기화
+  $('reset').onclick = () => {
+    if (!resetArmed) { resetArmed = true; $('reset').textContent = `⚠ 에코 ${echoes.length}명 지우기? 한 번 더`; setTimeout(() => { resetArmed = false; $('reset').textContent = '에코 기록 초기화'; }, 3000); return; }
+    resetArmed = false; echoes = []; runCount = 0; save(); $('reset').textContent = '초기화됨'; GameUI.refresh();
+  };
   $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); $('mute').textContent = Sfx.isMuted() ? '🔇' : '🔊'; };
 
   /* ---------- 렌더 ---------- */
@@ -937,6 +941,7 @@
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  GameUI.refresh();   // 에코 수 표시 등 (에코 정보는 이 파일에서 준비됨)
 
   // 테스트/디버그용 훅
   window.__echo = { get bossFx() { return bossFx; }, get sim() { return sim; }, get state() { return state; }, get echoes() { return echoes; }, get tutorial() { return tutorial; } };

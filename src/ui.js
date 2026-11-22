@@ -19,6 +19,12 @@
       const w = M.WORLDS[save.worlds.selected] || M.WORLDS.school;
       $('bWorld').textContent = `🗺️ 월드: ${w.emoji} ${w.name}` + (save.cycle > 0 ? ` · 🔁 ${save.cycle + 1}회차` : '');
       drawOutfit();
+      // 이번 월드의 큰 도전에 필요한 에코: 지금 몇 명 모였는지 (에코를 모아야 넘는다는 걸 한눈에)
+      if (window.GameEchoes) {
+        const need = w.boss.needEchoes, have = GameEchoes.world() === w.id ? GameEchoes.count() : 0;
+        $('echoLine').textContent = `👻 에코 ${have} / ${need}명` + (have >= need ? ' ✅' : '');
+        $('echoLine').style.color = have >= need ? '#7dffb2' : '#9fdcff';
+      }
     }
 
   /** 시작 화면: 이번 회차 복장 미리보기 + 이름 (회차마다 장식이 늘고, 5회차마다 새 복장) */
@@ -91,6 +97,7 @@
       map.appendChild(card);
     }
     body.appendChild(map);
+    renderChars(body);
   }
 
   /* ---------- 선행: 칭호 · 도감 ---------- */
@@ -233,14 +240,15 @@
   }
 
   /* ---------- 캐릭터 ---------- */
-  function renderChars() {
-    const body = $('pbody'); body.innerHTML = '';
+  /** 캐릭터 고르기 (내 캐릭터 화면 아래쪽에 붙는다) */
+  function renderChars(body) {
+    body.appendChild(el('div', 'msg', '🧑 캐릭터 고르기'));
     for (const id in M.CHARACTERS) {
       const c = M.CHARACTERS[id];
       const owned = save.chars.unlocked.indexOf(id) >= 0;
       const selected = save.chars.selected === id;
       const row = item(c.emoji, c.name, c.desc, { done: owned && !selected, sel: selected });
-      const b = el('button', '', selected ? '사용 중' : owned ? '선택' : `🎓 ${c.cost}`);
+      const b = el('button', '', selected ? '사용 중' : owned ? '선택' : `🎓 ${M.fmtNum(c.cost)}`);
       b.disabled = selected || (!owned && save.coins < c.cost);
       b.onclick = () => {
         if (!owned) { if (!M.unlockCharacter(save, id).ok) return; Sfx.play('levelup'); }
@@ -308,8 +316,8 @@
   /* ---------- 연결 ---------- */
   $('bWorld').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🗺️ 월드 선택', renderWorlds); };
   $('bShop').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏪 상점', renderShop); };
-  $('bChar').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🧑 캐릭터', renderChars); };
-  const openLook = () => { Sfx.unlock(); Sfx.play('click'); lookPreview = null; openPanel('👕 내 모습', renderLook); };
+  $('bMore').onclick = () => { Sfx.unlock(); Sfx.play('click'); const m = $('more'), open = m.style.display === 'none'; m.style.display = open ? 'flex' : 'none'; $('bMore').textContent = open ? '⋯ 접기' : '⋯ 더보기'; };
+  const openLook = () => { Sfx.unlock(); Sfx.play('click'); lookPreview = null; openPanel('👕 내 캐릭터', renderLook); };
   $('bLook').onclick = openLook; $('outfitPv').onclick = openLook; $('outfitPv').style.cursor = 'pointer';
   $('bDeed').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💛 선행', renderDeeds); };
   $('bQuest').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏆 과제 · 미션', renderQuests); };
