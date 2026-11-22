@@ -171,11 +171,19 @@ test('회차: 12번째 월드를 극복하면 2회차 — 학교부터 다시, �
   }
   s.worlds.selected = 'stage';
   const r = M.recordRun(s, clearRun('stage'), '2026-11-20');
-  assert.strictEqual(r.newCycle, 1); assert.strictEqual(s.cycle, 1); assert.strictEqual(r.newWorld, null);
+  assert.strictEqual(r.newCycle, 1); assert.strictEqual(s.maxCycle, 1); assert.strictEqual(r.newWorld, null);
+  assert.strictEqual(s.cycle, 0, '바로 넘어가지 않고 2회차가 열리기만 한다');
+  assert.strictEqual(M.worldUnlocked(s, 'stage'), true, '끝낸 1회차는 모든 월드가 열려 있다');
+  assert.strictEqual(M.selectCycle(s, 1), true, '메뉴에서 2회차로 넘어간다');
   assert.strictEqual(s.worlds.selected, 'school');
   assert.deepStrictEqual(s.worlds.cycleClears, {}, '이번 회차 진행은 처음부터');
   assert.strictEqual(M.worldUnlocked(s, 'academy'), false, '2회차는 다시 학교부터 차례로');
-  assert.strictEqual(s.worlds.clears.stage, 1, '전체 기록은 남는다');
+  assert.strictEqual(M.selectCycle(s, 2), false, '안 열린 회차는 못 고름');
+  assert.strictEqual(M.selectCycle(s, 0), true, '지난 회차로 돌아갈 수 있다');
+  assert.strictEqual(M.gearMax(s), 10, '지난 회차로 가도 장비 최대 레벨은 그대로');
+  assert.strictEqual(M.recordRun(s, clearRun('stage'), '2026-11-20').newCycle, null, '지난 회차를 다시 깨도 새 회차는 안 열림');
+  M.selectCycle(s, 1);
+  assert.strictEqual(s.worlds.clears.stage, 2, '전체 기록은 남는다 (1회차를 두 번 극복)');
   assert.ok(r.newAch.some((a) => a.id === 'cycle_2') && r.newAch.some((a) => a.id === 'clear_stage'));
   assert.strictEqual(M.gearMax(s), 10);
   assert.strictEqual(M.gearAvailable(s, 'stage'), true, '한 바퀴 돈 뒤에는 모든 월드 장비를 살 수 있다');

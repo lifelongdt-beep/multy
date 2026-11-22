@@ -111,18 +111,32 @@
       };
       row.appendChild(b); body.appendChild(row);
     }
-    if (save.cycle > 0) body.insertBefore(el('div', 'msg', `🔁 ${save.cycle + 1}회차: 적이 더 강해졌어요. 매점 장비 최대 Lv ${M.gearMax(save)}`), body.firstChild);
+    // 회차 고르기: 열린 회차 중에서 ◀ ▶ 로 고른다. 새로 열린 회차가 있으면 바로 넘어가는 버튼
+    const top = M.topCycle(save);
+    if (top > 0) {
+      const box = el('div', 'cyc');
+      const prev = el('button', 'sub', '◀'), next = el('button', 'sub', '▶');
+      const cv = el('div', 'cv', `🔁 ${save.cycle + 1}회차`);
+      cv.appendChild(el('small', '', save.cycle < top ? `끝낸 회차 · 모든 월드 열림 (열린 회차 1~${top + 1})` : `지금 도전 중인 회차 · 적이 더 강해요`));
+      prev.disabled = save.cycle <= 0; next.disabled = save.cycle >= top;
+      const go = (c) => { if (M.selectCycle(save, c)) { if (GameEchoes.world() !== save.worlds.selected) GameEchoes.reset(save.worlds.selected); Sfx.play('click'); commit(); rerender(); } };
+      prev.onclick = () => go(save.cycle - 1); next.onclick = () => go(save.cycle + 1);
+      box.append(prev, cv, next);
+      const nodes = [box];
+      if (save.cycle < top) { const b = el('button', '', `🆕 ${top + 1}회차로 넘어가기 ▶`); b.style.background = '#ff8c42'; b.onclick = () => go(top); nodes.push(b); }
+      nodes.reverse().forEach((n) => body.insertBefore(n, body.firstChild));
+    }
     body.appendChild(el('div', 'msg', `※ 에코는 월드를 옮기면 새로 시작해요. (지금 ${M.WORLDS[GameEchoes.world()].name}의 에코 ${GameEchoes.count()}명) 새 월드에서 다시 쌓아 보세요.`));
   }
 
   /* ---------- 상점 ---------- */
   function renderShop() {
     const body = $('pbody'); body.innerHTML = '';
-    body.appendChild(el('div', 'msg', '🏪 기본 강화 (모든 월드 공통)' + (save.cycle > 0 ? ` · 🔁 ${save.cycle + 1}회차 가격` : '')));
+    body.appendChild(el('div', 'msg', '🏪 기본 강화 (모든 월드 공통)' + (M.topCycle(save) > 0 ? ` · 🔁 ${M.topCycle(save) + 1}회차 가격` : '')));
     for (const it of M.SHOP) {
       const lv = M.shopLevel(save, it.id);
       const mx = M.shopMax(save, it.id), maxed = lv >= mx;
-      const cost = maxed ? 0 : M.shopCost(it.id, lv, save.cycle);
+      const cost = maxed ? 0 : M.shopCost(it.id, lv, M.topCycle(save));
       const row = item(it.icon, `${it.name}  Lv ${lv}/${mx}`,
         `${it.fmt(it.per * lv)} → ${maxed ? (it.grow ? '최대 (다음 회차에 +5)' : '최대') : it.fmt(it.per * (lv + 1))}`, { done: maxed, progress: lv / mx });
       const b = el('button', '', maxed ? '최대' : `🎓 ${M.fmtNum(cost)}`);
@@ -253,6 +267,8 @@
     /** 지난 판에 도와준 사람이 이번 판에 찾아온다 (한 번만) */
     takeVisitor() { const v = M.takeVisitor(save); if (v) commit(); return v; },
     cycle() { return save.cycle; },
+    /** 회차 고르기 (결과 화면의 "다음 회차로" 버튼 등) */
+    selectCycle(c) { const ok = M.selectCycle(save, c); if (ok) { if (window.GameEchoes && GameEchoes.world() !== save.worlds.selected) GameEchoes.reset(save.worlds.selected); commit(); } return ok; },
     /** 시작하려는 월드에 장비가 모자라면 {atk, def} 부족분, 충분하면 null */
     gearShort(worldId) {
       const rec = M.recommendedGear(worldId, save.cycle), gt = M.gearTotals(save);

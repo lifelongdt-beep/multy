@@ -464,8 +464,11 @@
     for (const a of sum.newAch) lines.push(`🏆 ${a.name} +${a.reward}`);
     for (const m of sum.missionsDone) lines.push(`🎯 +${m.reward}`);
     if (sum.newWorld) { const w = EchoSim.WORLDS[sum.newWorld]; lines.push(`🔓 ${w.emoji} ${w.name}`); }
+    $('nextCycle').style.display = 'none';
     if (sum.newCycle !== null && sum.newCycle !== undefined) {
-      lines.push(`🔁 ${sum.newCycle + 1}회차!`);
+      lines.push(`🔓 ${sum.newCycle + 1}회차가 열렸어요!`);
+      const nb = $('nextCycle'); nb.style.display = ''; nb.textContent = `🔁 ${sum.newCycle + 1}회차로 넘어가기 ▶`;
+      nb.onclick = () => { Sfx.play('levelup'); GameUI.selectCycle(sum.newCycle); nb.style.display = 'none'; $('toMenu').onclick(); };
       const of = EchoWorlds.outfitOf(sum.newCycle);
       lines.push(of.tier === 0 ? `👕 새 복장: ${of.name}` : `👕 ${of.name} ${'★'.repeat(of.stars)} 장식 추가`);
     }

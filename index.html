@@ -11,6 +11,8 @@
   canvas{width:100%;height:100%;display:block;background:#161a2e;border-radius:6px}
   .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(8,10,20,.82);text-align:center;padding:24px;box-sizing:border-box}
   .overlay.hidden{display:none}
+  #end{overflow-y:auto;touch-action:pan-y;justify-content:safe center;gap:8px}   /* 보상 줄이 많아도 겹치지 않게 */
+  #end>*{flex-shrink:0}
   h1{margin:0;font-size:28px} h2{margin:0;font-size:22px}
   p{margin:0;opacity:.8;font-size:14px;line-height:1.5}
   button{font:inherit;font-size:16px;font-weight:700;border:0;border-radius:12px;padding:14px 22px;background:#6c8cff;color:#fff;cursor:pointer;min-width:200px}
@@ -34,6 +36,11 @@
   .book .cell{text-align:center;border-radius:8px;padding:3px 0;background:#0003}
   .book .cell.got{background:rgba(255,140,190,.18)}
   .book .cell small{display:block;font-size:10px;opacity:.75}
+  .cyc{display:flex;align-items:center;gap:6px;background:#222845;border:2px solid #ffd34d;border-radius:12px;padding:8px;width:100%;box-sizing:border-box}
+  .cyc .cv{flex:1;text-align:center;font-weight:700;font-size:15px}
+  .cyc .cv small{display:block;font-weight:400;font-size:11px;opacity:.75}
+  .cyc button{min-width:0;padding:8px 12px;font-size:14px}
+  .cyc button:disabled{opacity:.35}
   .book .wn{font-size:12px;text-align:left;white-space:nowrap}
   .item button{min-width:78px;padding:8px 10px;font-size:13px}
   .item button:disabled{opacity:.4;cursor:default}
@@ -111,6 +118,7 @@
     <div id="stats"></div>
     <div id="reward" class="msg" style="font-size:14px;line-height:1.6"></div>
     <div id="cheer" style="font-size:14px;color:#ffe58a;line-height:1.5;padding:0 8px"></div>
+    <button id="nextCycle" style="display:none;background:#ff8c42">🔁 다음 회차로 ▶</button>
     <button id="again">한 판만 더</button>
     <button id="toMenu" class="sub">🏪 메뉴 · 상점</button>
   </div>

@@ -38,7 +38,9 @@
   /** 기본 강화 가격: 회차마다 그 회차 수입만큼 비싸진다 (학교 단계의 학점 배율). 레벨은 5개 묶음마다 다시 기본가부터 */
   function shopCost(id, level, cycle) { return Math.round(SHOP_BY_ID[id].base * Math.pow(1.85, level % 5) * Worlds.rewardMul('school', cycle || 0)); }
   /** 최대 레벨: 체력·공격력·재생·에코처럼 계속 키울 수 있는 강화는 회차마다 +5 */
-  function shopMax(save, id) { const it = SHOP_BY_ID[id]; return it.grow ? it.max * (Math.min(9999, save.cycle || 0) + 1) : it.max; }
+  function shopMax(save, id) { const it = SHOP_BY_ID[id]; return it.grow ? it.max * (Math.min(9999, topCycle(save)) + 1) : it.max; }
+  /** 지금까지 열린 가장 높은 회차 (장비·강화의 최대 레벨과 가격은 이 기준: 낮은 회차로 돌아가도 그대로) */
+  function topCycle(save) { return Math.max(save.cycle || 0, save.maxCycle || 0); }
 
   /* ---------- 월드 매점 장비 ----------
    * 월드마다 ⚔ 공격 장비(팀 공격력 x1.06/레벨, 에코 포함) 1개 + 🛡 방어 장비(받는 피해 ÷1.05/레벨) 1개.
@@ -53,7 +55,7 @@
   }
   const GEAR_BY_ID = {}; GEAR_ITEMS.forEach((g) => { GEAR_BY_ID[g.id] = g; });
   function gearLevel(save, id) { return save.gear[id] || 0; }
-  function gearMax(save) { return Worlds.gearMaxLevel(save.cycle); }
+  function gearMax(save) { return Worlds.gearMaxLevel(topCycle(save)); }
   /** 다음 1레벨 가격 (같은 종류는 어느 월드 장비든 같은 값, 많이 살수록 비싸짐) */
   function gearCost(save, id) { const k = GEAR_BY_ID[id].kind; return Worlds.gearCost(k, gearTotals(save)[k]); }
   /** 큰 숫자를 짧게: 12,345 → 1.2만, 3억 … (끝없는 회차에서 학점이 커지므로) */
@@ -71,7 +73,7 @@
     return t;
   }
   /** 그 월드의 장비를 살 수 있는가: 이번 회차에 열린 월드이거나, 이미 한 바퀴 돈 뒤(2회차~)면 모두 */
-  function gearAvailable(save, worldId) { return save.cycle > 0 || worldUnlocked(save, worldId); }
+  function gearAvailable(save, worldId) { return topCycle(save) > 0 || worldUnlocked(save, worldId); }
   function gearText(kind, lv) {
     return kind === 'atk'
       ? `총알 위력 x${Math.pow(GEAR.atkPer, lv).toFixed(2)}`
@@ -97,8 +99,8 @@
     { id: 'clear_home',    icon: '🌙', name: '꿀잠',          desc: '집 월드의 “불면증”을 극복',            reward: 1000, test: (s, run, sv) => !!sv && (sv.worlds.clears.home || 0) >= 1 },
     { id: 'clear_beach',   icon: '🌤️', name: '태풍이 지나간 뒤', desc: '바닷가 월드의 “태풍”을 극복',      reward: 1500, test: (s, run, sv) => !!sv && (sv.worlds.clears.beach || 0) >= 1 },
     { id: 'clear_stage',   icon: '🌟', name: '꿈의 무대',     desc: '마지막 월드 “꿈의 무대”에서 무대 공포증을 극복', reward: 3000, test: (s, run, sv) => !!sv && (sv.worlds.clears.stage || 0) >= 1 },
-    { id: 'cycle_2',       icon: '🔁', name: '두 번째 여정',  desc: '12개 월드를 모두 극복하고 2회차 시작',  reward: 2000, test: (s, run, sv) => !!sv && sv.cycle >= 1 },
-    { id: 'cycle_3',       icon: '♾️', name: '끝없는 성장',   desc: '3회차 시작',                           reward: 5000, test: (s, run, sv) => !!sv && sv.cycle >= 2 },
+    { id: 'cycle_2',       icon: '🔁', name: '두 번째 여정',  desc: '12개 월드를 모두 극복하고 2회차 시작',  reward: 2000, test: (s, run, sv) => !!sv && topCycle(sv) >= 1 },
+    { id: 'cycle_3',       icon: '♾️', name: '끝없는 성장',   desc: '3회차 시작',                           reward: 5000, test: (s, run, sv) => !!sv && topCycle(sv) >= 2 },
     { id: 'gear_20',       icon: '🧰', name: '든든한 장비',   desc: '매점 장비 레벨 합계 20',               reward: 300,  test: (s, run, sv) => !!sv && sv.gear && Object.values(sv.gear).reduce((a, b) => a + b, 0) >= 20 },
     { id: 'help_1',     icon: '🙋', name: '도움 요청하기', desc: '선생님·선배께 도움을 청해 조언 받기',  reward: 40,  test: (s) => s.helped >= 1 },
     { id: 'help_10',    icon: '💛', name: '든든한 인연',   desc: '도움을 청해 조언을 10번 받기',        reward: 150, test: (s) => s.helped >= 10 },
@@ -148,7 +150,8 @@
       worlds: { selected: 'school', clears: {}, best: {}, cycleClears: {} },   // 월드별 극복 횟수(전체) / 최장 생존(초) / 이번 회차 극복 횟수
       tutorial: false,                            // 튜토리얼(에코 10명과 함께하는 첫 판)을 마쳤거나 건너뛰었는지
       gear: {},                                   // 월드 매점 장비 'world:atk|def' -> level
-      cycle: 0,                                   // 회차(0=1회차). 12개 월드를 모두 극복하면 +1, 학교부터 다시
+      cycle: 0,                                   // 지금 플레이하는 회차(0=1회차). 월드 메뉴에서 열린 회차 중 고를 수 있다
+      maxCycle: 0,                                // 열린 가장 높은 회차. 12개 월드를 모두 극복하면 +1
       deeds: { people: 0, escorts: 0, spots: 0, book: {}, visitor: null },   // 선행 기록: 도운 사람 · 지켜 준 친구 · 작은 선행 · 도감('world:kind' -> 횟수) · 다음 판에 찾아올 사람
     };
   }
@@ -186,7 +189,7 @@
     if (!raw || typeof raw !== 'object') return d;
     if (isNum(raw.coins) && raw.coins >= 0) d.coins = Math.floor(raw.coins);
     if (raw.shop && typeof raw.shop === 'object') {
-      const cyc = isNum(raw.cycle) && raw.cycle >= 0 ? Math.min(9999, Math.floor(raw.cycle)) : 0;
+      const cyc = Math.max(isNum(raw.cycle) && raw.cycle >= 0 ? Math.min(9999, Math.floor(raw.cycle)) : 0, isNum(raw.maxCycle) && raw.maxCycle >= 0 ? Math.min(9999, Math.floor(raw.maxCycle)) : 0);
       for (const it of SHOP) { const lv = raw.shop[it.id]; if (isNum(lv)) d.shop[it.id] = Math.max(0, Math.min(shopMax({ cycle: cyc }, it.id), Math.floor(lv))); }
     }
     if (raw.chars && typeof raw.chars === 'object') {
@@ -208,8 +211,9 @@
         .map((m) => ({ id: m.id, target: m.target, reward: m.reward, progress: isNum(m.progress) ? Math.max(0, m.progress) : 0, done: m.done === true }));
     }
     if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(9999, Math.floor(raw.cycle));
+    d.maxCycle = Math.max(d.cycle, isNum(raw.maxCycle) && raw.maxCycle >= 0 ? Math.min(9999, Math.floor(raw.maxCycle)) : 0);
     if (raw.gear && typeof raw.gear === 'object') {
-      const max = Worlds.gearMaxLevel(d.cycle);
+      const max = Worlds.gearMaxLevel(d.maxCycle);
       for (const g of GEAR_ITEMS) { const lv = raw.gear[g.id]; if (isNum(lv) && lv > 0) d.gear[g.id] = Math.min(max, Math.floor(lv)); }
     }
     if (raw.worlds && typeof raw.worlds === 'object') {
@@ -241,7 +245,16 @@
     const w = WORLDS[id];
     if (!w) return false;
     if (!w.unlock) return true;
+    if ((save.cycle || 0) < (save.maxCycle || 0)) return true;   // 이미 끝낸 회차를 다시 할 때는 모든 월드가 열려 있다
     return ((save.worlds.cycleClears || {})[w.unlock.world] || 0) >= 1;
+  }
+  /** 회차 고르기: 열린 회차(0 ~ maxCycle) 중 하나. 고른 월드가 잠겨 있으면 학교로 */
+  function selectCycle(save, c) {
+    c = Math.floor(c);
+    if (!(c >= 0 && c <= topCycle(save)) || c === save.cycle) return false;
+    save.cycle = c;
+    if (!worldUnlocked(save, save.worlds.selected)) save.worlds.selected = WORLD_ORDER[0];
+    return true;
   }
   function selectWorld(save, id) {
     if (!worldUnlocked(save, id)) return false;
@@ -299,7 +312,7 @@
     if (!it) return { ok: false, reason: 'unknown' };
     const lv = shopLevel(save, id);
     if (lv >= shopMax(save, id)) return { ok: false, reason: 'max' };
-    const cost = shopCost(id, lv, save.cycle);
+    const cost = shopCost(id, lv, topCycle(save));
     if (save.coins < cost) return { ok: false, reason: 'coins', cost };
     save.coins -= cost; save.shop[id] = lv + 1;
     return { ok: true, cost, level: lv + 1 };
@@ -387,11 +400,11 @@
     let newWorld = WORLD_ORDER.find((w) => worldUnlocked(save, w) && unlockedBefore.indexOf(w) < 0) || null;
     // 마지막 월드까지 극복하면 다음 회차: 학교부터 다시, 적은 더 강하고 장비 최대 레벨이 오른다
     let newCycle = null;
-    if (run.result === 'clear' && worldId === WORLD_ORDER[WORLD_ORDER.length - 1]) {
-      save.cycle = Math.min(9999, save.cycle + 1);
-      save.worlds.cycleClears = {};
-      save.worlds.selected = WORLD_ORDER[0];
-      newCycle = save.cycle; newWorld = null;
+    if (run.result === 'clear' && worldId === WORLD_ORDER[WORLD_ORDER.length - 1] && save.cycle >= topCycle(save) && save.cycle < 9999) {
+      // 다음 회차가 "열린다" (바로 넘어가지 않음: 결과 화면·월드 메뉴에서 넘어갈 수 있다)
+      save.maxCycle = save.cycle + 1;
+      save.worlds.cycleClears = {};          // 새 회차의 진행은 처음부터
+      newCycle = save.maxCycle; newWorld = null;
       for (const a of ACHIEVEMENTS) {      // 회차 과제는 넘어간 직후에 판정
         if (!save.ach[a.id] && a.test(st, run, save)) { save.ach[a.id] = true; newAch.push(a); save.coins += a.reward; st.totalCoins += a.reward; total += a.reward; }
       }
@@ -526,7 +539,7 @@
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopMax, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
-    deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
+    topCycle, selectCycle, deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
