@@ -58,6 +58,84 @@
       g.fillStyle = hi; oval(g, -4.6, -4.2, 2.6, 1.7); g.fill(); circle(g, -1.4, -5.6, 0.9); g.fill();
     };
   }
+  /* 부정적인 마음이 위험 요소로: 짜증·조급함·스트레스·귀찮음·지침·잡념·병균·긴장 (40x40 기준, 가운데 0,0)
+   * 좋은 것(책·공·침대·조명)이 공격으로 오지 않게, 피해야 할 것은 모두 '부정적인 것'으로 그린다 */
+  function gloomFace(g, x, y, s, mood) {
+    const ew = s * 0.22;
+    for (const sx of [-1, 1]) {
+      g.fillStyle = '#fff'; oval(g, x + sx * s * 0.34, y, ew, ew * 1.1); g.fill(); g.lineWidth = 1.2; g.strokeStyle = OL; g.stroke();
+      g.fillStyle = OL; circle(g, x + sx * s * 0.34 + sx * ew * 0.15, y + ew * 0.2, ew * 0.55); g.fill();
+      g.strokeStyle = OL; g.lineWidth = 1.8; g.beginPath();
+      if (mood === 'angry') { g.moveTo(x + sx * s * 0.6, y - ew * 1.5); g.lineTo(x + sx * s * 0.14, y - ew * 0.9); }
+      else if (mood === 'tired') { g.moveTo(x + sx * s * 0.58, y - ew * 0.9); g.lineTo(x + sx * s * 0.12, y - ew * 1.2); }
+      else if (mood === 'scared') { g.moveTo(x + sx * s * 0.56, y - ew * 1.1); g.quadraticCurveTo(x + sx * s * 0.34, y - ew * 1.9, x + sx * s * 0.12, y - ew * 1.5); }
+      g.stroke();
+      if (mood === 'tired' || mood === 'meh') { g.fillStyle = g.__lid || '#888'; g.fillRect(x + sx * s * 0.34 - ew - 1, y - ew * 1.2, ew * 2 + 2, ew * 1.1); g.strokeStyle = OL; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x + sx * s * 0.34 - ew, y - ew * 0.1); g.lineTo(x + sx * s * 0.34 + ew, y - ew * 0.1); g.stroke(); }
+    }
+    g.strokeStyle = OL; g.lineWidth = 1.8; g.beginPath();
+    const my = y + s * 0.42;
+    if (mood === 'angry') { g.moveTo(x - s * 0.2, my + 2); g.lineTo(x - s * 0.07, my - 1); g.lineTo(x + s * 0.07, my + 2); g.lineTo(x + s * 0.2, my - 1); }
+    else if (mood === 'scared') { g.moveTo(x - s * 0.2, my); for (let i = 1; i <= 4; i++) g.lineTo(x - s * 0.2 + i * s * 0.1, my + (i % 2 ? -2 : 1)); }
+    else if (mood === 'meh') { g.moveTo(x - s * 0.16, my); g.lineTo(x + s * 0.16, my); }
+    else g.arc(x, my + s * 0.14, s * 0.17, Math.PI * 1.15, Math.PI * 1.85);
+    g.stroke();
+  }
+  function shine(g, x, y, r) { g.fillStyle = 'rgba(255,255,255,.35)'; oval(g, x, y, r, r * 0.6); g.fill(); }
+  const GLOOM = {
+    '💢'(g) {   // 짜증 폭탄: 빨간 가시 공
+      g.beginPath(); for (let i = 0; i < 20; i++) { const a = i * Math.PI / 10, r = i % 2 ? 11 : 15; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); fillStroke(g, '#ff5a4a', 2);
+      shine(g, -5, -6, 4); gloomFace(g, 0, -1, 14, 'angry');
+      g.strokeStyle = '#ffe14d'; g.lineWidth = 2; g.beginPath(); g.moveTo(9, -14); g.lineTo(13, -18); g.moveTo(13, -13); g.lineTo(17, -15); g.stroke();
+    },
+    '🌪'(g) {   // 조급함 돌풍: 회색 회오리
+      const cols = ['#9aa6c8', '#b4bdd9', '#c9d0e6'];
+      for (let i = 0; i < 4; i++) { oval(g, (i % 2 ? 2 : -2), -12 + i * 7, 15 - i * 3, 4.6); fillStroke(g, cols[i % 3], 1.8); }
+      oval(g, 0, 13, 3.4, 3); fillStroke(g, '#9aa6c8', 1.6);
+      g.__lid = '#b4bdd9'; gloomFace(g, 0, -4, 13, 'angry');
+      g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-18, -8); g.lineTo(-24, -8); g.moveTo(-17, 0); g.lineTo(-25, 0); g.stroke();
+    },
+    '⚡'(g) {   // 스트레스 번개구름
+      g.beginPath(); g.moveTo(2, 4); g.lineTo(-5, 17); g.lineTo(1, 14); g.lineTo(-2, 22); g.lineTo(8, 9); g.lineTo(3, 11); g.lineTo(6, 4); g.closePath(); fillStroke(g, '#ffd23f', 1.6);
+      for (const [x, y, r] of [[-9, -2, 8], [0, -7, 10], [10, -1, 8], [0, 2, 9]]) { circle(g, x, y, r); g.fillStyle = '#5a5f7a'; g.fill(); }
+      g.lineWidth = 2; g.strokeStyle = OL; for (const [x, y, r] of [[-9, -2, 8], [0, -7, 10], [10, -1, 8]]) { g.beginPath(); g.arc(x, y, r, Math.PI * 0.85, Math.PI * 2.15); g.stroke(); }
+      g.beginPath(); g.moveTo(-17, 1); g.quadraticCurveTo(0, 14, 18, 1); g.stroke();
+      shine(g, -4, -10, 3.5); g.__lid = '#5a5f7a'; gloomFace(g, 0, -2, 12, 'angry');
+    },
+    '😑'(g) {   // 귀찮음 덩어리: 무겁고 축 처진 회색 덩어리
+      g.beginPath(); g.moveTo(-15, 12); g.quadraticCurveTo(-17, -8, -4, -12); g.quadraticCurveTo(10, -15, 15, -2); g.quadraticCurveTo(18, 10, 14, 12); g.closePath(); fillStroke(g, '#8c8fa6', 2);
+      shine(g, -6, -6, 4); g.__lid = '#8c8fa6'; gloomFace(g, 0, 0, 14, 'meh');
+      g.fillStyle = '#6f7287'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.fillText('z', 13, -12); g.font = 'bold 6px sans-serif'; g.fillText('z', 17, -16);
+    },
+    '😩'(g) {   // 지친 마음: 보라색으로 축 늘어진 덩어리 (굴러옴)
+      circle(g, 0, 0, 14); fillStroke(g, '#9b7fd1', 2);
+      g.fillStyle = 'rgba(80,50,140,.35)'; oval(g, 4, 6, 9, 6); g.fill(); shine(g, -5, -6, 4);
+      g.__lid = '#9b7fd1'; gloomFace(g, 0, -1, 13, 'tired');
+      g.fillStyle = '#7fd3ff'; g.beginPath(); g.moveTo(11, -6); g.quadraticCurveTo(14, -1, 11, 0); g.quadraticCurveTo(8, -1, 11, -6); g.fill();   // 땀방울
+    },
+    '💭'(g) {   // 잡념 구름: 연보라 생각 구름 + 소용돌이
+      for (const [x, y, r] of [[-8, 2, 8], [0, -5, 10], [9, 1, 8], [0, 5, 8]]) { circle(g, x, y, r); g.fillStyle = '#c7b5f0'; g.fill(); }
+      g.lineWidth = 2; g.strokeStyle = OL; for (const [x, y, r] of [[-8, 2, 8], [0, -5, 10], [9, 1, 8], [0, 5, 8]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); }
+      for (const [x, y, r] of [[-8, 2, 8], [0, -5, 10], [9, 1, 8], [0, 5, 8]]) { circle(g, x, y, r - 1); g.fillStyle = '#c7b5f0'; g.fill(); }
+      g.strokeStyle = '#7a5cc4'; g.lineWidth = 1.4; for (const sx of [-1, 1]) { g.beginPath(); for (let k = 0; k < 14; k++) { const a = k * 0.55, r = k * 0.32; g.lineTo(sx * 5 + Math.cos(a) * r, -2 + Math.sin(a) * r); } g.stroke(); }
+      g.strokeStyle = OL; g.lineWidth = 1.6; g.beginPath(); g.moveTo(-3, 6); g.quadraticCurveTo(0, 4, 3, 6); g.stroke();
+      circle(g, 13, 13, 2.6); fillStroke(g, '#c7b5f0', 1.4); circle(g, 17, 17, 1.6); fillStroke(g, '#c7b5f0', 1.2);
+    },
+    '🦠'(g) {   // 병균: 초록 돌기 덩어리
+      g.strokeStyle = OL; g.lineWidth = 2;
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.beginPath(); g.moveTo(Math.cos(a) * 11, Math.sin(a) * 11); g.lineTo(Math.cos(a) * 16, Math.sin(a) * 16); g.stroke(); circle(g, Math.cos(a) * 16.5, Math.sin(a) * 16.5, 2.4); fillStroke(g, '#7fcf4f', 1.4); }
+      circle(g, 0, 0, 12); fillStroke(g, '#8bd85a', 2);
+      g.fillStyle = 'rgba(40,110,30,.35)'; circle(g, 6, 5, 2.4); g.fill(); circle(g, -6, 6, 1.8); g.fill(); shine(g, -5, -6, 3.5);
+      g.__lid = '#8bd85a'; gloomFace(g, 0, -1, 12, 'angry');
+    },
+    '😨'(g) {   // 긴장 그림자: 어두운 보라 그림자, 떨리는 눈
+      g.beginPath(); g.moveTo(-14, 14); g.quadraticCurveTo(-16, -6, -6, -13); g.quadraticCurveTo(0, -17, 6, -13); g.quadraticCurveTo(16, -6, 14, 14);
+      for (let i = 0; i < 4; i++) g.quadraticCurveTo(10.5 - i * 7, 9, 7 - i * 7, 14);
+      g.closePath(); fillStroke(g, '#4a3b6e', 2);
+      shine(g, -6, -7, 3.5); gloomFace(g, 0, -2, 13, 'scared');
+      g.strokeStyle = 'rgba(200,180,255,.6)'; g.lineWidth = 1.4; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 17, -6); g.lineTo(sx * 20, -3); g.lineTo(sx * 17, 0); g.stroke(); }
+    },
+  };
+
   /* 월드 엠블럼 (24x24, 가운데 0,0) */
   function rect(g, x, y, w, h, col, lw) { g.beginPath(); g.rect(x, y, w, h); fillStroke(g, col, lw || 1.6); }
   function wins(g, xs, ys, w, h, col) { g.fillStyle = col; for (const x of xs) for (const y of ys) g.fillRect(x, y, w, h); }
@@ -930,6 +1008,14 @@
       const c = sprite('deed:' + kind, 28, 28, fn);
       const k = (size || 18) / 24; blit(ctx, c, x, y, k, k);
     },
+    /** 부정적인 마음 위험 요소 그림이 있는지 / 그리기 (size: 화면 크기 px, spin: 굴러가는 각도) */
+    hasGloom(key) { return !!GLOOM[key]; },
+    drawGloom(ctx, key, x, y, size, spin) {
+      const fn = GLOOM[key]; if (!fn) return false;
+      const c = sprite('gloom:' + key, 44, 44, fn), k = (size || 30) / 40;
+      if (spin) { ctx.save(); ctx.translate(x, y); ctx.rotate(spin); blit(ctx, c, 0, 0, k, k); ctx.restore(); } else blit(ctx, c, x, y, k, k);
+      return true;
+    },
     /** 월드 엠블럼 그림 (메뉴용) */
     drawWorld(ctx, id, x, y, size) {
       const fn = WORLD_ART[id]; if (!fn) return false;
@@ -973,13 +1059,17 @@
 
     /** 질주하는 위험물: 🚆 열차(지하철·보스) · 🛒 수하물 카트(공항) · 💡 조명 장치(꿈의 무대). 앞쪽이 진행 방향(dir) */
     drawHazard(ctx, h, kind, now) {
-      if (kind !== '🚆' && kind !== '🛒' && kind !== '💡') {   // 책수레·공·파도·이동 침대: 큰 그림 + 속도선
+      if (kind !== '🚆' && kind !== '🛒' && kind !== '💡') {   // 부정적인 마음(돌풍·지친 마음·병균·긴장)·파도: 큰 그림 + 속도선
         ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 2;
         for (let i = -1; i <= 1; i++) { const bx = h.x - h.dir * (60 + (now / 8 + i * 17) % 30); ctx.beginPath(); ctx.moveTo(bx, h.y + i * 12); ctx.lineTo(bx - h.dir * 26, h.y + i * 12); ctx.stroke(); }
         ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(h.x, h.y + 20, 60, 6, 0, 0, Math.PI * 2); ctx.fill();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '40px sans-serif';
-        const spin = kind === '🏐' ? now / 60 * h.dir : 0;
-        for (let k = -1; k <= 1; k++) { ctx.save(); ctx.translate(h.x + k * 42, h.y + Math.sin(now / 90 + k) * 2); if (spin) ctx.rotate(spin); ctx.fillText(kind, 0, 0); ctx.restore(); }
+        const spin = kind === '😩' ? now / 60 * h.dir : 0;   // 지친 마음은 데굴데굴 굴러옴
+        for (let k = -1; k <= 1; k++) {
+          const hx = h.x + k * 42, hy = h.y + Math.sin(now / 90 + k) * 2 + (kind === '😨' ? Math.sin(now / 30 + k) * 1.5 : 0);
+          if (GLOOM[kind]) { this.drawGloom(ctx, kind, hx, hy, 44, spin); continue; }
+          ctx.save(); ctx.translate(hx, hy); if (spin) ctx.rotate(spin); ctx.fillText(kind, 0, 0); ctx.restore();
+        }
         return;
       }
       const key = kind === '🛒' ? 'cart' : kind === '💡' ? 'light' : 'train';

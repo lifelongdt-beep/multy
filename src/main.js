@@ -157,7 +157,7 @@
           else if (ev.what === 'allyBye') { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 34, y: ev.y + (Math.random() - 0.5) * 20, t: -i * 3, max: 50 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); }   // 하트가 반짝이며 사라짐
           else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') { Sfx.play('heal'); if (ev.what === 'escortStart') escortTalk = { text: '같이 가 줄래?', t: 150 }; }
           break;
-        case 'trainPass': { const em = (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'; Sfx.pass(ev.dir, em === '🚆' || em === '🛒' || em === '🛏️', em === '🌊'); break; }
+        case 'trainPass': { const em = (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'; Sfx.pass(ev.dir, em === '🚆' || em === '🛒', em === '🌊'); break; }
         case 'dropWarn': Sfx.play('dropWarn'); break;
         case 'dropHit': Sfx.play('dropHit'); shake = Math.max(shake, 4); if (artOn()) Art.burst(ev.x, ev.y, '#d7c7a5', 8, false); break;
         case 'train': Sfx.warn((sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
@@ -215,6 +215,11 @@
   const DEED_FALLBACK = { heart: '💛', heartPink: '💗', cup: '🥤', pot: '🪴', teddy: '🧸', gift: '🎁', flag: '🚩' };
   function deedArt(kind, x, y, size) {
     if (window.Art && Art.drawDeed) Art.drawDeed(ctx, kind, x, y, size); else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(DEED_FALLBACK[kind], x, y, size); }
+  }
+  /** 떨어지는 위험 요소: 부정적인 마음 그림이 있으면 그 그림, 없으면(낙석 등) 그림 문자 */
+  function dropArt(key, x, y, size) {
+    if (window.Art && Art.drawGloom && Art.drawGloom(ctx, key, x, y, size)) return;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(key, x, y, size * 0.87);
   }
   /** 결과 화면용: 캔버스 그림을 작은 이미지로 */
   function deedImg(draw, w, h, dispH) {
@@ -733,11 +738,11 @@
           ctx.strokeStyle = 'rgba(255,170,170,.9)'; ctx.lineWidth = 2; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, 7); ctx.stroke(); ctx.setLineDash([]);
           ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(h.x, h.y, h.r * (1 - k) + 2, 0, 7); ctx.stroke();   // 좁혀 오는 원 = 남은 시간
           ctx.fillStyle = `rgba(0,0,0,${0.15 + 0.3 * k})`; ctx.beginPath(); ctx.ellipse(h.x, h.y + 4, 6 + 12 * k, 3 + 5 * k, 0, 0, 7); ctx.fill();
-          if (k > 0.45) { const fall = (1 - k) / 0.55; emoji(em, h.x, h.y - fall * 160, 26); }
+          if (k > 0.45) { const fall = (1 - k) / 0.55; dropArt(em, h.x, h.y - fall * 160, 30); }
         } else {
           const k = h.t / 18;
           ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffd7a0'; ctx.lineWidth = 4 * (1 - k) + 1; ctx.beginPath(); ctx.arc(h.x, h.y, h.r * (0.6 + 0.6 * k), 0, 7); ctx.stroke();
-          ctx.globalAlpha = Math.min(1, 1.6 - k); emoji(em, h.x, h.y, 26); ctx.globalAlpha = 1;
+          ctx.globalAlpha = Math.min(1, 1.6 - k); dropArt(em, h.x, h.y, 30); ctx.globalAlpha = 1;
         }
         continue;
       }
