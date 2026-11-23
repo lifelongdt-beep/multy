@@ -580,53 +580,85 @@
       default: break;
     }
   }
+  /* ---------- 주인공 (새 그림체: 2등신 · 짧은 머리 · 큰 눈 · 활짝 웃는 입 · 팔·다리 · 백팩) ----------
+   * 새 몸은 'N 좌표'(머리 중심 0,-11 반지름 10.4 · 몸 -6.4..6.4 × 0..10.5 · 발 21)로 그리고 전체를 KID_S배로 줄인다.
+   * 모자·안경·목도리·망토 같은 기존 장식(옛 좌표: 머리 0,-6.5 r7.6 · 몸 11.6×11.5)은 새 머리·몸 위치로 옮겨 그린다 */
+  const KID_S = 0.75, KSK = '#ffdcbf';
+  const onHead = (g, fn) => { g.save(); g.translate(0, -11); g.scale(1.37, 1.37); g.translate(0, 6.5); fn(); g.restore(); };
+  const onBody = (g, fn) => { g.save(); g.scale(1.1, 0.91); fn(); g.restore(); };
   function drawKid(g, o, step) {
     if (o.aura) {   // ★5 오라: 뒤에 은은한 금빛
-      const gl = g.createRadialGradient(0, -2, 2, 0, -2, 15); gl.addColorStop(0, 'rgba(255,230,120,.45)'); gl.addColorStop(1, 'rgba(255,230,120,0)');
-      g.fillStyle = gl; g.fillRect(-15, -18, 30, 32);
+      const gl = g.createRadialGradient(0, -2, 2, 0, -2, 17); gl.addColorStop(0, 'rgba(255,230,120,.45)'); gl.addColorStop(1, 'rgba(255,230,120,0)');
+      g.fillStyle = gl; g.fillRect(-17, -22, 34, 38);
     }
-    if (o.cape) { g.beginPath(); g.moveTo(-6, 0.5); g.quadraticCurveTo(-10.5, 8, -8.5, 14.5); g.lineTo(8.5, 14.5); g.quadraticCurveTo(10.5, 8, 6, 0.5); g.closePath(); fillStroke(g, '#e53935', 1.5); }   // 모두의 영웅: 빨간 망토
-    if (o.stars) { const gl = g.createRadialGradient(0, -4, 2, 0, -4, 16); gl.addColorStop(0, 'rgba(255,170,230,.35)'); gl.addColorStop(1, 'rgba(255,170,230,0)'); g.fillStyle = gl; g.fillRect(-16, -20, 32, 34); }
-    if (o.outer) outerBack(g, o);
-    if (o.girl && o.head !== 'hood') { rrect(g, -8.4, -12, 16.8, 13, 6.5); fillStroke(g, o.hair || '#3b2b25', 1.6); }   // 여자 주인공: 뒷머리
-    oval(g, -3.2 + step * 1.2, 12, 2.6, 1.8); fillStroke(g, o.shoe || '#2a2440', 1.4);
-    oval(g, 3.2 - step * 1.2, 12, 2.6, 1.8); fillStroke(g, o.shoe || '#2a2440', 1.4);
-    if (o.outer === 'bag') { rrect(g, -9.5, -1, 5.5, 10.5, 2); fillStroke(g, o.oc, 1.6); g.fillStyle = '#ffd54f'; g.fillRect(-8.2, 3, 3, 1.4); }
-    else if (!o.outer || o.outer === 'apron' || o.outer === 'jacket') { rrect(g, -8.5, -0.5, 4.5, 9, 1.8); fillStroke(g, o.pack, 1.6); }
-    rrect(g, -5.8, 0, 11.6, 11.5, 4); fillStroke(g, o.body, 1.8);
-    bodyPattern(g, o);
-    if (o.gold) { g.fillStyle = '#ffd54f'; g.fillRect(-5, 10, 10, 1.3); }
-    if (o.outer) outerFront(g, o);
-    if (o.cross) { g.fillStyle = '#e2574c'; g.fillRect(-1, 5, 2, 5); g.fillRect(-2.5, 6.5, 5, 2); }
-    if (o.neck) neckItem(g, o);
-    if (o.bands) { for (const x of [-7.3, 5.3]) { rrect(g, x, 6.2, 2, 2.8, 0.8); fillStroke(g, '#ffffff', 1); g.fillStyle = '#2ee88a'; g.fillRect(x + 0.3, 7.2, 1.4, 0.8); } }   // 운동부: 양 손목 밴드
-    if (o.book) { rrect(g, 3.6, 4.6, 5.2, 6.4, 1); fillStroke(g, '#43a047', 1.3); g.fillStyle = '#fff8e1'; g.fillRect(4.4, 5.4, 0.9, 4.8); }        // 독서부: 손에 든 책
-    if (o.sash) { g.save(); rrect(g, -5.8, 0, 11.6, 11.5, 4); g.clip(); g.beginPath(); g.moveTo(-6, -0.5); g.lineTo(-2.5, -0.5); g.lineTo(7, 11); g.lineTo(3.5, 11); g.closePath(); fillStroke(g, '#ffd54f', 1); g.restore(); circle(g, 1.2, 5.6, 1.6); fillStroke(g, '#ff7043', 0.9); }   // 학생회장: 금빛 어깨띠
-    if (o.hand === 'brush') { line(g, [5.5, 10, 8.5, 2.5], 1.6, '#8d6e63'); circle(g, 8.8, 1.6, 1.5); fillStroke(g, '#e91e63', 0.9); circle(g, -2, 7, 0.9); g.fillStyle = '#42a5f5'; g.fill(); circle(g, 1.5, 3.5, 0.8); g.fillStyle = '#ffca28'; g.fill(); }   // 미술부: 붓 + 물감 자국
-    if (o.hand === 'mic') { line(g, [6.5, 10.5, 7.8, 4.5], 1.8, '#455a64'); circle(g, 8, 3.4, 2.1); fillStroke(g, '#b0bec5', 1.1); }                // 방송부: 마이크
-    if (o.hand === 'ladle') { line(g, [6, 10.5, 8, 1.5], 1.5, '#bdbdbd'); oval(g, 8.4, 1.2, 2.4, 1.6); fillStroke(g, '#e0e0e0', 1.1); }          // 요리부: 국자
-    if (o.hand === 'compass') { circle(g, 7.2, 7.5, 2.8); fillStroke(g, '#ffca28', 1.2); g.fillStyle = '#e53935'; g.beginPath(); g.moveTo(7.2, 5.4); g.lineTo(8, 7.5); g.lineTo(6.4, 7.5); g.closePath(); g.fill(); }   // 탐험가: 나침반
-    if (o.armband) { rrect(g, 4.4, 1.2, 3.2, 4.2, 0.8); fillStroke(g, '#ffffff', 1.1); g.fillStyle = '#e53935'; g.fillRect(5.6, 1.9, 0.9, 2.8); g.fillRect(4.9, 2.85, 2.3, 0.9); }   // 보건 도우미: 팔 십자 완장
-    if (o.head === 'hood') hoodBack(g, o);
-    if (o.girl) {   // 여자 주인공: 양갈래(분홍 머리끈). 뒷머리는 몸보다 먼저 그림
-      for (const sx of [-1, 1]) { oval(g, sx * 9.2, 0.5, 2.6, 4); fillStroke(g, o.hair || '#3b2b25', 1.4); circle(g, sx * 8.6, -3.2, 1.5); fillStroke(g, '#ff7eb6', 1); }
+    if (o.stars) { const gl = g.createRadialGradient(0, -4, 2, 0, -4, 18); gl.addColorStop(0, 'rgba(255,170,230,.35)'); gl.addColorStop(1, 'rgba(255,170,230,0)'); g.fillStyle = gl; g.fillRect(-18, -24, 36, 38); }
+    g.save(); g.scale(KID_S, KID_S);
+    const skin = o.skin || KSK, hair = o.hair || '#2a2220', st = step || 0;
+    const fsN = (fill, lw) => fillStroke(g, fill, lw);
+    // 뒤: 망토 등 · 백팩 · 여자 주인공 뒷머리
+    if (o.cape) onBody(g, () => { g.beginPath(); g.moveTo(-6, 0.5); g.quadraticCurveTo(-10.5, 8, -8.5, 14.5); g.lineTo(8.5, 14.5); g.quadraticCurveTo(10.5, 8, 6, 0.5); g.closePath(); fillStroke(g, '#e53935', 1.5); });
+    if (o.outer) onBody(g, () => outerBack(g, o));
+    const backpack = !o.outer || o.outer === 'apron' || o.outer === 'jacket';
+    if (backpack) { rrect(g, -9.6, -0.5, 19.2, 14, 5); fsN(o.pack, 1.4); }
+    if (o.girl && o.head !== 'hood') { rrect(g, -11.4, -15, 22.8, 16, 7); fsN(hair, 1.4); }
+    // 다리 (바지) + 운동화
+    for (const sx of [-1, 1]) {
+      const k = sx * st;
+      rrect(g, sx * 3.3 - 2.3, 10.5 + k * 0.4, 4.6, 9.2, 1.6); fsN(o.pants || '#3c4560', 1.2);
+      oval(g, sx * 3.6, 21 + k * 0.8, 3.4, 2.1); fsN(o.shoe || '#eeeeee', 1.3);
+      oval(g, sx * 3.6 - 0.9, 20.4 + k * 0.8, 1.2, 0.5); g.fillStyle = 'rgba(255,255,255,.55)'; g.fill();
     }
-    circle(g, 0, -6.5, 7.6); fillStroke(g, o.skin || '#ffd9b8', 1.8);
-    const hidesHair = ['space'].indexOf(o.head) < 0 && ['cap', 'detective', 'knight', 'explorer', 'pilot', 'fire'].indexOf(o.head) >= 0;
-    if (!hidesHair) { g.beginPath(); g.arc(0, -7.2, 7.7, Math.PI * 1.02, Math.PI * 1.98); g.quadraticCurveTo(3, -9.5, -1, -8.5); g.quadraticCurveTo(-4, -8, -7.6, -6.5); g.closePath(); fillStroke(g, o.hair || '#3b2b25', 1.6); }
-    if (o.spiky && !hidesHair && !o.head) { g.beginPath(); g.moveTo(-5, -12.6); g.lineTo(-3.6, -16.2); g.lineTo(-1.6, -13.6); g.lineTo(0.2, -16.8); g.lineTo(2, -13.6); g.lineTo(4.2, -15.8); g.lineTo(5.4, -12.2); g.closePath(); fillStroke(g, o.hair || '#3b2b25', 1.4); }   // 운동부: 삐죽 머리 (모자를 쓰면 숨김)
-    eye(g, -2.7, -4.6, 1.5, 'normal'); eye(g, 2.7, -4.6, 1.5, 'normal');
-    if (o.girl) {   // 속눈썹 + (모자를 안 쓰면) 분홍 리본
-      g.lineWidth = 0.9; g.strokeStyle = OL; g.beginPath(); g.moveTo(-4, -4.9); g.lineTo(-5.3, -5.4); g.moveTo(4, -4.9); g.lineTo(5.3, -5.4); g.stroke();
-      if (!hidesHair && !o.head) { g.beginPath(); g.moveTo(4.6, -12); g.lineTo(1.8, -14.4); g.lineTo(1.8, -9.8); g.closePath(); g.moveTo(4.6, -12); g.lineTo(7.4, -14.4); g.lineTo(7.4, -9.8); g.closePath(); fillStroke(g, '#ff7eb6', 1.1); circle(g, 4.6, -12, 1.2); fillStroke(g, '#ff4f9a', 0.9); }
+    // 팔 (소매 = 옷 색) + 손
+    for (const sx of [-1, 1]) { g.save(); g.translate(sx * 6.8, 1.5); g.rotate(sx * (0.3 - st * 0.12 * sx)); rrect(g, -2, -1, 4, 8.3, 2); fsN(o.body, 1.3); circle(g, 0, 8.4, 2); fsN(skin, 1.1); g.restore(); }
+    // 몸통
+    rrect(g, -6.4, 0, 12.8, 10.5, 4); fsN(o.body, 1.5);
+    g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-5.2, 1.4, 2.6, 7.5);
+    onBody(g, () => {
+      bodyPattern(g, o);
+      if (o.gold) { g.fillStyle = '#ffd54f'; g.fillRect(-5, 10, 10, 1.3); }
+      if (o.outer) outerFront(g, o);
+      if (o.cross) { g.fillStyle = '#e2574c'; g.fillRect(-1, 5, 2, 5); g.fillRect(-2.5, 6.5, 5, 2); }
+      if (o.neck) neckItem(g, o);
+      if (o.bands) { for (const x of [-7.3, 5.3]) { rrect(g, x, 6.2, 2, 2.8, 0.8); fillStroke(g, '#ffffff', 1); g.fillStyle = '#2ee88a'; g.fillRect(x + 0.3, 7.2, 1.4, 0.8); } }
+      if (o.book) { rrect(g, 3.6, 4.6, 5.2, 6.4, 1); fillStroke(g, '#43a047', 1.3); g.fillStyle = '#fff8e1'; g.fillRect(4.4, 5.4, 0.9, 4.8); }
+      if (o.sash) { g.save(); rrect(g, -5.8, 0, 11.6, 11.5, 4); g.clip(); g.beginPath(); g.moveTo(-6, -0.5); g.lineTo(-2.5, -0.5); g.lineTo(7, 11); g.lineTo(3.5, 11); g.closePath(); fillStroke(g, '#ffd54f', 1); g.restore(); }
+      if (o.hand === 'brush') { line(g, [5.5, 10, 8.5, 2.5], 1.6, '#8d6e63'); circle(g, 8.8, 1.6, 1.5); fillStroke(g, '#e91e63', 0.9); }
+      if (o.hand === 'mic') { line(g, [6.5, 10.5, 7.8, 4.5], 1.8, '#455a64'); circle(g, 8, 3.4, 2.1); fillStroke(g, '#b0bec5', 1.1); }
+      if (o.hand === 'ladle') { line(g, [6, 10.5, 8, 1.5], 1.5, '#bdbdbd'); oval(g, 8.4, 1.2, 2.4, 1.6); fillStroke(g, '#e0e0e0', 1.1); }
+      if (o.hand === 'compass') { circle(g, 7.2, 7.5, 2.8); fillStroke(g, '#ffca28', 1.2); g.fillStyle = '#e53935'; g.beginPath(); g.moveTo(7.2, 5.4); g.lineTo(8, 7.5); g.lineTo(6.4, 7.5); g.closePath(); g.fill(); }
+      if (o.armband) { rrect(g, 4.4, 1.2, 3.2, 4.2, 0.8); fillStroke(g, '#ffffff', 1.1); g.fillStyle = '#e53935'; g.fillRect(5.6, 1.9, 0.9, 2.8); g.fillRect(4.9, 2.85, 2.3, 0.9); }
+    });
+    if (backpack) for (const sx of [-1, 1]) { g.strokeStyle = shade(o.pack, -0.3); g.lineWidth = 1.6; g.beginPath(); g.moveTo(sx * 4.6, -0.2); g.lineTo(sx * 5.4, 7); g.stroke(); }   // 가방끈
+    if (o.outer === 'bag') onBody(g, () => { rrect(g, -9.5, -1, 5.5, 10.5, 2); fillStroke(g, o.oc, 1.6); g.fillStyle = '#ffd54f'; g.fillRect(-8.2, 3, 3, 1.4); });
+    // 머리
+    if (o.head === 'hood') onHead(g, () => hoodBack(g, o));
+    if (o.girl) for (const sx of [-1, 1]) { oval(g, sx * 11.6, -5, 3, 5); fsN(hair, 1.3); circle(g, sx * 10.8, -9.4, 1.7); fsN('#ff7eb6', 1); }   // 양갈래 + 분홍 머리끈
+    circle(g, -10, -10.5, 2.1); fsN(shade(skin, -0.06), 1.1); circle(g, 10, -10.5, 2.1); fsN(shade(skin, -0.06), 1.1);   // 귀
+    oval(g, 0, -11, 10.4, 10); fsN(skin, 1.6);
+    const hidesHair = ['cap', 'detective', 'knight', 'explorer', 'pilot', 'fire'].indexOf(o.head) >= 0;
+    if (!hidesHair) {
+      g.beginPath();
+      if (o.girl) { g.moveTo(-11.2, -6); g.quadraticCurveTo(-12.6, -21, 0, -22); g.quadraticCurveTo(12.6, -21, 11.2, -6); g.lineTo(9.4, -7); g.quadraticCurveTo(9.2, -11.5, 6.6, -12.8); g.quadraticCurveTo(3, -12, 0, -13); g.quadraticCurveTo(-3, -12, -6.6, -12.8); g.quadraticCurveTo(-9.2, -11.5, -9.4, -7); g.closePath(); }
+      else { g.moveTo(-10.6, -10); g.quadraticCurveTo(-11.5, -20, -3, -21.8); g.quadraticCurveTo(6, -23, 10.6, -15); g.lineTo(10.6, -10); g.lineTo(8, -13.5); g.lineTo(6, -12.2); g.lineTo(4, -14.2); g.lineTo(1.5, -12.4); g.lineTo(-1, -14.4); g.lineTo(-3.5, -12.6); g.lineTo(-6, -14.2); g.lineTo(-8.4, -12.4); g.closePath(); }
+      fsN(hair, 1.5);
+      g.strokeStyle = 'rgba(255,240,220,.35)'; g.lineWidth = 1.5; g.beginPath(); g.arc(-1.5, -14, 7.2, Math.PI * 1.15, Math.PI * 1.5); g.stroke();   // 머릿결 빛
+      if (o.spiky && !o.head) onHead(g, () => { g.beginPath(); g.moveTo(-5, -12.6); g.lineTo(-3.6, -16.2); g.lineTo(-1.6, -13.6); g.lineTo(0.2, -16.8); g.lineTo(2, -13.6); g.lineTo(4.2, -15.8); g.lineTo(5.4, -12.4); g.closePath(); fillStroke(g, hair, 1.3); });
     }
-    if (o.goggles) { g.lineWidth = 1.8; g.strokeStyle = '#26c6da'; circle(g, -2.7, -4.4, 2.5); g.stroke(); circle(g, 2.7, -4.4, 2.5); g.stroke(); g.lineWidth = 1.2; g.beginPath(); g.moveTo(-7.4, -5); g.lineTo(-5.2, -4.6); g.moveTo(5.2, -4.6); g.lineTo(7.4, -5); g.stroke(); }   // 과학부: 보안경
-    if (o.glasses) { g.lineWidth = 1; g.strokeStyle = OL; circle(g, -2.7, -4.4, 2.3); g.stroke(); circle(g, 2.7, -4.4, 2.3); g.stroke(); g.beginPath(); g.moveTo(-0.4, -4.4); g.lineTo(0.4, -4.4); g.stroke(); }
-    oval(g, -4.8, -2.2, 1.3, 0.8); g.fillStyle = 'rgba(255,120,120,.5)'; g.fill(); oval(g, 4.8, -2.2, 1.3, 0.8); g.fill();
-    if (o.head !== 'ninja') { g.beginPath(); g.arc(0, -2.2, 1.4, 0.15 * Math.PI, 0.85 * Math.PI); g.lineWidth = 1.1; g.strokeStyle = OL; g.stroke(); }
-    if (o.head) headwear(g, o);
-    if (o.stars) { for (const [x, y, r] of [[-10, -12, 2], [10, -9, 1.6], [-11, 3, 1.4]]) { star5(g, x, y, r, r * 0.42); fillStroke(g, '#ffb3e6', 0.8); } }   // 전설의 나: 분홍 별
-    if (o.aura) { for (const [x, y, r] of [[-11, -10, 1.8], [11, -4, 1.5], [-10, 6, 1.3], [10, 9, 1.7]]) { star5(g, x, y, r, r * 0.42); fillStroke(g, '#fff59d', 0.8); } }
+    // 얼굴: 큰 눈(반짝임 2개) · 눈썹 · 볼 · 활짝 웃는 입
+    for (const sx of [-1, 1]) { oval(g, sx * 3.9, -8.4, 2.1, 2.7); g.fillStyle = '#2b1d14'; g.fill(); oval(g, sx * 3.9, -7.8, 1.5, 1.6); g.fillStyle = '#6a4228'; g.fill(); circle(g, sx * 3.9 + 0.7, -9.4, 0.9); g.fillStyle = '#fff'; g.fill(); circle(g, sx * 3.9 - 0.6, -7.4, 0.4); g.fill(); }
+    if (o.girl) { g.lineWidth = 1; g.strokeStyle = OL; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 5.6, -10.2); g.lineTo(sx * 6.9, -11); g.stroke(); } }
+    g.strokeStyle = shade(hair, -0.1); g.lineWidth = 1; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 2.6, -12); g.quadraticCurveTo(sx * 4, -12.6, sx * 5.4, -12); g.stroke(); }
+    oval(g, -6.4, -5.4, 1.9, 1.1); g.fillStyle = 'rgba(255,110,110,.5)'; g.fill(); oval(g, 6.4, -5.4, 1.9, 1.1); g.fill();
+    if (o.head !== 'ninja') { g.beginPath(); g.moveTo(-2.4, -5); g.quadraticCurveTo(0, -1.8, 2.4, -5); g.closePath(); fsN('#c8403e', 1); g.fillStyle = '#fff'; g.fillRect(-1.6, -5, 3.2, 0.9); }
+    onHead(g, () => {
+      if (o.girl && !hidesHair && !o.head) { g.beginPath(); g.moveTo(4.6, -12); g.lineTo(1.8, -14.4); g.lineTo(1.8, -9.8); g.closePath(); g.moveTo(4.6, -12); g.lineTo(7.4, -14.4); g.lineTo(7.4, -9.8); g.closePath(); fillStroke(g, '#ff7eb6', 1); }   // 분홍 리본
+      if (o.goggles) { g.lineWidth = 1.6; g.strokeStyle = '#26c6da'; circle(g, -2.7, -4.4, 2.5); g.stroke(); circle(g, 2.7, -4.4, 2.5); g.stroke(); }
+      if (o.glasses) { g.lineWidth = 0.9; g.strokeStyle = OL; circle(g, -2.7, -4.4, 2.3); g.stroke(); circle(g, 2.7, -4.4, 2.3); g.stroke(); g.beginPath(); g.moveTo(-0.4, -4.4); g.lineTo(0.4, -4.4); g.stroke(); }
+      if (o.head) headwear(g, o);
+    });
+    g.restore();
+    if (o.stars) { for (const [x, y, r] of [[-12, -14, 2], [12, -11, 1.6], [-13, 3, 1.4]]) { star5(g, x, y, r, r * 0.42); fillStroke(g, '#ffb3e6', 0.8); } }   // 전설의 나: 분홍 별
+    if (o.aura) { for (const [x, y, r] of [[-13, -12, 1.8], [13, -6, 1.5], [-12, 6, 1.3], [12, 9, 1.7]]) { star5(g, x, y, r, r * 0.42); fillStroke(g, '#fff59d', 0.8); } }
   }
   let outfit = { style: 0, tier: 0, variant: 0, key: '0.0.0' };
   let kidLook = 'boy';   // 주인공 모습: 'boy' | 'girl'
@@ -660,7 +692,7 @@
   }
   function kidSprite(emo, step, of) {
     of = of || outfit;
-    return sprite(`kid:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${step}:${of.key}`, 32, 58, (g) => { g.translate(0, -1); drawKid(g, outfitOpts(emo, of), step); });
+    return sprite(`kid:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${step}:${of.key}`, 36, 66, (g) => { g.translate(0, -1); drawKid(g, outfitOpts(emo, of), step); });
   }
   const TEACHER = (g) => {
     rrect(g, -7, 2, 14, 15, 5); fillStroke(g, '#3fae8a', 1.8);                         // 가디건
