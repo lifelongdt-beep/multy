@@ -90,8 +90,17 @@
     { id: 'dragon',   name: '꼬마 용',   desc: '작은 날개로 힘껏 날아요' },
     { id: 'ufo',      name: '꼬마 UFO', desc: '먼 미래에서 온 듯한 비행접시' },
   ];
-  /** i번째(0부터) 에코 모습을 여는 데 드는 학점: 뒤로 갈수록 조금씩 비싸짐 (첫 번째는 무료) */
-  function echoFormCost(i) { return i <= 0 ? 0 : Math.round((150 * i + 40 * i * i) / 10) * 10; }
+  /** i번째(0부터) 에코 모습을 여는 데 드는 학점 (첫 번째는 무료).
+   *  기본 곡선(150i + 40i²)에 배율을 곱한다: 두 번째는 3배에서 시작해 점점 커져 마지막은 100배 (약 173만 학점).
+   *  보기 좋게 앞 두 자리만 남겨 반올림 */
+  const ECHO_COST_MUL0 = 3, ECHO_COST_MUL1 = 100;
+  function echoFormCost(i) {
+    if (i <= 0) return 0;
+    const last = ECHO_FORMS.length - 1, base = 150 * i + 40 * i * i;
+    const mul = ECHO_COST_MUL0 * Math.pow(ECHO_COST_MUL1 / ECHO_COST_MUL0, (Math.min(i, last) - 1) / Math.max(1, last - 1));
+    const v = base * mul, unit = Math.pow(10, Math.max(1, Math.floor(Math.log10(v)) - 1));
+    return Math.round(v / unit) * unit;
+  }
   /** i번째 에코 모습의 힘: 뒤에 열수록 에코 공격력이 조금씩 강해진다 (한 단계 +2%, 마지막 +38%). 월드·회차가 어려워지는 만큼 천천히 */
   const ECHO_FORM_STEP = 0.02;
   function echoFormPower(i) { return Math.max(0, i) * ECHO_FORM_STEP; }
