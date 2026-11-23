@@ -467,3 +467,13 @@ test('주인공 얼굴 색: 기본 살구(0), 저장 후 유지, 범위 밖은 �
   assert.strictEqual(M.kidSkin(back), M.KID_SKINS[3].hex);
   assert.strictEqual(M.sanitize({ skin: 9 }).skin, 0);
 });
+
+test('주인공 머리 색: 기본 흑갈색(0), 저장 후 유지, 범위 밖은 기본', () => {
+  assert.strictEqual(M.defaultSave().hair, 0);
+  assert.strictEqual(M.kidHair(M.defaultSave()), null);
+  const s = M.defaultSave(); s.hair = 3;
+  const back = M.sanitize(JSON.parse(JSON.stringify(s)));
+  assert.strictEqual(back.hair, 3);
+  assert.strictEqual(M.kidHair(back), M.KID_HAIRS[3].hex);
+  assert.strictEqual(M.sanitize({ hair: -1 }).hair, 0);
+});

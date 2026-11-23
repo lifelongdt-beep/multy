@@ -38,6 +38,7 @@
     if (Art.setLook) Art.setLook(save.look);
     if (Art.setColor) Art.setColor(M.kidColor(save));
     if (Art.setSkin) Art.setSkin(M.kidSkin(save));
+    if (Art.setHair) Art.setHair(M.kidHair(save));
     c.setTransform(2, 0, 0, 2, 0, 0); Art.drawKidPreview(c, 28, 38, emo, M.outfitCycle(save), 1.15);
     $('outfitName').textContent = `${of.name} ${'★'.repeat(of.stars)}${of.variant ? ` · 색 ${of.variant + 1}` : ''}`;
     const t = M.titleOf(M.deedScore(save)).title;
@@ -54,6 +55,7 @@
     if (Art.setLook) Art.setLook(save.look);
     if (Art.setColor) Art.setColor(origColor ? null : M.kidColor(save));
     if (Art.setSkin) Art.setSkin(M.kidSkin(save));
+    if (Art.setHair) Art.setHair(M.kidHair(save));
     c.setTransform(k, 0, 0, k, 0, 0); Art.drawKidPreview(c, 28, 38, emo, cycle, scale);
     if (locked) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(10,12,24,.92)'; c.fillRect(0, 0, cv.width, cv.height); c.globalCompositeOperation = 'source-over'; }
   }
@@ -116,6 +118,16 @@
     });
     box.insertBefore(sRow, ln);
     box.insertBefore(el('small', '', '🙂 얼굴 색 · ' + M.KID_SKINS[curSkin].name), ln);
+    // 머리 색 고르기
+    const hRow = el('div', 'kcol');
+    const curHair = M.KID_HAIRS[save.hair] ? save.hair : 0;
+    M.KID_HAIRS.forEach((c, i) => {
+      const b = el('button', 'sw' + (curHair === i ? ' on' : '')); b.title = c.name; b.setAttribute('aria-label', '머리 색: ' + c.name); b.style.background = c.hex;
+      b.onclick = () => { if (curHair === i) return; save.hair = i; Sfx.play('click'); commit(); rerender(); };
+      hRow.appendChild(b);
+    });
+    box.insertBefore(hRow, ln);
+    box.insertBefore(el('small', '', '💇 머리 색 · ' + M.KID_HAIRS[curHair].name), ln);
     body.appendChild(box);
     paintOutfit(big, show, 1.3, false);
     tabs(body, [{ id: 'outfit', html: Icons.svg('shirt', 16) + '<span>복장</span>' }, { id: 'char', html: Icons.svg('person', 16) + '<span>캐릭터</span>' }], lookTab, (id) => { lookTab = id; rerender(); });
@@ -484,6 +496,7 @@
     look() { return save.look === 'girl' ? 'girl' : 'boy'; },
     kidColor() { return M.kidColor(save); },
     kidSkin() { return M.kidSkin(save); },
+    kidHair() { return M.kidHair(save); },
     /** 회차 고르기 (결과 화면의 "다음 회차로" 버튼 등) */
     selectCycle(c) { const ok = M.selectCycle(save, c); if (ok) { if (window.GameEchoes && GameEchoes.world() !== save.worlds.selected) GameEchoes.reset(save.worlds.selected); commit(); } return ok; },
     /** 시작하려는 월드에 장비가 모자라면 {atk, def} 부족분, 충분하면 null */

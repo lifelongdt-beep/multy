@@ -67,6 +67,16 @@
     { id: 'brown',  name: '갈색',     hex: '#b5774c' },
     { id: 'deep',   name: '진한 갈색', hex: '#7c4d30' },
   ];
+  /** 주인공 머리 색 (분홍·초록·하늘처럼 게임 신호색은 뺐다) */
+  const KID_HAIRS = [
+    { id: 'dark',   name: '흑갈색', hex: '#3b2b25' },
+    { id: 'black',  name: '검정',   hex: '#1b1a22' },
+    { id: 'brown',  name: '밤색',   hex: '#7a4a2c' },
+    { id: 'blond',  name: '금발',   hex: '#e3bd57' },
+    { id: 'auburn', name: '적갈색', hex: '#9c4a2a' },
+    { id: 'silver', name: '은색',   hex: '#c7ccd6' },
+  ];
+  function kidHair(save) { const c = KID_HAIRS[save && save.hair]; return c && c.id !== 'dark' ? c.hex : null; }
   function kidSkin(save) { const c = KID_SKINS[save && save.skin]; return c && c.id !== 'peach' ? c.hex : null; }
   function kidColor(save) { const c = KID_COLORS[save && save.color]; return c ? c.hex : null; }
   /** 캐릭터 레벨: 좋은 효과(+)가 레벨마다 25%씩 강해진다 (나쁜 효과는 그대로). Lv3·Lv5에 시작 아이템 +1 */
@@ -260,6 +270,7 @@
       look: 'boy',                                // 주인공 모습: 'boy'(남자) | 'girl'(여자)
       color: null,                                // 옷 색: KID_COLORS 번호. null = 복장 원래 색
       skin: 0,                                    // 얼굴(피부) 색: KID_SKINS 번호
+      hair: 0,                                    // 머리 색: KID_HAIRS 번호
       outfitPick: null,                           // 골라 입은 복장(그 복장을 얻은 회차 번호). null = 지금 회차 복장 자동
       deeds: { people: 0, escorts: 0, spots: 0, book: {}, visitor: null },   // 선행 기록: 도운 사람 · 지켜 준 친구 · 작은 선행 · 도감('world:kind' -> 횟수) · 다음 판에 찾아올 사람
     };
@@ -325,6 +336,7 @@
     if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(9999, Math.floor(raw.cycle));
     d.maxCycle = Math.max(d.cycle, isNum(raw.maxCycle) && raw.maxCycle >= 0 ? Math.min(9999, Math.floor(raw.maxCycle)) : 0);
     if (raw.look === 'girl') d.look = 'girl';
+    if (isNum(raw.hair) && raw.hair >= 0 && raw.hair < KID_HAIRS.length) d.hair = Math.floor(raw.hair);
     if (isNum(raw.skin) && raw.skin >= 0 && raw.skin < KID_SKINS.length) d.skin = Math.floor(raw.skin);
     if (isNum(raw.color) && raw.color >= 0 && raw.color < KID_COLORS.length) d.color = Math.floor(raw.color);
     if (isNum(raw.outfitPick) && raw.outfitPick >= 0 && raw.outfitPick <= d.maxCycle) d.outfitPick = Math.floor(raw.outfitPick);
@@ -662,7 +674,7 @@
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopMax, shopEffect, shopLevel, dailyMissions, refillMissions, missionText, defaultSave, sanitize, load, persist,
-    RARITY, CHAR_MAX_LV, KID_COLORS, kidColor, KID_SKINS, kidSkin, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,
+    RARITY, CHAR_MAX_LV, KID_COLORS, kidColor, KID_SKINS, kidSkin, KID_HAIRS, kidHair, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,
     OUTFITS: Worlds.OUTFITS, outfitCycle, pickOutfit, topCycle, selectCycle, deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };
