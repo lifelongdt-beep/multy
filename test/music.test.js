@@ -26,10 +26,10 @@ test('곡 생성: 같은 월드면 항상 같은 곡, 음과 박자가 정상 �
   }
 });
 
-test('보스 곡: 같은 조에서 더 빠르고, 어두운 화성 단음계에 하이햇·베이스가 더 촘촘하다', () => {
+test('보스 곡: 같은 조에서 무겁고, 어두운 화성 단음계에 하이햇·베이스가 더 촘촘하다', () => {
   for (const id of ORDER) {
     const w = Mu.compose(id, false), b = Mu.compose(id, true), bs = Mu.bossSong(id);
-    assert.ok(b.bpm > w.bpm, `${id}: 보스 템포 ${b.bpm} > ${w.bpm}`);
+    assert.ok(b.bpm >= 118 && b.bpm <= 150, `${id}: 보스 템포 ${b.bpm}`);
     assert.strictEqual(bs.scale, 'harmonic');
     assert.strictEqual(((bs.root - Mu.SONGS[id].root) % 12 + 12) % 12, 0, '같은 조(근음)');
     const count = (c, k) => c.events.filter((e) => e.kind === k).length / c.bars;   // 마디당 (월드 곡 16마디, 왕 곡 8마디)
@@ -91,4 +91,18 @@ test('경쾌한 빠르기: 월드 곡은 모두 100 BPM 이상, 메인 화면은
   assert.ok(!ORDER.includes('menu'));
   const sig = (c) => c.events.filter((e) => e.kind === 'lead').slice(0, 24).map((e) => `${e.step}:${e.midi}`).join(',');
   for (const id of ORDER) assert.notStrictEqual(sig(Mu.compose(id, false)), sig(m), `메인 테마 ≠ ${id}`);
+});
+
+test('왕 곡은 웅장하고 엄습하게: 큰북·어두운 합창·낮은 금관 운명 동기(증4도)·관현악 강타·차오르는 소리', () => {
+  for (const def of [true, { name: '시험 불안', pattern: 'exam' }, { name: '급행열차', pattern: 'lane' }, { name: '눈보라', pattern: 'charge' }]) {
+    const c = Mu.compose('school', def), has = (f) => c.events.some(f);
+    assert.ok(has((e) => e.kind === 'taiko'), '큰북');
+    assert.ok(has((e) => e.inst === 'choir' && e.kind === 'pad'), '합창');
+    assert.ok(has((e) => e.inst === 'hit'), '관현악 강타');
+    assert.ok(has((e) => e.kind === 'riser'), '차오르는 소리');
+    const brass = c.events.filter((e) => e.inst === 'brass').map((e) => e.midi), lo = Math.min(...brass);
+    assert.ok(brass.some((m) => (m - lo) % 12 === 6 || (m - lo) % 12 === 1), '운명 동기: 반음·증4도');
+    assert.ok(c.bpm <= 150, `무겁게: ${c.bpm}`);
+  }
+  assert.ok(!Mu.compose('school', false).events.some((e) => e.kind === 'taiko'), '월드 곡에는 없음');
 });

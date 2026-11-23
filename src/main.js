@@ -163,10 +163,10 @@
           else if (ev.what === 'allyBye') { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 34, y: ev.y + (Math.random() - 0.5) * 20, t: -i * 3, max: 50 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); }   // 하트가 반짝이며 사라짐
           else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') { Sfx.play('heal'); if (ev.what === 'escortStart') escortTalk = { text: '같이 가 줄래?', t: 150 }; }
           break;
-        case 'trainPass': { const em = (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'; Sfx.pass(ev.dir, em === '🚆' || em === '🛒', em === '🌊'); break; }
+        case 'trainPass': { const em = EchoWorlds.hazardKind(sim.world); Sfx.pass(ev.dir, em === '🚆' || em === '🛒', em === '🌊' || em === '❄'); break; }
         case 'dropWarn': Sfx.play('dropWarn'); break;
         case 'dropHit': Sfx.play('dropHit'); shake = Math.max(shake, 4); if (artOn()) Art.burst(ev.x, ev.y, '#d7c7a5', 8, false); break;
-        case 'train': Sfx.warn((sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
+        case 'train': Sfx.warn(EchoWorlds.hazardKind(sim.world)); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': if (tutorial) banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
         case 'gotItem': tipEvent('item'); tipEvent('up:' + ev.id); headFlash.push({ icon: ev.icon, t: 50 }); if (headFlash.length > 3) headFlash.shift(); break;
         case 'autoPick': autoFlash.push({ id: ev.id, icon: ev.icon, t: 48 }); break;   // 자동 선택: 아이콘만 짧게 반짝 (글자·소리 없음)
@@ -802,13 +802,13 @@
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 14px sans-serif';
         ctx.fillText(h.dir > 0 ? '▶ ▶ ▶' : '◀ ◀ ◀', W / 2, h.y);
       } else if (useArt) {
-        Art.drawHazard(ctx, h, (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆', now);
+        Art.drawHazard(ctx, h, EchoWorlds.hazardKind(sim.world), now);
       } else {
         const hx = h.x, hy = h.y;
         ctx.fillStyle = '#c9d3dc'; ctx.fillRect(hx - 70, hy - 20, 140, 40);
         ctx.fillStyle = '#2a3340'; for (let k = -2; k <= 2; k++) ctx.fillRect(hx + k * 26 - 8, hy - 12, 16, 12);
         ctx.fillStyle = '#e53950'; ctx.fillRect(hx - 70, hy + 10, 140, 6);
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji((sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆', hx + h.dir * 62, hy, 30);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(EchoWorlds.hazardKind(sim.world), hx + h.dir * 62, hy, 30);
       }
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

@@ -25,7 +25,7 @@
  *   dash : dashCd      onDeath: {type, n} 죽을 때 분열
  * helper 필드: name, emoji, t(등장 초), 문구들, boons(조언 카드 이름 heal/power/focus/team)
  * gear: 이 월드의 매점 장비 이름 {atk:{icon,name}, def:{icon,name}} (효과는 아래 GEAR 공통)
- * rules 추가 규칙: atkMul(받는 피해 배율, 첫 월드를 쉽게) · rageMul(보스 격앙 피해 증가 배율) · sight(자동 조준 거리, 기본 260) · wind{amp,period}(좌우 바람) · dropEmoji(회복 아이템 모양) · trains{first,every,emoji,text}
+ * rules 추가 규칙: atkMul(받는 피해 배율, 첫 월드를 쉽게) · rageMul(보스 격앙 피해 증가 배율) · sight(자동 조준 거리, 기본 260) · wind{amp,period}(좌우 바람) · dropEmoji(회복 아이템 모양) · trains{first,every,emoji,text} · lane(주기 위험물이 없는 월드에서 왕이 부르는 질주 위험물의 모양)
  */
 (function (root) {
   'use strict';
@@ -38,7 +38,7 @@
       ruleText: '특별한 규칙 없음 · 숙제는 미리미리! · 담임 선생님께 도움을 청할 수 있어요',
       theme: { bg: '#161a2e', grid: 'rgba(255,255,255,.04)', deco: 'none' },
       // 첫 월드는 쉽게: 방해 요소가 덜 아프고(atkMul), 조금 덜 단단하고, 덜 몰려온다. 큰 도전도 에코 2명이면 넘을 수 있게
-      rules: { hpMul: 0.85, xpMul: 1.0, speedMul: 0.95, spawnMul: 0.85, atkMul: 0.6, rageMul: 0.8, drops: { first: 22, every: 18, n: 1, emoji: '💢', text: '💢 빨간 원이 생기면 곧 짜증 폭탄이 떨어져요! 원 밖으로 피하세요' } },
+      rules: { lane: '😨', hpMul: 0.85, xpMul: 1.0, speedMul: 0.95, spawnMul: 0.85, atkMul: 0.6, rageMul: 0.8, drops: { first: 22, every: 18, n: 1, emoji: '💢', text: '💢 빨간 원이 생기면 곧 짜증 폭탄이 떨어져요! 원 밖으로 피하세요' } },
       enemies: {
         hw:     { name: '미루기',   emoji: '🐌', hp: 3,  speed: 0.7,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         test:   { name: '걱정',     emoji: '😰', hp: 2,  speed: 1.1,  r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -114,7 +114,7 @@
       ruleText: '야근 커피: 방해 요소를 잡으면 가끔 ☕ 떨어짐(체력 +12) · 일이 몰려 방해가 많이 나옴 · 방해 요소가 더 단단함',
       unlock: { world: 'academy' },
       theme: { bg: '#172229', grid: 'rgba(140,200,220,.07)', deco: 'tiles' },
-      rules: { hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, atkMul: 0.7, drops: { first: 18, every: 15, n: 1, emoji: '⚡', text: '⚡ 스트레스 번개구름이 떨어져요! 빨간 원을 피하세요' } },
+      rules: { lane: '⚡', hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, atkMul: 0.7, drops: { first: 18, every: 15, n: 1, emoji: '⚡', text: '⚡ 스트레스 번개구름이 떨어져요! 빨간 원을 피하세요' } },
       enemies: {
         doc:     { name: '스트레스',      emoji: '😫', hp: 4,  speed: 0.8,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         mail:    { name: '압박감',        emoji: '💢', hp: 2,  speed: 1.25, r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -190,7 +190,7 @@
       ruleText: '깊은 밤: 어두워서 조준 거리가 짧아짐(가까운 적만 자동 공격) · 방해 요소가 더 단단함',
       unlock: { world: 'subway' },
       theme: { bg: '#0f1224', grid: 'rgba(160,170,255,.05)', deco: 'stars' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, sight: 190, atkMul: 0.78, drops: { first: 16, every: 14, n: 1, emoji: '😑', text: '😑 귀찮음 덩어리가 떨어져요! 빨간 원을 피하세요' } },
+      rules: { lane: '😩', hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, sight: 190, atkMul: 0.78, drops: { first: 16, every: 14, n: 1, emoji: '😑', text: '😑 귀찮음 덩어리가 떨어져요! 빨간 원을 피하세요' } },
       enemies: {
         snack:  { name: '야식 유혹',     emoji: '🍜', hp: 5,  speed: 0.85, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         game:   { name: '게임 한 판만',  emoji: '🎮', hp: 6,  speed: 0.65, r: 9,  dmg: 8,  xp: 2, ai: 'dash', dashCd: 105 },
@@ -267,7 +267,7 @@
       ruleText: '조용한 집중: 경험치 +20% · 방해 요소를 잡으면 가끔 🍫(체력 +12) · 시야가 조금 좁음',
       unlock: { world: 'gym' },
       theme: { bg: '#1c1a12', grid: 'rgba(255,220,150,.06)', deco: 'ruled' },
-      rules: { hpMul: 1.15, xpMul: 1.2, speedMul: 1.0, spawnMul: 1.0, sight: 220, coffeeChance: 0.03, dropEmoji: '🍫', atkMul: 0.76, drops: { first: 14, every: 13, n: 2, emoji: '💭', text: '💭 잡념 구름이 쏟아져요! 빨간 원을 피하세요' } },
+      rules: { lane: '😨', hpMul: 1.15, xpMul: 1.2, speedMul: 1.0, spawnMul: 1.0, sight: 220, coffeeChance: 0.03, dropEmoji: '🍫', atkMul: 0.76, drops: { first: 14, every: 13, n: 2, emoji: '💭', text: '💭 잡념 구름이 쏟아져요! 빨간 원을 피하세요' } },
       enemies: {
         nod:    { name: '꾸벅꾸벅',      emoji: '💤', hp: 5,  speed: 0.9,  r: 9,  dmg: 6,  xp: 1, ai: 'zig' },
         tempt:  { name: '스마트폰 유혹', emoji: '📲', hp: 6,  speed: 0.7,  r: 8,  dmg: 8,  xp: 2, ai: 'dash', dashCd: 100 },
@@ -421,7 +421,7 @@
       ruleText: '산바람 + 안개: 바람이 세게 불어 캐릭터가 밀리고, 시야가 좁아 가까운 적만 조준',
       unlock: { world: 'hospital' },
       theme: { bg: '#1a2420', grid: 'rgba(200,255,200,.05)', deco: 'diag' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, wind: { amp: 0.95, period: 4}, atkMul: 0.92, sight: 210, drops: { first: 12, every: 12, n: 2, emoji: '🪨', text: '🪨 낙석 주의! 빨간 원을 피하세요' } },
+      rules: { lane: '❄', hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, wind: { amp: 0.95, period: 4}, atkMul: 0.92, sight: 210, drops: { first: 12, every: 12, n: 2, emoji: '🪨', text: '🪨 낙석 주의! 빨간 원을 피하세요' } },
       enemies: {
         slope:  { name: '가파른 오르막',       emoji: '⛰️', hp: 16, speed: 0.45, r: 13, dmg: 9,  xp: 3, ai: 'chase' },
         rock:   { name: '굴러오는 돌',         emoji: '🪨', hp: 7,  speed: 0.7,  r: 9,  dmg: 9,  xp: 2, ai: 'dash', dashCd: 90 },
@@ -588,7 +588,9 @@
     team:  { icon: '🤝', desc: '에코 응원 Lv +1' },
   };
 
-  const api = { TIME_SCALE, WORLDS, ORDER, BOONS, GEAR, worldIndex, stageOf, stageMul, recommendedGear, gearMaxLevel, gearCost, rewardMul, OUTFITS, outfitOf };
+  /** 화면을 가로질러 지나가는 위험물의 모양: 월드의 주기 위험물 → 월드가 정한 모양 → 열차(지하철) */
+  const hazardKind = (w) => (w.rules.trains && w.rules.trains.emoji) || w.rules.lane || '🚆';
+  const api = { hazardKind, TIME_SCALE, WORLDS, ORDER, BOONS, GEAR, worldIndex, stageOf, stageMul, recommendedGear, gearMaxLevel, gearCost, rewardMul, OUTFITS, outfitOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoWorlds = api;
 })(typeof window !== 'undefined' ? window : globalThis);
