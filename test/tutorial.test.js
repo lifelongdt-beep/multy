@@ -48,7 +48,7 @@ test('튜토리얼 에코: 10명, 같은 시드면 같은 결과, 화면 안에�
 test('튜토리얼: 에코 10명과 함께라면 처음 하는 사람(봇)도 학교 큰 도전을 넘고, 에코 없이는 어렵다', () => {
   let withEchoes = 0, alone = 0;
   for (let s = 1; s <= 4; s++) {
-    if (runBot(new E.Sim({ seed: s * 991, echoes: T.makeTutorialEchoes(s * 77), world: T.TUTORIAL_WORLD })).result === 'clear') withEchoes++;
+    if (runBot(new E.Sim({ seed: s * 991, echoes: T.makeTutorialEchoes(s * 77), world: T.TUTORIAL_WORLD, extraSec: T.EXTRA_SEC })).result === 'clear') withEchoes++;
     if (runBot(new E.Sim({ seed: s * 991, echoes: [], world: T.TUTORIAL_WORLD })).result === 'clear') alone++;
   }
   assert.ok(withEchoes >= 3, `에코 10명과 함께 클리어 ${withEchoes}/4`);
@@ -131,4 +131,21 @@ test('백업 코드: 손상되거나 이상한 에코 데이터는 거부한다'
   const r = M.importBackup(enc({ save: s, ep: { w: 'mars', e: [Object.assign({}, good, { u: [[10, 'rate'], [20, 'hack'], ['x', 'dmg']] })] } }));
   assert.strictEqual(r.pool.world, 'school');
   assert.deepStrictEqual(r.pool.echoes[0].ups, [{ t: 10, id: 'rate' }]);
+});
+
+test('튜토리얼 안내: 긴 글은 3초 넘게 보이고, 멈춤도 글 길이에 맞춰(1~2.5초) 늘어난다', () => {
+  const short = T.tipTiming('짧은 안내'), long = T.tipTiming(T.EVENT_TIPS.helper);
+  assert.ok(long.show >= 3000, `긴 글 ${long.show}ms`);
+  assert.ok(long.freeze > short.freeze && long.freeze <= 2500 && short.freeze >= 1000);
+  assert.ok(long.show > long.freeze, '멈춘 뒤에도 조금 더 보여 줌');
+});
+
+test('튜토리얼 판은 더 길고 왕도 그만큼 늦게 나온다 · 모든 아이템에 자세한 설명이 있다', () => {
+  const a = new E.Sim({ seed: 1, world: T.TUTORIAL_WORLD }), b = new E.Sim({ seed: 1, world: T.TUTORIAL_WORLD, extraSec: T.EXTRA_SEC });
+  assert.strictEqual(b.runTicks - a.runTicks, T.EXTRA_SEC * E.TICK);
+  assert.strictEqual(b.world.boss.times[0] - a.world.boss.times[0], T.EXTRA_SEC);
+  assert.strictEqual(E.WORLDS[T.TUTORIAL_WORLD].boss.times[0], a.world.boss.times[0], '원래 월드 데이터는 그대로');
+  for (const u of E.UPGRADES) assert.ok(T.EVENT_TIPS['up:' + u.id], `${u.name} 설명`);
+  const last = T.TIPS[T.TIPS.length - 1].sec;
+  assert.ok(last < b.world.boss.times[0] - T.BOSS_SOON, '일반 안내는 왕 안내 전에 끝남');
 });
