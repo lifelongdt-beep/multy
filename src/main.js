@@ -85,7 +85,7 @@
     return { dx, dy };
   }
 
-  ['pointerdown', 'keydown'].forEach((t) => addEventListener(t, () => { Sfx.unlock(); if (state === 'menu' && !menuMusicOn) { menuMusicOn = true; Music.play(GameUI.worldId()); } }));   // 첫 터치에 메인 화면 음악 = 지금 고른 월드의 곡 (브라우저는 터치 전 소리를 막음)
+  ['pointerdown', 'keydown'].forEach((t) => addEventListener(t, () => { Sfx.unlock(); if (state === 'menu' && !menuMusicOn) { menuMusicOn = true; Music.play('menu'); } }));   // 첫 터치에 메인 화면 음악 = 메인 테마 (브라우저는 터치 전 소리를 막음)
   let menuMusicOn = false;
 
   /* ---------- 연출 상태 ---------- */
@@ -468,7 +468,7 @@
     if (!quitArmed) { quitArmed = true; $('quit').textContent = '⚠ 한 번 더 누르면 이번 판은 기록되지 않아요'; return; }
     quitArmed = false;
     if (tutorial) GameUI.finishTutorial();
-    tutorial = false; sim = null; state = 'menu'; Music.stop(); Music.play(GameUI.worldId());
+    tutorial = false; sim = null; state = 'menu'; Music.stop(); Music.play('menu');
     $('pause').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh();
   }
   $('pauseBtn').onclick = () => { Sfx.play('click'); pauseGame(); };
@@ -646,7 +646,7 @@
   $('tSkip').onclick = () => { Sfx.unlock(); Sfx.play('click'); GameUI.finishTutorial(); $('tutorial').classList.add('hidden'); $('start').classList.remove('hidden'); };
   // 처음 실행이면 튜토리얼 안내부터
   if (!GameUI.tutorialDone()) { $('start').classList.add('hidden'); $('tutorial').classList.remove('hidden'); }
-  $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; Music.play(GameUI.worldId()); };
+  $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; Music.play('menu'); };
   let resetArmed = false;   // 실수로 누르지 않게 두 번 눌러야 초기화
   const resetBtn = $('reset');   // 백업 화면 안으로 옮겨 다니므로 처음에 잡아 둔다
   resetBtn.onclick = () => {
@@ -1159,7 +1159,7 @@
     }
     // 보스가 나오면 긴장감 있는 곡으로. 여러 번 나오는 월드는 사이 쉬는 시간에도 유지하고, 모두 극복하면 원래 곡으로
     updateCards();
-    if (state === 'menu' && menuMusicOn && Music.state.world !== GameUI.worldId()) Music.play(GameUI.worldId());   // 메뉴에서 월드를 바꾸면 곡도 그 월드로
+    if (state === 'menu' && menuMusicOn && Music.state.world !== 'menu') Music.play('menu');   // 메인 화면은 언제나 메인 테마
     if (state === 'play' && sim) {   // 왕마다 다른 테마 (왕과 왕 사이 쉬는 동안은 지금 곡 유지)
       const be = sim.bossAlive ? sim.enemies.find((e) => e.type === 'boss') : null;
       Music.setBoss(sim.bossAlive || (sim.bossIdx > 0 && sim.bossIdx < sim.bossCount), be ? be.def : null);
