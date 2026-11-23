@@ -645,7 +645,7 @@
       oval(g, sx * 3.8 + k * 0.6 - 0.9, fy - 0.6, 1.2, 0.5); g.fillStyle = 'rgba(255,255,255,.55)'; g.fill();
     }
     // 팔 (소매 = 옷 색) + 손
-    if (!o.noArms) for (const sx of [-1, 1]) { g.save(); g.translate(sx * 6.8, 1.5); g.rotate(sx * (0.3 - st * 0.12 * sx)); rrect(g, -2, -1, 4, 8.3, 2); fsN(o.body, 1.3); circle(g, 0, 8.4, 2); fsN(skin, 1.1); g.restore(); }
+    if (!o.noArms) for (const sx of [-1, 1]) { g.save(); g.translate(sx * 6.8, 1.5); g.rotate(sx * (0.3 - st * 0.12 * sx)); rrect(g, -2, -1, 4, 6, 2); fsN(o.body, 1.3); circle(g, 0, 6, 2); fsN(skin, 1.1); g.restore(); }
     // 몸통
     rrect(g, -6.4, 0, 12.8, 10.5, 4); fsN(o.body, 1.5);
     g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-5.2, 1.4, 2.6, 7.5);
@@ -782,7 +782,7 @@
         P.lf = [-4.6, 20.5]; P.rf = [4.6, 20.5]; break;
       }
       case 'lost':        // 길을 잃음: 한 손으로 머리를 긁적이고 한 손엔 지도
-        P.R = [9.6 + Math.sin(t * 14) * 1.2, -14]; P.L = [-9, 8]; P.prop = 'map'; break;
+        P.R = [8.4 + Math.sin(t * 14) * 1, -8.5]; P.L = [-9, 8]; P.prop = 'map'; break;
       case 'reach':       // 손을 뻗는다 (ang 방향: 도움을 청하거나 도와준다)
         P.R = at(SR, ang || 0, 11.5); break;
       case 'teach': {     // 가르치기: 한 손엔 펼친 책, 다른 손으로 책을 짚었다가 위로 들어 설명
@@ -878,11 +878,17 @@
     else if (expr === 'scared') { ctx.beginPath(); ctx.moveTo(-1.6, my + 0.6); for (let i = 1; i <= 4; i++) ctx.lineTo(-1.6 + i * 0.8, my + (i % 2 ? 0 : 0.6)); ctx.stroke(); }
     else { ctx.beginPath(); ctx.arc(0, my - 0.2, 1.8, 0.12 * Math.PI, 0.88 * Math.PI); ctx.stroke(); }   // 미소
   }
+  const ARM_K = 0.7;   // 팔 길이 배율 (다리 없는 짧은 몸에 맞게)
+  const shortArm = (S, H) => [S[0] + (H[0] - S[0]) * ARM_K, S[1] + (H[1] - S[1]) * ARM_K];
   const P_DROP = 4.6;   // 사람: 다리를 없앤 만큼 몸을 내림 (발은 몸 아래 15.9에 → 화면에선 원래 발자리 20.5)
   const seedOf = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 997; return h / 97; };
   function drawPersonPosed(ctx, c, look, x, y, pose, t) {
     const s = look.s || 1, dir = pose.dir < 0 ? -1 : 1;
     const P = personPose(pose.name, t, pose.ang);
+    // 다리가 없어진 만큼 팔도 짧게: 어깨→손 길이를 줄인다 (손이 머리·책에 닿아야 하는 몸짓은 그대로)
+    const keep = { cower: 'LR', hurt: 'LR', lost: 'R', teach: 'L' }[pose.name] || '';
+    if (!keep.includes('L')) P.L = shortArm([-6.3, 4.5], P.L);
+    if (!keep.includes('R')) P.R = shortArm([6.3, 4.5], P.R);
     const enter = () => { ctx.save(); ctx.translate(x, y); ctx.scale(K_KID * dir, K_KID); ctx.translate(0, 2 + 17 * (1 - s)); ctx.scale(s, s); ctx.translate(0, P_DROP); };
     enter();   // 다리 없이 발만: 몸 바로 아래 신발 (발 위치는 그대로, 몸이 내려옴)
     const fy = (q) => q[1] - P_DROP;
@@ -1099,6 +1105,7 @@
       } else if (pose === 'cheer') {                                       // 만세!
         const k = Math.sin(t * 10) * 1.4; L = [-8, -9.5 + k]; R = [8, -9.5 - k];
       }
+      if (pose !== 'learn') { L = shortArm([-5.4, 2.6], L); R = shortArm([5.4, 2.6], R); }   // 다리 없는 몸에 맞게 짧은 팔 (공책 쓰기는 손이 공책에 닿게)
       ctx.save(); ctx.translate(p.x, cy); ctx.scale(K_KID * f, sy); ctx.translate(0, -1 + KID_DROP * KID_S);
       limb(ctx, -5.4, 2.6, L[0], L[1], sleeve, 2.8); limb(ctx, 5.4, 2.6, R[0], R[1], sleeve, 2.8);
       if (pose === 'learn') {   // 작은 공책 + 연필
