@@ -260,7 +260,7 @@
 
   let form = 'star';
   let offEcho = null;
-  const ECHO_ALPHA = 1.3;   // main.js가 0.3을 넘기므로 실제 불투명도 약 0.39 (예전 0.63)
+  const ECHO_ALPHA = 0.85;  // main.js가 0.3을 넘기므로 실제 불투명도 약 0.26 (처음 0.63 → 0.39 → 0.26)
   Object.assign(Art, {
     ECHO_FORM_IDS: IDS,
     /** 게임에 쓸 에코 모습 */
