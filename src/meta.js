@@ -17,34 +17,34 @@
   const CHARACTERS = {
     student:  { id: 'student',  emoji: '🧑‍🎓', name: '학생',       rarity: 'common', cost: 0,
                 desc: '균형 잡힌 기본 캐릭터 · 레벨마다 체력 +6, 공격 +4%', mods: { maxhp: 6, dmgMul: 1.04 }, lvOnly: true },
-    athlete:  { id: 'athlete',  emoji: '🏃',   name: '운동부',     rarity: 'common', cost: 900,
+    athlete:  { id: 'athlete',  emoji: '🏃',   name: '운동부',     rarity: 'common', cost: 2000,
                 desc: '체력 +20, 이동 +15%, 공격 간격 +10% · 운동화 시작', mods: { maxhp: 20, speedMul: 1.15, cooldownMul: 1.1, startStats: { speed: 1 } } },
-    genius:   { id: 'genius',   emoji: '🤓',   name: '전교 1등',   rarity: 'common', cost: 1800,
+    genius:   { id: 'genius',   emoji: '🤓',   name: '전교 1등',   rarity: 'common', cost: 4000,
                 desc: '공격 +25%, 체력 -20 · 시험 만점(치명타) 시작', mods: { maxhp: -20, dmgMul: 1.25, startStats: { crit: 1 } } },
-    nurse:    { id: 'nurse',    emoji: '🧑‍⚕️', name: '보건 도우미', rarity: 'common', cost: 3000,
+    nurse:    { id: 'nurse',    emoji: '🧑‍⚕️', name: '보건 도우미', rarity: 'common', cost: 6500,
                 desc: '체력 +10, 초당 재생 +0.7 · 급식 시간 시작', mods: { maxhp: 10, regen: 0.7, startStats: { regen: 1 } } },
-    artist:   { id: 'artist',   emoji: '🎨',   name: '미술부',     rarity: 'rare',   cost: 6000,
+    artist:   { id: 'artist',   emoji: '🎨',   name: '미술부',     rarity: 'rare',   cost: 12000,
                 desc: '구슬 흡수 범위 +40, 경험치 +15% · 자석 필통 시작', mods: { magnet: 40, xpMul: 1.15, startStats: { magnet: 1 } },
                 req: { text: '📖 학원 극복', test: visited('academy') } },
-    caster:   { id: 'caster',   emoji: '🎤',   name: '방송부',     rarity: 'rare',   cost: 8000,
+    caster:   { id: 'caster',   emoji: '🎤',   name: '방송부',     rarity: 'rare',   cost: 15000,
                 desc: '에코 공격 +20% · 에코 응원 시작', mods: { echoPower: 0.2, startStats: { echo: 1 } },
                 req: { text: '💛 선행 점수 40', test: (sv) => deedScore(sv) >= 40 } },
-    cook:     { id: 'cook',     emoji: '🧑‍🍳', name: '요리부',     rarity: 'rare',   cost: 10000,
+    cook:     { id: 'cook',     emoji: '🧑‍🍳', name: '요리부',     rarity: 'rare',   cost: 18000,
                 desc: '체력 +35, 재생 +0.4, 이동 -5%', mods: { maxhp: 35, regen: 0.4, speedMul: 0.95 },
                 req: { text: '🎮 30판 플레이', test: (sv) => sv.stats.runs >= 30 } },
-    scientist:{ id: 'scientist',emoji: '🧑‍🔬', name: '과학부',     rarity: 'rare',   cost: 12000,
+    scientist:{ id: 'scientist',emoji: '🧑‍🔬', name: '과학부',     rarity: 'rare',   cost: 22000,
                 desc: '공격 간격 -12%, 체력 -10 · 관통 시작', mods: { cooldownMul: 0.88, maxhp: -10, startStats: { pierce: 1 } },
                 req: { text: '💼 회사 극복', test: visited('office') } },
-    president:{ id: 'president',emoji: '🏅',   name: '학생회장',   rarity: 'hero',   cost: 30000,
+    president:{ id: 'president',emoji: '🏅',   name: '학생회장',   rarity: 'hero',   cost: 60000,
                 desc: '공격 +15%, 에코 공격 +15%, 체력 +15', mods: { dmgMul: 1.15, echoPower: 0.15, maxhp: 15 },
                 req: { text: '🔁 2회차 열기', test: (sv) => topCycle(sv) >= 1 } },
-    explorer: { id: 'explorer', emoji: '🧭',   name: '탐험가',     rarity: 'hero',   cost: 40000,
+    explorer: { id: 'explorer', emoji: '🧭',   name: '탐험가',     rarity: 'hero',   cost: 80000,
                 desc: '이동 +20%, 흡수 범위 +30, 경험치 +10% · 운동화 시작', mods: { speedMul: 1.2, magnet: 30, xpMul: 1.1, startStats: { speed: 1 } },
                 req: { text: '🏖️ 바닷가 극복', test: visited('beach') } },
-    hero:     { id: 'hero',     emoji: '🦸',   name: '모두의 영웅', rarity: 'legend', cost: 150000,
+    hero:     { id: 'hero',     emoji: '🦸',   name: '모두의 영웅', rarity: 'legend', cost: 300000,
                 desc: '공격 +20%, 체력 +30, 재생 +0.5, 에코 공격 +20%', mods: { dmgMul: 1.2, maxhp: 30, regen: 0.5, echoPower: 0.2 },
                 req: { text: '🎭 꿈의 무대 극복 · ☀️ 선행 250', test: (sv) => visited('stage')(sv) && deedScore(sv) >= 250 } },
-    star:     { id: 'star',     emoji: '🌟',   name: '전설의 나',   rarity: 'legend', cost: 400000,
+    star:     { id: 'star',     emoji: '🌟',   name: '전설의 나',   rarity: 'legend', cost: 800000,
                 desc: '모든 능력 조금씩 + 공격 간격 -10% · 시험 만점·에코 응원 시작', mods: { dmgMul: 1.15, maxhp: 20, speedMul: 1.1, cooldownMul: 0.9, magnet: 20, xpMul: 1.1, echoPower: 0.15, startStats: { crit: 1, echo: 1 } },
                 req: { text: '🔁 3회차 열기', test: (sv) => topCycle(sv) >= 2 } },
   };
@@ -62,10 +62,10 @@
     return o;
   }
   function charLevel(save, id) { return save.chars.unlocked.indexOf(id) < 0 ? 0 : Math.max(1, Math.min(CHAR_MAX_LV, (save.chars.levels || {})[id] || 1)); }
-  /** 레벨 올리는 값: 캐릭터 값(기본 600)의 40% x 레벨, 회차가 높을수록 그 회차 수입만큼 비싸짐 */
+  /** 레벨 올리는 값: 캐릭터 값(기본 1500)의 40% x 레벨, 회차가 높을수록 그 회차 수입만큼 비싸짐 */
   function charLevelCost(save, id) {
     const c = CHARACTERS[id], lv = charLevel(save, id);
-    return Math.round(Math.max(600, c.cost) * 0.4 * lv * Worlds.rewardMul('school', topCycle(save)));
+    return Math.round(Math.max(1500, c.cost) * 0.4 * lv * Worlds.rewardMul('school', topCycle(save)));
   }
   function charReqMet(save, id) { const c = CHARACTERS[id]; return !c.req || !!c.req.test(save); }
   function levelUpCharacter(save, id) {
