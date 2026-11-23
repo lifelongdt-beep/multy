@@ -66,28 +66,58 @@
 
   /* ---------- 학교: 저녁 교실 ---------- */
   BG.school = (g, W, H) => {
-    woodFloor(g, 0, 0, W, H, '#3a3040', 22, 11);
-    g.fillStyle = 'rgba(20,22,40,.38)'; g.fillRect(0, 0, W, H);                       // 저녁 톤
-    wall(g, W, 96, '#2c3a3a', '#253131');
-    withShadow(g, 8, 4, () => box(g, 26, 40, W - 52, 46, 3, '#5a4330'));               // 칠판 틀
-    const cb = g.createLinearGradient(0, 44, 0, 82); cb.addColorStop(0, '#24483a'); cb.addColorStop(1, '#1b3a2e');
-    g.fillStyle = cb; g.fillRect(31, 44, W - 62, 37);
-    g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = 1.1;                         // 분필 글씨
-    g.beginPath(); g.moveTo(48, 56); g.quadraticCurveTo(66, 50, 86, 58); g.moveTo(50, 66); g.lineTo(118, 64); g.moveTo(52, 74); g.lineTo(96, 73);
-    g.moveTo(W - 132, 55); g.lineTo(W - 78, 57); g.moveTo(W - 126, 66); g.quadraticCurveTo(W - 100, 72, W - 68, 64); g.stroke();
-    g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(31, 44, W - 62, 4);
-    g.fillStyle = '#6b5038'; g.fillRect(40, 84, W - 80, 4); g.fillStyle = '#eee'; g.fillRect(70, 82, 9, 2.4); g.fillStyle = '#f9a8b8'; g.fillRect(86, 82, 7, 2.4);   // 분필 받침
-    circle(g, W - 22, 22, 10); g.fillStyle = '#e8e4d8'; g.fill(); g.strokeStyle = '#3a3a3a'; g.lineWidth = 1.6; g.stroke();   // 시계
-    g.beginPath(); g.moveTo(W - 22, 22); g.lineTo(W - 22, 15); g.moveTo(W - 22, 22); g.lineTo(W - 17, 24); g.stroke();
-    // 양옆 책상 줄 (가운데 통로는 비움)
-    for (let rI = 0; rI < 6; rI++) for (const x of [44, W - 44]) {
-      const y = 150 + rI * 72;
-      withShadow(g, 6, 4, () => box(g, x - 26, y - 12, 52, 24, 3, '#6a5240', '#7d6450'), 0.45);
-      g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x - 22, y + 10, 44, 2);
-      withShadow(g, 4, 3, () => box(g, x - 11, y + 16, 22, 12, 3, '#3f4a66', '#4d5878'), 0.4);   // 의자
+    // 만화풍 교실 (캔바 시안을 코드로): 세로 판자 마루 · 양옆 책상과 의자 · 위쪽 칠판. 가운데는 비워 싸우기 좋게
+    const OLc = '#2b2119', r = rng(11), TOP = 88;
+    // 1) 세로 판자 마루: 판자마다 갈색·회갈색이 번갈아, 이음매는 엇갈리게
+    const PL = 15, tones = ['#7b5a3e', '#8d6b4a', '#6f5846', '#8b7a64', '#80603f', '#76685a'];
+    for (let x = 0, i = 0; x < W; x += PL, i++) {
+      let y = TOP - r() * 140;
+      while (y < H) {
+        const len = 90 + r() * 170, col = tones[Math.floor(r() * tones.length)];
+        g.fillStyle = col; g.fillRect(x, y, PL, len);
+        g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(x + 1, y, 2, len);          // 판자 왼쪽 밝은 결
+        g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x + PL - 4, y, 3, len);           // 오른쪽 그늘
+        g.fillStyle = 'rgba(35,24,16,.65)'; g.fillRect(x, y + len - 1, PL, 1.4);     // 이음매
+        y += len;
+      }
+      g.fillStyle = 'rgba(35,24,16,.7)'; g.fillRect(x + PL - 1, TOP, 1.2, H - TOP);    // 판자 사이 선
     }
-    g.fillStyle = 'rgba(255,200,140,.06)';                                               // 창문 노을빛
-    for (let i = 0; i < 4; i++) { const x0 = -60 + i * 100; g.beginPath(); g.moveTo(x0, 96); g.lineTo(x0 + 44, 96); g.lineTo(x0 + 240, H); g.lineTo(x0 + 150, H); g.closePath(); g.fill(); }
+    // 2) 위쪽 벽 + 칠판 (정보창 바로 아래에 보이게)
+    g.fillStyle = '#48503e'; g.fillRect(0, 0, W, TOP);
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, TOP - 6, W, 6);
+    const sh = g.createLinearGradient(0, TOP, 0, TOP + 18); sh.addColorStop(0, 'rgba(0,0,0,.35)'); sh.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = sh; g.fillRect(0, TOP, W, 18);
+    const bx = 52, bw = W - 104, by = 30, bh = 44;
+    g.fillStyle = '#b89a72'; rrect(g, bx - 4, by - 4, bw + 8, bh + 8, 3); g.fill(); g.strokeStyle = OLc; g.lineWidth = 1.4; g.stroke();   // 나무 틀
+    const cb = g.createLinearGradient(0, by, 0, by + bh); cb.addColorStop(0, '#20443a'); cb.addColorStop(1, '#1a3830');
+    g.fillStyle = cb; g.fillRect(bx, by, bw, bh); g.strokeStyle = 'rgba(0,0,0,.4)'; g.strokeRect(bx, by, bw, bh);
+    g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(bx, by, bw, 5);
+    g.fillStyle = '#9c7f5c'; rrect(g, bx + 6, by + bh + 4, bw - 12, 5, 2); g.fill(); g.strokeStyle = OLc; g.lineWidth = 1; g.stroke();     // 분필 받침
+    g.fillStyle = '#f2f2ec'; g.fillRect(bx + 150, by + bh + 4.5, 10, 3); g.fillStyle = '#7fb4e8'; g.fillRect(bx + 166, by + bh + 4.5, 9, 3);
+    g.fillStyle = '#26262c'; rrect(g, bx + bw - 44, by + bh + 2.5, 16, 6, 1.5); g.fill();                                                 // 칠판지우개
+    // 3) 양옆 책상 + 의자 (화면 끝에 살짝 걸침)
+    const DW = 60, DH = 50, rows = [124, 230, 336, 442, 548];
+    const desk = (x, y, item) => {
+      withShadow(g, 5, 3, () => { g.fillStyle = '#d5995a'; rrect(g, x, y, DW, DH, 2); g.fill(); }, 0.35);
+      g.strokeStyle = OLc; g.lineWidth = 1.5; rrect(g, x, y, DW, DH, 2); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(x + 2, y + 2, DW - 4, 4);                      // 윗면 빛
+      g.fillStyle = 'rgba(120,60,20,.18)'; g.fillRect(x + 2, y + DH - 6, DW - 4, 4);                   // 앞쪽 그늘
+      g.fillStyle = '#3a3a40'; for (const lx of [x + 2, x + DW - 6]) g.fillRect(lx, y + DH - 1, 4, 5); // 책상 다리 끝
+      // 의자 (책상 아래쪽): 금속 틀 + 나무 좌석
+      const cx = x + DW / 2, cy = y + DH + 18;
+      g.strokeStyle = '#4a4a52'; g.lineWidth = 2; rrect(g, cx - 22, cy - 9, 44, 26, 5); g.stroke();
+      g.fillStyle = '#c99254'; rrect(g, cx - 19, cy - 7, 38, 17, 4); g.fill(); g.strokeStyle = OLc; g.lineWidth = 1.3; g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(cx - 17, cy - 5, 34, 3);
+      g.fillStyle = '#2f2f36'; for (const lx of [cx - 21, cx + 18]) g.fillRect(lx, cy + 15, 3.5, 5);
+      // 책상 위 소품 (사람 없이 물건만)
+      if (item === 'book') { g.fillStyle = '#3f6a46'; rrect(g, x + 32, y + 10, 18, 25, 1.5); g.fill(); g.strokeStyle = OLc; g.lineWidth = 1.1; g.stroke(); g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(x + 34, y + 12, 2, 21); }
+      if (item === 'case') { g.save(); g.translate(x + 40, y + 28); g.rotate(-0.35); g.fillStyle = '#26304a'; rrect(g, -11, -4.5, 22, 9, 4); g.fill(); g.strokeStyle = OLc; g.lineWidth = 1; g.stroke(); g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(-8, -3, 14, 1.5); g.restore(); }
+      if (item === 'note') { g.fillStyle = '#f1e9d6'; rrect(g, x + 16, y + 11, 20, 26, 1); g.fill(); g.strokeStyle = OLc; g.lineWidth = 1; g.stroke(); g.fillStyle = '#9a9a9a'; for (let k = 0; k < 6; k++) g.fillRect(x + 15, y + 13 + k * 4, 2.2, 1.6); }
+      if (item === 'pencil') { g.save(); g.translate(x + 38, y + 26); g.rotate(1.25); g.fillStyle = '#2c3550'; g.fillRect(-11, -1.4, 20, 2.8); g.fillStyle = '#e9cfa0'; g.beginPath(); g.moveTo(9, -1.4); g.lineTo(13, 0); g.lineTo(9, 1.4); g.fill(); g.restore(); }
+    };
+    const leftItems = ['book', 'case', null, 'note', null], rightItems = [null, null, null, 'note', 'pencil'];
+    rows.forEach((y, i) => { desk(-2, y, leftItems[i]); desk(W - DW + 2, y, rightItems[i]); });
+    // 4) 살짝 차분하게: 밝은 나무색이 캐릭터·적·구슬보다 튀지 않도록
+    g.fillStyle = 'rgba(14,12,30,.22)'; g.fillRect(0, 0, W, H);
   };
 
   /* ---------- 학원: 밤 자습실 ---------- */
