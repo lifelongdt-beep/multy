@@ -203,7 +203,7 @@
   const NPC_EMO = { child: '🧒', elder: '👵', friend: '🧑' };
   function drawNPC(useArt, kind, x, y, pose) {
     ctx.fillStyle = 'rgba(255,216,77,.22)'; ctx.beginPath(); ctx.ellipse(x, y + 29, 14, 5.5, 0, 0, 7); ctx.fill();
-    ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y + 29, 14, 5.5, 0, 0, 7); ctx.stroke();   // 노란 바닥 링 = 내 편인 사람 (적=빨강, 에코=파랑, 나=초록)
+    ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y + 29, 14, 5.5, 0, 0, 7); ctx.stroke();   // 노란 바닥 링 = 내 편인 사람 (적=빨강, 에코=회색, 나=초록)
     if (useArt && Art.drawPerson) return Art.drawPerson(ctx, 'npc:' + kind + (pose && pose.sad ? ':sad' : ''), x, y, pose, performance.now());
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(NPC_EMO[kind] || '🧑', x, y, 28);
     return { L: [x - 10, y + 6], R: [x + 10, y + 6] };
@@ -754,16 +754,16 @@
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-    // 에코 = 내 편: 파란 원 + 파란 테두리 유령 (적은 빨간 테두리라 한눈에 구분)
+    // 에코 = 내 편: 회색 원 + 회색 테두리 유령 (적은 빨간 테두리라 한눈에 구분)
     for (const ec of sim.echoes) {
       if (!ec.alive || ec.down > 0) continue;   // 에너지가 떨어져 사라진 동안은 그리지 않음
-      // 흐리게: 내 캐릭터·적보다 눈에 덜 띄도록 (파란 테두리는 남겨 적과 구분). 맞으면 잠깐 깜빡임
+      // 흐리게: 내 캐릭터·적보다 눈에 덜 띄도록 (회색 테두리는 남겨 적과 구분). 맞으면 잠깐 깜빡임
       const hit = ec.inv > 0 && Math.floor(ec.inv / 4) % 2 === 0 ? 0.5 : 1;
       if (useArt) { Art.drawEcho(ctx, ec, playerEmoji, now, 0.3 * hit); continue; }   // 새 그림체: 과거의 나 모습의 유령
       ctx.globalAlpha = 0.07 * hit;
-      ctx.fillStyle = '#3fb8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.fill();
+      ctx.fillStyle = '#aab0bd'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.fill();
       ctx.globalAlpha = 0.32 * hit;
-      ctx.strokeStyle = '#6fd6ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.stroke();
+      ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.stroke();
       ctx.globalAlpha = 0.24 * hit; emoji('👻', ec.x, ec.y + 1, 16);
       ctx.globalAlpha = 1;
     }
@@ -805,7 +805,7 @@
       else {
       if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
       if (e.warn) { ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, 7); ctx.stroke(); }
-      // 적 = 방해 요소: 빨간 테두리 원 (에코의 파란 원과 구분)
+      // 적 = 방해 요소: 빨간 테두리 원 (에코의 회색 원과 구분)
       ctx.strokeStyle = 'rgba(255,85,105,.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 7); ctx.stroke();
       emoji(e.emoji, e.x, e.y + 1, e.r * 2);
       }
@@ -881,7 +881,7 @@
       ctx.globalAlpha = Math.min(1, f.t / 12);
       if (f.kind === 'pop') { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(f.x, f.y, 14 - f.t, 0, 7); ctx.stroke(); }
       else if (f.kind === 'hurt') { ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.arc(f.x, f.y, 16 - f.t, 0, 7); ctx.fill(); }
-      else if (f.kind === 'echoUp') { ctx.globalAlpha = f.t / 40; ctx.strokeStyle = '#6fd6ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, 4 + f.t * 0.6, 0, 7); ctx.stroke(); }
+      else if (f.kind === 'echoUp') { ctx.globalAlpha = f.t / 40; ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, 4 + f.t * 0.6, 0, 7); ctx.stroke(); }
       else if (f.kind === 'vanish') { ctx.globalAlpha *= 0.35; ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(f.x, f.y, 24 - f.t, 0, 7); ctx.fill(); }
       else if (f.kind === 'nova') { ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 - f.t / 24), 0, 7); ctx.stroke(); }
       ctx.globalAlpha = 1;

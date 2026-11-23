@@ -10,7 +10,8 @@
   const S = 3;                    // 스프라이트 해상도 배율
   const cache = new Map();
   const K_EN = 1.3;               // 적 그림 크기 배율 (충돌 판정은 그대로)
-  const K_KID = 1.4;              // 주인공·에코·선생님 그림 크기 배율
+  const K_KID = 1.4;
+  const ECHO_GRAY = '#b9bfcc', ECHO_RING = '#c9ced8';   // 에코(과거의 나)는 회색 스타일로 통일              // 주인공·에코·선생님 그림 크기 배율
 
   /* ---------- 스프라이트 캐시 ---------- */
   function sprite(key, w, h, draw) {
@@ -813,7 +814,7 @@
       blit(ctx, c, g.x, g.y + bob);
     },
 
-    /** 발밑 표시: 적은 붉은 고리, 에코는 파란 고리 (한눈에 편 구분) */
+    /** 발밑 표시: 적은 붉은 고리, 에코는 회색 고리 (한눈에 편 구분) */
     groundMark(ctx, x, y, r, color, alpha) {
       ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = 1.6;
       ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.38, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
@@ -874,12 +875,12 @@
       return [p.x + f * K_KID * R[0], cy + sy * (R[1] - 1)];
     },
 
-    /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 파란 유령 */
+    /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 회색 유령 (옷·머리·얼굴 색과 상관없이 모두 같은 회색 톤) */
     drawEcho(ctx, ec, emo, now, alpha) {
       const base = kidSprite(emo, 0);
-      const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${outfit.key}`, base, '#6fd3ff', 0.55);
+      const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${outfit.key}`, base, ECHO_GRAY, 0.82);
       const bob = Math.sin(now / 400 + ec.id) * 1.5;
-      this.groundMark(ctx, ec.x, ec.y + 13 * K_KID, 9 * K_KID, '#6fd6ff', alpha * 1.4);
+      this.groundMark(ctx, ec.x, ec.y + 13 * K_KID, 9 * K_KID, ECHO_RING, alpha * 1.4);
       ctx.globalAlpha = alpha * 1.25;
       const dir = ec._lx !== undefined && ec.x < ec._lx ? -1 : 1; ec._lx = ec.x;
       blit(ctx, ghost, ec.x, ec.y - 4 + bob, K_KID, K_KID, dir < 0);
@@ -935,9 +936,9 @@
       const a = Math.atan2(b.vy, b.vx);
       ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(a);
       ctx.globalAlpha = echo ? 0.35 : 1;
-      ctx.fillStyle = echo ? 'rgba(127,220,255,.35)' : 'rgba(255,226,122,.35)';
+      ctx.fillStyle = echo ? 'rgba(200,205,216,.35)' : 'rgba(255,226,122,.35)';
       ctx.fillRect(-12, -1.6, 10, 3.2);                                     // 꼬리
-      ctx.fillStyle = b.crit ? '#ff9f43' : (echo ? '#9fe8ff' : '#ffe27a');
+      ctx.fillStyle = b.crit ? '#ff9f43' : (echo ? '#d4d8e2' : '#ffe27a');
       ctx.beginPath(); ctx.ellipse(0, 0, b.crit ? 5.5 : 4.5, b.crit ? 2.8 : 2.2, 0, 0, Math.PI * 2); ctx.fill();
       ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
       ctx.restore(); ctx.globalAlpha = 1;

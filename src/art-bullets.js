@@ -71,7 +71,7 @@
 
   const prevDraw = Art.drawBullet.bind(Art);
   Art.drawBullet = function (ctx, b) {
-    if (b.owner !== 'player') return prevDraw(ctx, b);   // 에코 총알은 그대로 (흐린 파란색)
+    if (b.owner !== 'player') return prevDraw(ctx, b);   // 에코 총알은 그대로 (흐린 회색)
     const c = sprite(b.tier || 0, b.crit);
     ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.atan2(b.vy, b.vx));
     const z = 1.3; ctx.drawImage(c, -c.R * z, -c.R * z, c.R * 2 * z, c.R * 2 * z);   // 모양이 잘 보이게 조금 크게
