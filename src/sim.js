@@ -49,6 +49,9 @@
     bossGapSec: 6,           // 보스 극복 후 다음 보스가 나오기까지 최소 간격(초)
     hpGrowth: 1.6,           // 진행도에 따른 적 체력 증가
     healAmount: 35,
+    kindHealFrac: 0.2,       // 친구를 도운 뒤 체력 회복(최대 체력의 20%)
+    kindGems: 6,             // 친구가 고마움으로 주는 경험치 구슬 수와 값
+    kindGemXp: 3,
     // ---- 아이템(업그레이드) 1레벨당 효과 ----
     rateMul: 0.80,           // 발사 간격 x0.80 (이전 0.85)
     dmgPer: 0.5,             // 공격력 +50% (이전 35%)
@@ -159,6 +162,9 @@
       this.world = WORLDS[opts.world] || WORLDS.school;
       this.helper = null;      // 도우미(선생님 등): {x,y,r,state,prog,need,t,stay,fade}
       this.helped = 0;         // 이번 판에 도움을 받은 횟수
+      this.friend = null;      // 도움이 필요한 친구(선행 대상): {id,x,y,r,state,prog,need,t,stay,fade,troubles}
+      this.friendCount = 0;
+      this.goodDeeds = 0;      // 이번 판에 남을 도와준 횟수(선행)
       this.choiceKind = 'levelup';   // 'levelup' | 'helper' (선택창 종류)
       this.hazards = [];       // 지하철 열차 {y,h,x,dir,state,t,warn,speed,dmg}
       this.bonus = Object.assign({}, NO_BONUS, opts.bonus || {});
@@ -355,6 +361,7 @@
       if (t % interval === 0) for (let i = 0; i < wave.n; i++) this._spawn(wave);
       while (this.swarmIdx < w.swarms.length && t >= w.swarms[this.swarmIdx].t * TICK) this._ring(w.swarms[this.swarmIdx++]);
       if (t === w.helper.t * TICK) this._spawnHelper();
+      if (t === w.friend.t * TICK) this._spawnFriend();
       // 큰 도전(보스): 월드가 높을수록 여러 번. 앞 보스를 극복하면 숨 돌린 뒤 다음 보스가 등장
       const times = w.boss.times;
       if (this.bossIdx < times.length && !this.bossAlive) {
@@ -563,7 +570,7 @@
       const p = this.player, h = this.world.helper;
       let x = W / 2, y = H * 0.35, best = -1;
       for (let i = 0; i < 12; i++) {      // 플레이어에게서 적당히(너무 멀지도 가깝지도 않게) 떨어진 위치
-        const cx = 60 + this.rng() * (W - 120), cy = 110 + this.rng() * (H - 300);
+        const cx = 60 + this.rng() * (W - 120), cy = 160 + this.rng() * (PLAY_BOTTOM - 160 - 110);
         const d = Math.hypot(cx - p.x, cy - p.y);
         const score = d < 90 ? -1 : Math.min(d, 220);
         if (score > best) { best = score; x = cx; y = cy; }
@@ -595,6 +602,60 @@
           this._ev({ k: 'banner', text: this.world.helper.leaveText });
         }
       } else if (--hp.fade <= 0) this.helper = null;
+    }
+
+    /** 도움이 필요한 친구 등장: 방해 요소 몇 마리가 친구를 둘러싸고 있다. (친구는 적에게 다치지 않는다) */
+    _spawnFriend() {
+      const p = this.player, f = this.world.friend;
+      let x = W / 2, y = H * 0.4, best = -1;
+      for (let i = 0; i < 16; i++) {
+        const cx = 60 + this.rng() * (W - 120), cy = 160 + this.rng() * (PLAY_BOTTOM - 160 - 110);
+        let score = Math.min(Math.hypot(cx - p.x, cy - p.y), 230);
+        if (score < 120) score = -1;
+        if (this.helper && Math.hypot(cx - this.helper.x, cy - this.helper.y) < 110) score = -1;
+        if (score > best) { best = score; x = cx; y = cy; }
+      }
+      const id = ++this.friendCount;
+      this.friend = { id, x, y, r: 64, state: 'need', prog: 0, need: 200, t: 0, stay: 2100, fade: 0, troubles: 0, name: f.name, emoji: f.emoji };
+      // 친구를 둘러싼 방해 요소: 가장 순한 종류(chase/zig)만, 플레이어가 가까이 올 때까지 친구 곁을 맴돈다
+      const sec = this.tick / TICK;
+      const wave = this.world.waves.find((q) => sec >= q.from && sec < q.to) || this.world.waves[this.world.waves.length - 1];
+      const mild = Object.keys(wave.w).filter((k) => ['chase', 'zig'].includes(this.world.enemies[k].ai));
+      const n = 4;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        this._make(mild[i % mild.length], x + Math.cos(a) * 34, y + Math.sin(a) * 34);
+        const e = this.enemies[this.enemies.length - 1];
+        e.guard = true; e.fid = id; e.gAng = a;
+      }
+      this._ev({ k: 'banner', text: f.arriveText });
+      this._ev({ k: 'friend' });
+    }
+
+    /** 도와주는 방법: ① 친구 곁으로 간다 ② 친구를 괴롭히던 방해 요소를 모두 물리친다 ③ 곁에 잠시 함께 있어 준다. 못 해도 벌은 없다. */
+    _updateFriend() {
+      const f = this.friend;
+      if (!f) return;
+      const p = this.player;
+      f.t += 1;
+      if (f.state === 'need') {
+        f.troubles = 0;
+        for (const e of this.enemies) if (e.fid === f.id && e.hp > 0) f.troubles += 1;
+        const inside = Math.hypot(p.x - f.x, p.y - f.y) < f.r + p.r;
+        if (inside && f.troubles === 0) f.prog = Math.min(f.need, f.prog + 1);
+        else if (!inside) f.prog = Math.max(0, f.prog - 1);
+        if (f.prog >= f.need) {
+          f.state = 'thanks'; f.fade = 180; this.goodDeeds += 1;
+          p.hp = Math.min(p.maxhp, p.hp + p.maxhp * TUNING.kindHealFrac);
+          for (let i = 0; i < TUNING.kindGems; i++) this.gems.push({ x: f.x + (this.rng() - 0.5) * 50, y: f.y + (this.rng() - 0.5) * 50, v: TUNING.kindGemXp });
+          this._ev({ k: 'banner', text: this.world.friend.thanksText });
+          this._ev({ k: 'kind', x: f.x, y: f.y });
+        } else if (f.t >= f.stay) {
+          f.state = 'gone'; f.fade = 90;
+          for (const e of this.enemies) if (e.fid === f.id) e.guard = false;
+          this._ev({ k: 'banner', text: this.world.friend.leaveText });
+        }
+      } else if (--f.fade <= 0) this.friend = null;
     }
 
     /** 열차 위험물 갱신: 경고 → 질주. 플레이어에겐 큰 피해, 일반 적은 즉사 */
@@ -725,6 +786,7 @@
 
       this._updateHazards();
       this._updateHelper();
+      this._updateFriend();
 
       // 적 이동/AI/접촉/사망
       for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -736,6 +798,17 @@
         const ax = p.x - e.x, ay = p.y - e.y;
         const dist = Math.hypot(ax, ay) || 1;
         const ux = ax / dist, uy = ay / dist;
+        if (e.guard) {
+          const fr = this.friend;
+          if (fr && fr.state === 'need' && dist > 170) {   // 플레이어가 멀면 친구 곁을 빙빙 돈다
+            const ang = e.gAng + this.tick * 0.02;
+            const gx = fr.x + Math.cos(ang) * 34 - e.x, gy = fr.y + Math.sin(ang) * 34 - e.y, gd = Math.hypot(gx, gy) || 1;
+            const stepLen = Math.min(e.speed * 1.2, gd);
+            e.x += (gx / gd) * stepLen; e.y += (gy / gd) * stepLen;
+            continue;
+          }
+          e.guard = false;   // 플레이어가 가까이 오면 맞서 달려든다
+        }
         let mvx = ux * e.speed, mvy = uy * e.speed;
 
         switch (bt.ai) {

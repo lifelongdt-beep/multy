@@ -101,6 +101,8 @@
         case 'banner': banner = { text: ev.text, t: 150 }; break;
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 150 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
+        case 'friend': Sfx.play('heal'); break;
+        case 'kind': Sfx.play('levelup'); for (let i = 0; i < 5; i++) floats.push({ x: ev.x + (i - 2) * 14, y: ev.y - 10, v: '💛', crit: true, t: 60 }); break;
         case 'helped': Sfx.play('levelup'); break;
         case 'train': Sfx.play('train'); banner = { text: '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
@@ -153,8 +155,9 @@
   }
 
   /** 결과 화면의 따뜻한 한마디 (실패해도 괜찮고, 도움을 청하는 건 좋은 일) */
-  function cheerMessage(result, helped, echoCount) {
+  function cheerMessage(result, helped, echoCount, kind) {
     const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    if (kind) return pick(['남을 도운 마음이 가장 큰 힘이에요 💛', '다정함은 돌고 돌아 나에게 와요 🌷', '친구를 도운 오늘, 정말 멋졌어요']);
     if (helped) return pick(['도움을 청한 건 용기 있는 선택이었어요 🙋', '함께하면 더 멀리 갈 수 있어요 💛', '도움을 받는 것도 실력이에요']);
     if (result === 'clear') return pick(['혼자가 아니었어요. 과거의 나도 함께했어요 💛', '큰 도전을 해냈어요. 정말 잘했어요!', '차근차근 해낸 만큼 성장했어요 🌱']);
     if (result === 'survive') return pick(['끝까지 버틴 끈기가 멋져요!', '한 번만 더 도전하면 넘을 수 있어요']);
@@ -171,17 +174,17 @@
     Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
     $('endTitle').textContent = title;
     $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;
-    $('cheer').textContent = cheerMessage(sim.result, sim.helped, sim.echoes.length);
+    $('cheer').textContent = cheerMessage(sim.result, sim.helped, sim.echoes.length, sim.goodDeeds);
     if (sim.result !== 'clear' && sim.echoes.length < sim.world.boss.needEchoes) $('cheer').textContent += `  (👻 이 월드의 큰 도전은 에코 ${sim.world.boss.needEchoes}명 이상일 때 도전할 만해요 · 이번 판 ${sim.echoes.length}명)`;
     const alive = sim.echoes.filter((e) => e.alive).length;
-    $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}` + (sim.helped ? ` · 도움 ${sim.helped}회` : '') + (sim.bossCount > 1 ? ` · 큰 도전 ${sim.bossDefeated}/${sim.bossCount}` : '') + '<br>' +
+    $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}` + (sim.helped ? ` · 도움 받음 ${sim.helped}회` : '') + (sim.goodDeeds ? ` · 선행 ${sim.goodDeeds}회` : '') + (sim.bossCount > 1 ? ` · 큰 도전 ${sim.bossDefeated}/${sim.bossCount}` : '') + '<br>' +
       (sim.echoes.length ? `이번 판 에코 ${alive}/${sim.echoes.length}명 생존<br>` : '') +
       (res.removed.length
         ? `가장 일찍 쓰러진 에코(${(res.removed[0].ticks / TICK).toFixed(0)}초)가 퇴장했습니다<br>`
         : '') +
       `가장 오래 버틴 에코 ${(Math.max(...echoes.map((e) => e.ticks)) / TICK).toFixed(0)}초까지 다음 판을 도와줍니다<br><small>(에코는 ${sim.world.name}에서만 함께해요)</small>`;
     // 학점 · 도전 과제 · 일일 미션
-    const sum = GameUI.recordRun({ kills: sim.kills, seconds: Math.floor(sim.tick / TICK), level: sim.player.level, result: sim.result, gems: sim.gemCount, echoes: sim.echoes.length, world: sim.world.id, helped: sim.helped });
+    const sum = GameUI.recordRun({ kills: sim.kills, seconds: Math.floor(sim.tick / TICK), level: sim.player.level, result: sim.result, gems: sim.gemCount, echoes: sim.echoes.length, world: sim.world.id, helped: sim.helped, goodDeeds: sim.goodDeeds });
     const lines = [`🎓 학점 +${sum.earned}`];
     for (const a of sum.newAch) lines.push(`🏆 과제 달성: ${a.name} (+${a.reward})`);
     for (const m of sum.missionsDone) lines.push(`🎯 미션 완료! (+${m.reward})`);
@@ -205,6 +208,25 @@
     if (w > maxW) ctx.font = `bold ${Math.max(10, Math.floor(size * maxW / w))}px sans-serif`;
     ctx.fillText(text, x, y);
   }
+  /** 작은 말풍선: (x, y)는 꼬리 끝(말하는 사람의 머리 위). 화면 밖으로 나가지 않게 좌우를 보정한다. */
+  let bubbles = [];   // 이번 프레임의 말풍선 (적·탄환보다 위에 그리려고 모아 둠)
+  function bubble(text, x, y, warn) { bubbles.push([text, x, y, warn]); }
+  function drawBubble(text, x, y, warn) {
+    ctx.font = 'bold 9px sans-serif';
+    const lines = text.split('\n');
+    const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 12, h = lines.length * 11 + 7;
+    const bx = Math.min(W - 4 - w / 2, Math.max(4 + w / 2, x)), by = y - h - 7;
+    ctx.fillStyle = 'rgba(255,255,255,.96)'; ctx.strokeStyle = warn ? '#ff7a9a' : '#ffd34d'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(bx - w / 2 + 6, by); ctx.lineTo(bx + w / 2 - 6, by); ctx.quadraticCurveTo(bx + w / 2, by, bx + w / 2, by + 6);
+    ctx.lineTo(bx + w / 2, by + h - 6); ctx.quadraticCurveTo(bx + w / 2, by + h, bx + w / 2 - 6, by + h);
+    ctx.lineTo(x + 5, by + h); ctx.lineTo(x, y - 1); ctx.lineTo(x - 5, by + h);
+    ctx.lineTo(bx - w / 2 + 6, by + h); ctx.quadraticCurveTo(bx - w / 2, by + h, bx - w / 2, by + h - 6);
+    ctx.lineTo(bx - w / 2, by + 6); ctx.quadraticCurveTo(bx - w / 2, by, bx - w / 2 + 6, by);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#2a2f4a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    lines.forEach((l, i) => ctx.fillText(l, bx, by + 4 + 5.5 + i * 11));
+  }
+
   function emoji(ch, x, y, size) { ctx.font = `${size}px serif`; ctx.fillText(ch, x, y); }
 
   function render() {
@@ -269,6 +291,7 @@
       ctx.globalAlpha = 1;
     }
 
+    bubbles = [];
     // 도우미(선생님 등): 빛나는 상담 구역 + 게이지. 가까이 가서 잠시 머물면 조언 카드를 받는다
     if (sim.helper) {
       const hp = sim.helper, bob = Math.sin(performance.now() / 300) * 2;
@@ -286,9 +309,38 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       emoji(hp.emoji, hp.x, hp.y + bob, 34);
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
-      ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
-      ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
-      if (hp.state === 'wait') { ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.fillText(hp.prog > 0 ? '조언을 듣는 중…' : '곁에 가서 잠시 머물러 보세요', hp.x, hp.y + hp.r + 12); }
+      const hb = sim.world.helper.bubble;
+      bubble(hp.state === 'done' ? hb.done : hp.prog > 0 ? hb.talk : hb.wait, hp.x, hp.y - 20 + bob, false);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(hp.name, hp.x, hp.y + hp.r + 12);
+      if (hp.state === 'wait') { ctx.fillStyle = '#fff'; ctx.font = '9px sans-serif'; ctx.fillText('곁에 가서 잠시 머물러 보세요', hp.x, hp.y + hp.r + 23); }
+      ctx.globalAlpha = 1;
+    }
+
+    // 도움이 필요한 친구(선행): 분홍 원 + 말풍선. 방해 요소를 물리치고 곁에 함께 있으면 고마워한다
+    if (sim.friend) {
+      const fr = sim.friend, bob = Math.sin(performance.now() / 260) * 2;
+      const fadeA = fr.state === 'need' ? 1 : Math.max(0, fr.fade / (fr.state === 'thanks' ? 180 : 90));
+      ctx.globalAlpha = fadeA;
+      const g = ctx.createRadialGradient(fr.x, fr.y, 4, fr.x, fr.y, fr.r + 6);
+      g.addColorStop(0, 'rgba(255,150,190,.30)'); g.addColorStop(1, 'rgba(255,150,190,.04)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fr.x, fr.y, fr.r + 6, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,150,190,.95)'; ctx.lineWidth = 2.5; ctx.setLineDash([6, 6]);
+      ctx.beginPath(); ctx.arc(fr.x, fr.y, fr.r, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      if (fr.prog > 0 && fr.state === 'need') {
+        ctx.strokeStyle = '#7dffb2'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(fr.x, fr.y, fr.r - 5, -Math.PI / 2, -Math.PI / 2 + (fr.prog / fr.need) * Math.PI * 2); ctx.stroke();
+      }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      emoji(fr.emoji, fr.x, fr.y + bob, 28);
+      const fb = sim.world.friend.bubble;
+      const crowded = fr.state === 'need' && fr.troubles > 0;
+      bubble(fr.state === 'thanks' ? fb.thanks : fr.state === 'gone' ? '…' : crowded ? fb.crowded : fr.prog > 0 ? fb.relief : fb.calm, fr.x, fr.y - 18 + bob, crowded);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffb3d1'; ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(fr.name, fr.x, fr.y + fr.r + 12);
+      if (fr.state === 'need') { ctx.fillStyle = '#fff'; ctx.font = '9px sans-serif'; ctx.fillText(crowded ? '① 주변 방해를 물리쳐요' : fr.prog > 0 ? '함께 있어 주는 중…' : '② 곁에 가서 함께 있어 줘요', fr.x, fr.y + fr.r + 23); }
       ctx.globalAlpha = 1;
     }
 
@@ -353,6 +405,10 @@
       else if (f.kind === 'nova') { ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 - f.t / 24), 0, 7); ctx.stroke(); }
       ctx.globalAlpha = 1;
     }
+
+    // 말풍선은 맨 위에
+    for (const bb of bubbles) drawBubble(bb[0], bb[1], bb[2], bb[3]);
+    ctx.globalAlpha = 1;
 
     // 데미지 숫자
     ctx.textAlign = 'center';

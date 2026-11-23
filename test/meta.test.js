@@ -348,3 +348,17 @@ test('에코 풀: 월드 정보가 없는 옛 데이터는 학교의 에코로 �
   assert.deepStrictEqual(M.echoesForWorld(null, 'subway'), { world: 'subway', echoes: [], cleared: 0 });
   assert.strictEqual(M.echoesForWorld({ world: 'school', echoes: [] }, 'zzz').world, 'school', '모르는 월드는 학교');
 });
+
+test('선행: 통계·과제·미션·학점 보상', () => {
+  const s = M.defaultSave();
+  const a = M.recordRun(s, run({ goodDeeds: 0 }), '2026-11-20');
+  const b = M.recordRun(M.defaultSave(), run({ goodDeeds: 1 }), '2026-11-20');
+  assert.strictEqual(b.base - a.base, 15, '선행 1회당 학점 +15');
+  const r = M.recordRun(s, run({ goodDeeds: 1 }), '2026-11-20');
+  assert.ok(r.newAch.some((x) => x.id === 'kind_1'));
+  assert.strictEqual(s.stats.goodDeeds, 1);
+  assert.ok(M.MISSION_TEMPLATES.some((t) => t.id === 'kind'));
+  s.daily = { date: '2026-11-20', missions: [{ id: 'kind', target: 1, reward: 45, progress: 0, done: false }, { id: 'runs', target: 9, reward: 1, progress: 0, done: false }, { id: 'help', target: 9, reward: 1, progress: 0, done: false }] };
+  assert.strictEqual(M.missionText(s.daily.missions[0]), '어려워하는 친구 도와주기');
+  assert.deepStrictEqual(M.recordRun(s, run({ goodDeeds: 1 }), '2026-11-20').missionsDone.map((m) => m.id), ['kind']);
+});

@@ -5,6 +5,7 @@
  *   - 숙제·시험·업무는 나쁜 것이 아니라 배움과 성장의 일부다. 적으로 만들지 않는다.
  *     (괴롭히는 건 "숙제"가 아니라 "미루는 마음", "시험"이 아니라 "시험 불안")
  *   - 선생님·선배·역무원 같은 사람은 적이 아니라 "도와주는 존재"(helper)로 등장한다.
+ *   - 도움이 필요한 사람(친구·동료·어르신)은 말풍선으로 도움을 청하고(friend), 플레이어가 곁으로 가서 도와주는 선행이 있다.
  *     플레이어가 먼저 곁으로 가서 도움을 청하면 조언 카드를 받는다. (도움을 구하는 건 좋은 일!)
  *   - 보스는 사람도, 숙제/시험 자체도 아닌 "극복해야 할 큰 장애물"(시험 불안, 슬럼프, 번아웃, 급행열차)이다.
  *     이기는 것이 아니라 "극복"한다.
@@ -21,7 +22,9 @@
  *   ai: chase | zig(지그재그) | dash(돌진) | shoot(원거리) | boss
  *   shoot: fireCd, volley(한 번에 발사 수), spread(부채 각도), bspeed(탄속), bdmg(탄 피해)
  *   dash : dashCd      onDeath: {type, n} 죽을 때 분열
- * helper 필드: name, emoji, t(등장 초), 문구들, boons(조언 카드 이름 heal/power/focus/team)
+ * helper 필드(나를 돕는 사람): name, emoji, t(등장 초), 문구들, bubble(말풍선 wait/talk/done), boons(조언 카드 이름 heal/power/focus/team)
+ * friend 필드(내가 돕는 사람 = 선행): name, emoji, t(등장 초), 문구들, bubble(crowded/calm/relief/thanks)
+ *   → 친구 곁으로 가서 주변 방해 요소를 물리치고, 잠시 함께 있어 주면 고마움과 보상을 받는다
  */
 (function (root) {
   'use strict';
@@ -47,7 +50,15 @@
         arriveText: '👩‍🏫 담임 선생님이 도와주러 오셨어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 선생님께 도움을 받았어요',
         leaveText: '선생님은 언제나 기다리고 계세요',
+        bubble: { wait: '도움이 필요하면\n곁으로 와요', talk: '잘 듣고 있어요', done: '힘내요! 💛' },
         boons: { heal: '따뜻한 격려', power: '오답 노트 정리', focus: '집중하는 법', team: '친구와 함께' },
+      },
+      friend: {
+        name: '반 친구', emoji: '🧒', t: 25,
+        arriveText: '🧒 친구가 힘들어해요! 말풍선이 있는 곳으로 가서 도와주세요',
+        thanksText: '💛 친구가 환하게 웃었어요',
+        leaveText: '친구는 스스로 이겨냈어요',
+        bubble: { crowded: '미루기가 너무 많아…\n도와줘!', calm: '곁에 있어 줄래?', relief: '고마워… 힘이 나!', thanks: '덕분이야! 💛' },
       },
       boss: { name: '시험 불안', emoji: '😱', hp: 750, times: [90], needEchoes: 7, fightSec: 50, refMul: 1.0, speed: 0.4, r: 30, dmg: 12, xp: 30, ai: 'boss', pattern: 'exam', warnText: '⚠ 기말고사 D-DAY, 불안이 밀려와요 ⚠', startText: '😱 시험 불안, 극복해 봐요!', summon: 'hw' },
       waves: [
@@ -83,7 +94,15 @@
         arriveText: '🧑‍🏫 학원 선생님이 코칭하러 오셨어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 선생님의 코칭을 받았어요',
         leaveText: '질문은 언제든 환영이에요',
+        bubble: { wait: '모르는 건\n곁으로 와서 물어봐요', talk: '천천히 말해 봐요', done: '할 수 있어요! 💛' },
         boons: { heal: '마음 다독이기', power: '개념 완성', focus: '시간 관리법', team: '스터디 그룹' },
+      },
+      friend: {
+        name: '옆자리 친구', emoji: '👧', t: 30,
+        arriveText: '👧 옆자리 친구가 지쳐 있어요! 말풍선이 있는 곳으로 가서 도와주세요',
+        thanksText: '💛 친구가 다시 웃으며 공부해요',
+        leaveText: '친구는 스스로 힘을 냈어요',
+        bubble: { crowded: '포기하고 싶어…\n도와줘!', calm: '같이 있어 줄래?', relief: '조금 힘이 나!', thanks: '고마워! 💛' },
       },
       boss:  { name: '슬럼프', emoji: '🌧️', hp: 850, times: [85, 125], needEchoes: 8, fightSec: 33, refMul: 1.3, speed: 0.35, r: 30, dmg: 12, xp: 34, ai: 'boss', pattern: 'spiral', warnText: '⚠ 슬럼프가 찾아와요 ⚠', startText: '🌧️ 슬럼프, 함께 이겨내요!', summon: 'memo' },
       waves: [
@@ -119,7 +138,15 @@
         arriveText: '🧑‍💼 멘토 선배가 조언해 주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 선배의 조언을 받았어요',
         leaveText: '궁금한 건 언제든 물어보세요',
+        bubble: { wait: '막히면\n곁으로 와요', talk: '같이 생각해 봐요', done: '잘하고 있어요! 💛' },
         boons: { heal: '숨 돌리기', power: '업무 노하우', focus: '우선순위 정리', team: '동료와 협업' },
+      },
+      friend: {
+        name: '신입 동료', emoji: '🧑‍💻', t: 35,
+        arriveText: '🧑‍💻 신입 동료가 힘들어해요! 말풍선이 있는 곳으로 가서 도와주세요',
+        thanksText: '💛 동료가 안심하며 웃었어요',
+        leaveText: '동료는 스스로 해냈어요',
+        bubble: { crowded: '일이 너무 몰려요…\n도와주세요!', calm: '곁에 있어 주세요', relief: '한결 나아졌어요!', thanks: '감사해요! 💛' },
       },
       boss:  { name: '번아웃', emoji: '🥵', hp: 1000, times: [80, 115, 150], needEchoes: 9, fightSec: 30, refMul: 0.6, speed: 0.35, r: 30, dmg: 14, xp: 38, ai: 'boss', pattern: 'charge', warnText: '⚠ 번아웃이 다가와요 ⚠', startText: '🥵 번아웃, 쉬어가며 극복해요!', summon: 'mail' },
       waves: [
@@ -155,7 +182,15 @@
         arriveText: '🙋 역무원이 도와주러 왔어요! 빛나는 원으로 가 보세요',
         thanksText: '💛 역무원의 안내를 받았어요',
         leaveText: '도움이 필요하면 언제든 말씀하세요',
+        bubble: { wait: '길을 모르면\n곁으로 와요', talk: '이쪽이에요', done: '조심히 가세요! 💛' },
         boons: { heal: '잠깐 쉬어가기', power: '빠른 환승 길', focus: '졸음 깨우기', team: '함께 가는 길' },
+      },
+      friend: {
+        name: '짐 든 어르신', emoji: '👵', t: 40,
+        arriveText: '👵 어르신이 짐 때문에 힘들어하세요! 말풍선이 있는 곳으로 가서 도와주세요',
+        thanksText: '💛 어르신이 고맙다며 웃으셨어요',
+        leaveText: '어르신은 다른 분의 도움을 받으셨어요',
+        bubble: { crowded: '짐이 무거워요…\n도와줄래요?', calm: '곁에 있어 줄래요?', relief: '한결 가벼워요!', thanks: '고마워요! 💛' },
       },
       boss:  { name: '급행열차', emoji: '🚆', hp: 950, times: [75, 110, 145, 180], needEchoes: 9, fightSec: 22, refMul: 0.5, speed: 0.35, r: 30, dmg: 14, xp: 42, ai: 'boss', pattern: 'lane', warnText: '⚠ 급행열차가 들어와요 ⚠', startText: '🚆 급행열차를 피해 집으로!', summon: 'sleepy' },
       waves: [

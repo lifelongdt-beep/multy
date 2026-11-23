@@ -121,7 +121,7 @@
       body.appendChild(item(done ? '✅' : a.icon, a.name, `${a.desc} · 보상 🎓 ${a.reward}`, { done }));
     }
     const st = save.stats;
-    body.appendChild(el('div', 'msg', `통계: ${st.runs}판 · 물리친 방해 ${st.kills} · 보스 극복 ${st.clears} · 도움 ${st.helped || 0}회 · 최장 ${Math.floor(st.bestTime)}초 · 최고 Lv ${st.bestLevel}`));
+    body.appendChild(el('div', 'msg', `통계: ${st.runs}판 · 물리친 방해 ${st.kills} · 보스 극복 ${st.clears} · 도움 받음 ${st.helped || 0}회 · 도와줌 ${st.goodDeeds || 0}회 · 최장 ${Math.floor(st.bestTime)}초 · 최고 Lv ${st.bestLevel}`));
   }
 
   /* ---------- 백업 ---------- */

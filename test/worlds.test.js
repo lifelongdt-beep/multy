@@ -611,3 +611,93 @@ test('격앙 이후에는 전투가 길어질수록 받는 피해가 계속 커�
   b.hp = 0; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 });
   assert.strictEqual(s.bossRage, 1);
 });
+
+/* ===================== 선행: 도움이 필요한 친구 ===================== */
+
+const advance = (s, n, input) => { for (let i = 0; i < n && !s.over; i++) { s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id); s.step(input || { dx: 0, dy: 0 }); } };
+const toFriend = (s) => { s.player.x = s.friend.x; s.player.y = s.friend.y; };
+const farFromFriend = (s) => { s.player.x = s.friend.x < W / 2 ? W - 15 : 15; s.player.y = s.friend.y < H / 2 ? H - 40 : 40; };
+
+test('친구(선행 대상) 데이터: 월드마다 있고, 사람이며, 적·도우미와 겹치지 않는다', () => {
+  for (const id of ORDER) {
+    const w = WORLDS[id], f = w.friend;
+    assert.ok(f && f.name && f.emoji && f.t > 0 && f.t < w.helper.t, `${id}: 친구는 도우미보다 먼저 등장`);
+    assert.ok(PERSON_EMOJI.test(f.emoji), `${id}: 친구는 사람`);
+    assert.ok(!Object.values(w.enemies).some((e) => e.emoji === f.emoji) && f.emoji !== w.helper.emoji, `${id}: 이모지 구분`);
+    for (const k of ['crowded', 'calm', 'relief', 'thanks']) assert.ok(f.bubble[k], `${id}: 말풍선 ${k}`);
+    for (const k of ['wait', 'talk', 'done']) assert.ok(w.helper.bubble[k], `${id}: 도우미 말풍선 ${k}`);
+    for (const t of Object.values(f.bubble).concat(Object.values(w.helper.bubble))) assert.ok(t.replace('\n', '').length <= 18, `${id}: 말풍선은 짧게 "${t}"`);
+  }
+});
+
+test('친구 등장: 정해진 시간에 나타나고, 방해 요소 4마리가 친구를 둘러싼다', () => {
+  for (const id of ORDER) {
+    const s = new Sim({ seed: 51, events: true, world: id });
+    let seen = false;
+    while (!s.over && s.tick <= WORLDS[id].friend.t * 60 + 2) { s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 }); for (const ev of s.drainEvents()) if (ev.k === 'friend') seen = true; }
+    assert.ok(seen && s.friend && s.friend.state === 'need', `${id}: 친구 등장`);
+    const guards = s.enemies.filter((e) => e.fid === s.friend.id);
+    assert.strictEqual(guards.length, 4, `${id}: 둘러싼 방해 요소`);
+    for (const g of guards) assert.ok(['chase', 'zig'].includes(g.def.ai), `${id}: 순한 종류만`);
+    assert.ok(s.friend.x > 40 && s.friend.x < W - 40 && s.friend.y > 100 && s.friend.y < H - 150);
+  }
+});
+
+test('플레이어가 멀리 있으면 방해 요소는 친구 곁을 맴돌고(플레이어를 쫓지 않음), 가까이 오면 달려든다', () => {
+  const s = new Sim({ seed: 52, events: false });
+  s._spawnFriend();
+  farFromFriend(s);
+  advance(s, 120);
+  const guards = s.enemies.filter((e) => e.fid === s.friend.id);
+  for (const g of guards) assert.ok(Math.hypot(g.x - s.friend.x, g.y - s.friend.y) < 60, '친구 곁에 머묾');
+  assert.ok(guards.every((g) => g.guard));
+  toFriend(s); s.step({ dx: 0, dy: 0 });
+  assert.ok(guards.filter((g) => s.enemies.includes(g)).every((g) => !g.guard), '가까이 오면 풀려남');
+});
+
+test('돕기 순서: 방해 요소가 남아 있으면 게이지가 차지 않고, 모두 물리친 뒤 곁에 있으면 고마움과 보상', () => {
+  const s = new Sim({ seed: 53, events: true });
+  s._spawnFriend(); s.player.hp = 50;
+  const f = s.friend;
+  // ① 방해 요소가 남아 있는 동안은 곁에 있어도 게이지가 차지 않는다
+  for (let i = 0; i < 30; i++) { toFriend(s); for (const e of s.enemies) if (e.fid === f.id) { e.x = f.x + 30; e.y = f.y; e.hp = 1e9; } s.player.hp = 50; s.player.inv = 999; s.step({ dx: 0, dy: 0 }); }
+  assert.strictEqual(f.prog, 0, '먼저 방해를 물리쳐야 함');
+  assert.ok(f.troubles > 0);
+  // ② 방해를 물리친다
+  for (const e of s.enemies) if (e.fid === f.id) e.hp = 0;
+  s.step({ dx: 0, dy: 0 });
+  // ③ 곁에 함께 있어 준다
+  const xp0 = s.player.xp, hp0 = s.player.hp;
+  let kind = null;
+  for (let i = 0; i < 260 && f.state === 'need'; i++) { toFriend(s); s.player.inv = 999; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 }); for (const ev of s.drainEvents()) if (ev.k === 'kind') kind = ev; }
+  assert.strictEqual(f.state, 'thanks');
+  assert.strictEqual(s.goodDeeds, 1);
+  assert.ok(kind, '고마움 이벤트');
+  assert.ok(s.player.hp > hp0, '체력 회복');
+  assert.ok(s.gems.length >= TUNING.kindGems || s.player.xp > xp0 || s.player.level > 1, '고마움의 구슬');
+});
+
+test('곁을 떠나면 게이지가 줄고, 시간이 지나면 친구는 스스로 이겨낸다(벌 없음)', () => {
+  const s = new Sim({ seed: 54, events: true });
+  advance(s, WORLDS.school.friend.t * 60 + 1);            // 정해진 시각에 자연스럽게 등장
+  assert.ok(s.friend && s.friend.state === 'need');
+  for (const e of s.enemies) if (e.fid === s.friend.id) e.hp = 0;
+  for (let i = 0; i < 60; i++) { toFriend(s); s.player.inv = 999; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 }); }
+  const p1 = s.friend.prog;
+  assert.ok(p1 > 30);
+  for (let i = 0; i < 20; i++) { farFromFriend(s); if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 }); }
+  assert.ok(s.friend.prog < p1, '떠나면 감소');
+  let left = false;
+  for (let i = 0; i < 2300 && s.friend; i++) { farFromFriend(s); s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 }); for (const ev of s.drainEvents()) if (ev.k === 'banner' && ev.text === WORLDS.school.friend.leaveText) left = true; }
+  assert.ok(left && s.friend === null);
+  assert.strictEqual(s.goodDeeds, 0);
+});
+
+test('친구는 다치지 않는다 (적 목록에 없고, 판 결과에 영향 없음)', () => {
+  const s = new Sim({ seed: 55, events: false });
+  s._spawnFriend();
+  for (let i = 0; i < 20; i++) s._make('alarm', s.friend.x, s.friend.y);
+  advance(s, 200);
+  assert.ok(!s.enemies.includes(s.friend));
+  assert.ok(s.friend && s.friend.state === 'need');
+});

@@ -55,6 +55,8 @@
     { id: 'clear_subway',  icon: '🏠', name: '퇴근 성공!',    desc: '지하철 월드에서 “급행열차”를 피해 무사히 퇴근', reward: 800, test: (s, run, sv) => !!sv && (sv.worlds.clears.subway || 0) >= 1 },
     { id: 'help_1',     icon: '🙋', name: '도움 요청하기', desc: '선생님·선배께 도움을 청해 조언 받기',  reward: 40,  test: (s) => s.helped >= 1 },
     { id: 'help_10',    icon: '💛', name: '든든한 인연',   desc: '도움을 청해 조언을 10번 받기',        reward: 150, test: (s) => s.helped >= 10 },
+    { id: 'kind_1',     icon: '🤝', name: '마음 나누기',   desc: '어려워하는 친구를 도와주기',          reward: 40,  test: (s) => s.goodDeeds >= 1 },
+    { id: 'kind_5',     icon: '🌷', name: '다정한 사람',   desc: '친구·동료·어르신을 5번 도와주기',     reward: 150, test: (s) => s.goodDeeds >= 5 },
     { id: 'echo_5',     icon: '👻', name: '유령 친구들',   desc: '에코 5명과 함께 플레이',      reward: 80,  test: (s, run) => !!run && run.echoes >= 5 },
     { id: 'echo_10',    icon: '👥', name: '유령 반 편성',  desc: '에코 10명과 함께 플레이',     reward: 200, test: (s, run) => !!run && run.echoes >= 10 },
   ];
@@ -68,6 +70,7 @@
     { id: 'level',   kind: 'max', field: 'level',   targets: [[6, 30], [10, 55], [15, 90]],     text: (t) => `한 판에서 Lv ${t} 달성` },
     { id: 'clear',   kind: 'sum', field: 'clear',   targets: [[1, 120]],                        text: () => '큰 도전(보스) 극복하기' },
     { id: 'help',    kind: 'sum', field: 'helped',  targets: [[1, 40], [2, 70]],                text: (t) => t === 1 ? '선생님·선배께 도움 청하기' : `도움을 ${t}번 청하기` },
+    { id: 'kind',    kind: 'sum', field: 'goodDeeds', targets: [[1, 45], [2, 80]],               text: (t) => t === 1 ? '어려워하는 친구 도와주기' : `${t}번 남을 도와주기` },
     { id: 'runs',    kind: 'sum', field: 'runs',    targets: [[3, 30], [5, 50]],                text: (t) => `${t}판 플레이` },
   ];
 
@@ -95,7 +98,7 @@
       coins: 0,
       shop: {},                                   // id -> level
       chars: { unlocked: ['student'], selected: 'student' },
-      stats: { runs: 0, kills: 0, gems: 0, clears: 0, bestTime: 0, bestLevel: 0, totalCoins: 0, helped: 0 },
+      stats: { runs: 0, kills: 0, gems: 0, clears: 0, bestTime: 0, bestLevel: 0, totalCoins: 0, helped: 0, goodDeeds: 0 },
       ach: {},                                    // id -> true
       daily: { date: '', missions: [] },
       worlds: { selected: 'school', clears: {}, best: {} },   // 월드별 보스 격파 횟수 / 최장 생존(초)
@@ -217,7 +220,7 @@
   }
 
   /* ---------- 한 판 결과 반영 ---------- */
-  /** run: {kills, seconds, level, result:'dead'|'survive'|'clear', gems, echoes, world, helped}
+  /** run: {kills, seconds, level, result:'dead'|'survive'|'clear', gems, echoes, world, helped, goodDeeds}
    *  @returns {{earned:number, base:number, total:number, newAch:Array, missionsDone:Array, newWorld:string|null}} */
   function recordRun(save, run, today) {
     // 날짜가 바뀌면 오늘의 미션 갱신
@@ -226,7 +229,7 @@
     const worldId = WORLDS[run.world] ? run.world : 'school';
     const unlockedBefore = WORLD_ORDER.filter((w) => worldUnlocked(save, w));
     const st = save.stats;
-    st.runs += 1; st.kills += run.kills; st.gems += run.gems || 0; st.helped += run.helped || 0;
+    st.runs += 1; st.kills += run.kills; st.gems += run.gems || 0; st.helped += run.helped || 0; st.goodDeeds += run.goodDeeds || 0;
     if (run.result === 'clear') st.clears += 1;
     st.bestTime = Math.max(st.bestTime, run.seconds);
     st.bestLevel = Math.max(st.bestLevel, run.level);
@@ -234,7 +237,7 @@
     save.worlds.best[worldId] = Math.max(save.worlds.best[worldId] || 0, run.seconds);
 
     // 기본 보상
-    const base = Math.floor(run.kills * 0.4 + run.seconds * 0.5 + run.level * 3 + (run.result === 'clear' ? 100 : run.seconds >= 120 ? 40 : 0));
+    const base = Math.floor(run.kills * 0.4 + run.seconds * 0.5 + run.level * 3 + (run.goodDeeds || 0) * 15 + (run.result === 'clear' ? 100 : run.seconds >= 120 ? 40 : 0));
     const earned = Math.round(base * coinMul(save) * WORLDS[worldId].coinMul);
     let total = earned;
 
