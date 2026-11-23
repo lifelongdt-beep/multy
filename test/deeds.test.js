@@ -84,6 +84,7 @@ test('도와준 사람은 싸우지 않고 손 흔들며 안전한 곳으로 떠
   assert.ok(s.allies.length === 0 || Math.abs(s.allies[0].x - x0) > 50, '만세·손 흔들기 뒤 화면 밖으로 걸어 나감');
   run(s, TUNING.allySec * TICK, pick);
   assert.strictEqual(s.allies.length, 0, '안전한 곳으로 떠남');
+  run(s, TUNING.cheerSec * TICK, pick);   // 응원은 사람이 떠난 뒤에도 cheerSec 동안 이어짐
   assert.strictEqual(s.cheer, 0, '응원은 시간이 지나면 끝');
 });
 
