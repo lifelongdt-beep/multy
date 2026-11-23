@@ -446,3 +446,24 @@ test('주인공 모습(남자/여자): 기본은 남자, 저장 후에도 유지
   assert.strictEqual(M.sanitize({ look: 'robot' }).look, 'boy');
   assert.strictEqual(M.sanitize({}).look, 'boy', '예전 저장 데이터는 남자');
 });
+
+test('주인공 옷 색: 기본은 원래 색(null), 고른 색은 저장 후에도 유지, 범위 밖은 원래 색', () => {
+  assert.strictEqual(M.defaultSave().color, null);
+  assert.strictEqual(M.kidColor(M.defaultSave()), null);
+  const s = M.defaultSave(); s.color = 2;
+  const back = M.sanitize(JSON.parse(JSON.stringify(s)));
+  assert.strictEqual(back.color, 2);
+  assert.strictEqual(M.kidColor(back), M.KID_COLORS[2].hex);
+  assert.strictEqual(M.sanitize({ color: 99 }).color, null);
+  assert.strictEqual(M.sanitize({ color: 'red' }).color, null);
+});
+
+test('주인공 얼굴 색: 기본 살구(0), 저장 후 유지, 범위 밖은 기본', () => {
+  assert.strictEqual(M.defaultSave().skin, 0);
+  assert.strictEqual(M.kidSkin(M.defaultSave()), null);
+  const s = M.defaultSave(); s.skin = 3;
+  const back = M.sanitize(JSON.parse(JSON.stringify(s)));
+  assert.strictEqual(back.skin, 3);
+  assert.strictEqual(M.kidSkin(back), M.KID_SKINS[3].hex);
+  assert.strictEqual(M.sanitize({ skin: 9 }).skin, 0);
+});

@@ -50,6 +50,25 @@
   };
   const RARITY = { common: { name: '일반', color: '#9fb3c8' }, rare: { name: '희귀', color: '#4fc3f7' }, hero: { name: '영웅', color: '#b388ff' }, legend: { name: '전설', color: '#ffd54f' } };
   const CHAR_MAX_LV = 5;
+  /** 주인공 옷 색 (게임 화면의 신호색과 겹치지 않게: 초록=나 · 빨강/분홍=방해 요소 · 하늘=에코 · 노랑=도와줄 사람 은 뺐다) */
+  const KID_COLORS = [
+    { id: 'blue',   name: '파랑',   hex: '#4561d6' },
+    { id: 'purple', name: '보라',   hex: '#7e57c2' },
+    { id: 'orange', name: '주황',   hex: '#ef7d32' },
+    { id: 'navy',   name: '남색',   hex: '#2b3a73' },
+    { id: 'white',  name: '하양',   hex: '#e6e9f0' },
+    { id: 'brown',  name: '갈색',   hex: '#7a5643' },
+  ];
+  /** 주인공 얼굴(피부) 색 */
+  const KID_SKINS = [
+    { id: 'peach',  name: '살구',     hex: '#ffd9b8' },
+    { id: 'light',  name: '밝은 색',  hex: '#ffe8d6' },
+    { id: 'tan',    name: '구릿빛',   hex: '#e5ad7f' },
+    { id: 'brown',  name: '갈색',     hex: '#b5774c' },
+    { id: 'deep',   name: '진한 갈색', hex: '#7c4d30' },
+  ];
+  function kidSkin(save) { const c = KID_SKINS[save && save.skin]; return c && c.id !== 'peach' ? c.hex : null; }
+  function kidColor(save) { const c = KID_COLORS[save && save.color]; return c ? c.hex : null; }
   /** 캐릭터 레벨: 좋은 효과(+)가 레벨마다 25%씩 강해진다 (나쁜 효과는 그대로). Lv3·Lv5에 시작 아이템 +1 */
   function charMods(save, id) {
     const c = CHARACTERS[id] || CHARACTERS.student, lv = charLevel(save, c.id), k = c.lvOnly ? lv - 1 : 1 + 0.25 * (lv - 1), m = c.mods, o = {};   // lvOnly: Lv2부터 레벨마다 효과
@@ -239,6 +258,8 @@
       cycle: 0,                                   // 지금 플레이하는 회차(0=1회차). 월드 메뉴에서 열린 회차 중 고를 수 있다
       maxCycle: 0,                                // 열린 가장 높은 회차. 12개 월드를 모두 극복하면 +1
       look: 'boy',                                // 주인공 모습: 'boy'(남자) | 'girl'(여자)
+      color: null,                                // 옷 색: KID_COLORS 번호. null = 복장 원래 색
+      skin: 0,                                    // 얼굴(피부) 색: KID_SKINS 번호
       outfitPick: null,                           // 골라 입은 복장(그 복장을 얻은 회차 번호). null = 지금 회차 복장 자동
       deeds: { people: 0, escorts: 0, spots: 0, book: {}, visitor: null },   // 선행 기록: 도운 사람 · 지켜 준 친구 · 작은 선행 · 도감('world:kind' -> 횟수) · 다음 판에 찾아올 사람
     };
@@ -304,6 +325,8 @@
     if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(9999, Math.floor(raw.cycle));
     d.maxCycle = Math.max(d.cycle, isNum(raw.maxCycle) && raw.maxCycle >= 0 ? Math.min(9999, Math.floor(raw.maxCycle)) : 0);
     if (raw.look === 'girl') d.look = 'girl';
+    if (isNum(raw.skin) && raw.skin >= 0 && raw.skin < KID_SKINS.length) d.skin = Math.floor(raw.skin);
+    if (isNum(raw.color) && raw.color >= 0 && raw.color < KID_COLORS.length) d.color = Math.floor(raw.color);
     if (isNum(raw.outfitPick) && raw.outfitPick >= 0 && raw.outfitPick <= d.maxCycle) d.outfitPick = Math.floor(raw.outfitPick);
     if (raw.gear && typeof raw.gear === 'object') {
       const max = Worlds.gearMaxLevel(d.maxCycle);
@@ -639,7 +662,7 @@
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopMax, shopEffect, shopLevel, dailyMissions, refillMissions, missionText, defaultSave, sanitize, load, persist,
-    RARITY, CHAR_MAX_LV, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,
+    RARITY, CHAR_MAX_LV, KID_COLORS, kidColor, KID_SKINS, kidSkin, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,
     OUTFITS: Worlds.OUTFITS, outfitCycle, pickOutfit, topCycle, selectCycle, deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };

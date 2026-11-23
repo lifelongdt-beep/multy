@@ -36,6 +36,8 @@
     const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
     const emo = (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji;
     if (Art.setLook) Art.setLook(save.look);
+    if (Art.setColor) Art.setColor(M.kidColor(save));
+    if (Art.setSkin) Art.setSkin(M.kidSkin(save));
     c.setTransform(2, 0, 0, 2, 0, 0); Art.drawKidPreview(c, 28, 38, emo, M.outfitCycle(save), 1.15);
     $('outfitName').textContent = `${of.name} ${'★'.repeat(of.stars)}${of.variant ? ` · 색 ${of.variant + 1}` : ''}`;
     const t = M.titleOf(M.deedScore(save)).title;
@@ -44,12 +46,14 @@
 
   /* ---------- 내 모습: 지금 캐릭터 크게 + 복장 지도 ---------- */
   /** 캔버스에 회차 cycle의 복장을 그린다. locked면 검은 실루엣 */
-  function paintOutfit(cv, cycle, scale, locked, charId) {
+  function paintOutfit(cv, cycle, scale, locked, charId, origColor) {
     const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
     if (!window.Art) return;
     const emo = (M.CHARACTERS[charId || save.chars.selected] || M.CHARACTERS.student).emoji;   // 캐릭터 종류(고유 표시)를 고르는 열쇠로만 씀, 화면엔 그림으로
     const k = cv.width / 56;   // 56 x 70 논리 크기 기준
     if (Art.setLook) Art.setLook(save.look);
+    if (Art.setColor) Art.setColor(origColor ? null : M.kidColor(save));
+    if (Art.setSkin) Art.setSkin(M.kidSkin(save));
     c.setTransform(k, 0, 0, k, 0, 0); Art.drawKidPreview(c, 28, 38, emo, cycle, scale);
     if (locked) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(10,12,24,.92)'; c.fillRect(0, 0, cv.width, cv.height); c.globalCompositeOperation = 'source-over'; }
   }
@@ -88,6 +92,30 @@
       gRow.appendChild(b);
     }
     box.insertBefore(gRow, ln);
+    // 옷 색 고르기: [원래 색] + 6색 (게임 속 신호색과 겹치지 않는 색만)
+    const cRow = el('div', 'kcol');
+    const mk = (idx, bg, title) => {
+      const b = el('button', 'sw' + ((save.color === undefined ? null : save.color) === idx ? ' on' : ''));
+      b.title = title; b.setAttribute('aria-label', '옷 색: ' + title); b.style.background = bg;
+      b.onclick = () => { if (save.color === idx) return; save.color = idx; Sfx.play('click'); commit(); rerender(); };
+      cRow.appendChild(b);
+    };
+    const orig = EchoWorlds.outfitOf(show);
+    mk(null, 'conic-gradient(#4561d6 0 25%, #e2574c 0 50%, #8e7cc3 0 75%, #f48fb1 0)', '원래 색 (복장마다 달라요)');
+    M.KID_COLORS.forEach((c, i) => mk(i, c.hex, c.name));
+    box.insertBefore(cRow, ln);
+    const cName = save.color === null || save.color === undefined ? `원래 색 (${orig.name})` : M.KID_COLORS[save.color].name;
+    box.insertBefore(el('small', '', '🎨 옷 색 · ' + cName), ln);
+    // 얼굴(피부) 색 고르기
+    const sRow = el('div', 'kcol');
+    const curSkin = M.KID_SKINS[save.skin] ? save.skin : 0;
+    M.KID_SKINS.forEach((c, i) => {
+      const b = el('button', 'sw' + (curSkin === i ? ' on' : '')); b.title = c.name; b.setAttribute('aria-label', '얼굴 색: ' + c.name); b.style.background = c.hex;
+      b.onclick = () => { if (curSkin === i) return; save.skin = i; Sfx.play('click'); commit(); rerender(); };
+      sRow.appendChild(b);
+    });
+    box.insertBefore(sRow, ln);
+    box.insertBefore(el('small', '', '🙂 얼굴 색 · ' + M.KID_SKINS[curSkin].name), ln);
     body.appendChild(box);
     paintOutfit(big, show, 1.3, false);
     tabs(body, [{ id: 'outfit', html: Icons.svg('shirt', 16) + '<span>복장</span>' }, { id: 'char', html: Icons.svg('person', 16) + '<span>캐릭터</span>' }], lookTab, (id) => { lookTab = id; rerender(); });
@@ -108,7 +136,7 @@
       const cv = el('canvas'); cv.width = 96; cv.height = 120; card.appendChild(cv);
       card.appendChild(el('div', '', it.o.name + (it.o.variant ? ` 🎨${it.o.variant + 1}` : '')));
       card.appendChild(el('div', 'st', '★'.repeat(it.o.stars)));
-      paintOutfit(cv, it.cycle, 1, false);
+      paintOutfit(cv, it.cycle, 1, false, null, true);
       card.onclick = () => { lookPreview = it.cycle === cur ? null : it.cycle; Sfx.play('click'); rerender(); };   // 화면 위치는 그대로
       map.appendChild(card);
     }
@@ -126,7 +154,7 @@
         const o = EchoWorlds.outfitOf(c), cell = el('div', 'dx' + (c === cur ? ' cur' : '') + (c === show && show !== cur ? ' pv' : ''));   // 노랑 = 입는 중, 파랑 = 미리보는 중
         const cv = el('canvas'); cv.width = 64; cv.height = 80; cell.appendChild(cv);
         cell.appendChild(el('small', '', `${c + 1}회차`)); cell.appendChild(el('div', 'st', '★'.repeat(o.stars)));
-        paintOutfit(cv, c, 1, false);
+        paintOutfit(cv, c, 1, false, null, true);
         cell.onclick = () => { lookPreview = c === cur ? null : c; Sfx.play('click'); rerender(); };   // 화면 위치는 그대로
         cells.appendChild(cell);
       }
@@ -454,6 +482,8 @@
     /** 입고 있는 복장(회차 번호) */
     outfitCycle() { return M.outfitCycle(save); },
     look() { return save.look === 'girl' ? 'girl' : 'boy'; },
+    kidColor() { return M.kidColor(save); },
+    kidSkin() { return M.kidSkin(save); },
     /** 회차 고르기 (결과 화면의 "다음 회차로" 버튼 등) */
     selectCycle(c) { const ok = M.selectCycle(save, c); if (ok) { if (window.GameEchoes && GameEchoes.world() !== save.worlds.selected) GameEchoes.reset(save.worlds.selected); commit(); } return ok; },
     /** 시작하려는 월드에 장비가 모자라면 {atk, def} 부족분, 충분하면 null */
