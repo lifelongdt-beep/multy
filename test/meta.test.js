@@ -60,7 +60,7 @@ test('보너스 계산: 상점 레벨과 캐릭터 효과가 합쳐진다', () =
 test('한 판 결과: 재화 지급, 통계 누적, 학점 획득 보너스 반영', () => {
   const s = M.defaultSave();
   const r1 = M.recordRun(s, run({}), '2026-11-20');
-  const expectedBase = Math.floor(50 * 0.4 + 60 * 0.9 + 8 * 3);
+  const expectedBase = Math.floor(50 * 0.4 + 60 * 0.5 + 8 * 3);
   assert.strictEqual(r1.base, expectedBase);
   assert.strictEqual(r1.earned, expectedBase);
   assert.ok(s.coins >= r1.earned);
@@ -68,7 +68,7 @@ test('한 판 결과: 재화 지급, 통계 누적, 학점 획득 보너스 반�
   s.shop.coin = 5; // +50%
   const before = s.coins;
   const r2 = M.recordRun(s, run({ kills: 0, seconds: 10, level: 1 }), '2026-11-20');
-  assert.strictEqual(r2.base, Math.floor(0 + 9 + 3));
+  assert.strictEqual(r2.base, Math.floor(0 + 5 + 3));
   assert.strictEqual(r2.earned, Math.round(r2.base * 1.5));
   assert.ok(s.coins >= before + r2.earned);
 });
@@ -251,7 +251,7 @@ test('월드 보상 배율: 뒤 월드일수록 같은 성적에 학점을 더 �
   const earn = (world) => M.recordRun(M.defaultSave(), run({ world }), '2026-11-20').earned;
   const e = M.WORLD_ORDER.map(earn);
   for (let i = 1; i < e.length; i++) assert.ok(e[i] > e[i - 1], e.join());
-  const base = Math.floor(50 * 0.4 + 60 * 0.9 + 8 * 3);
+  const base = Math.floor(50 * 0.4 + 60 * 0.5 + 8 * 3);
   assert.strictEqual(e[0], base);
   assert.strictEqual(e[3], Math.round(base * M.rewardMul('subway', 0)), '보상 배율 = 그 단계의 적 체력 배율');
 });

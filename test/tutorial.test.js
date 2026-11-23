@@ -57,7 +57,7 @@ test('튜토리얼: 에코 10명과 함께라면 처음 하는 사람(봇)도 �
 
 test('튜토리얼 안내 문구는 시간 순서이고 큰 도전(90초) 전에 끝난다', () => {
   for (let i = 1; i < T.TIPS.length; i++) assert.ok(T.TIPS[i].sec > T.TIPS[i - 1].sec);
-  assert.ok(T.TIPS[T.TIPS.length - 1].sec < 90);
+  assert.ok(T.TIPS[T.TIPS.length - 1].sec < 180);
 });
 
 test('저장: 새 사람은 튜토리얼 전, 기존에 플레이하던 저장은 튜토리얼을 마친 것으로 본다', () => {

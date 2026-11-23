@@ -14,11 +14,11 @@
   const W = 360, H = 640;
   const TICK = 60;
   const PLAY_BOTTOM = H - 140;   // UI 전용: 이 아래를 '추천 조작 영역'으로 표시 (캐릭터 이동은 제한하지 않음)
-  const RUN_TICKS = 72 * TICK;       // 한 판 72초 (짧고 굵게)
-  const BOSS_TICK = 54 * TICK;
+  const RUN_TICKS = 144 * TICK;      // 한 판 144초
+  const BOSS_TICK = 108 * TICK;
   const MAX_ECHOES = 10;  // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
   const MAX_ENEMIES = 260;
-  const OVERTIME_TICKS = 15 * TICK;   // 72초가 지나도 보스가 살아 있으면 최대 15초 연장 (에코 없이 버티기만으로는 못 넘게)
+  const OVERTIME_TICKS = 30 * TICK;   // 144초가 지나도 보스가 살아 있으면 최대 30초 연장 (에코 없이 버티기만으로는 못 넘게)
   const MAX_LEVEL = 5;
 
   /* ---- 밸런스 튜닝 값 (여기만 만지면 됨) ---- */
@@ -72,7 +72,7 @@
     hurtInvTicks: 50,        // 피격 후 무적 시간(틱)
     enemySpeedGrowth: 0.15,  // 진행도에 따른 적 속도 증가
     // ---- 도우미(선생님 등) · 나중에 보상형 광고로 바꿀 자리 ----
-    helperEvery: 16,         // 첫 등장(월드의 helper.t초) 뒤 이 간격(초)마다 다시 찾아옴 (앞 도우미가 떠난 뒤)
+    helperEvery: 30,         // 첫 등장(월드의 helper.t초) 뒤 이 간격(초)마다 다시 찾아옴 (앞 도우미가 떠난 뒤)
     helperNeed: 70,          // 곁에 이만큼(틱, 60=1초) 머물면 조언 카드 (이전 150틱=2.5초 → 약 1.2초)
     helperDecay: 1,          // 곁을 벗어나면 게이지가 틱당 이만큼 줄어듦 (이전 2: 잠깐 벗어나도 덜 깎임)
     helperStay: 7,           // 도우미가 기다려 주는 시간(초)
@@ -80,12 +80,12 @@
     // ---- 선행(좋은 일)을 하면 아이템 ----
     enemyLifeSec: 10,        // 일반 방해 요소는 이 시간(초)이 지나면 스르르 사라진다 (화면이 붐비지 않게). 보스·구조 대상 곁의 방해 요소는 제외
     enemyFadeTicks: 30,      //   사라지기 전 흐려지는 시간(틱)
-    deedRescueFirst: 18,     // 어려움에 처한 사람: 첫 등장(초)
-    deedRescueEvery: 26,     //   이후 간격(초)
+    deedRescueFirst: 36,     // 어려움에 처한 사람: 첫 등장(초)
+    deedRescueEvery: 50,     //   이후 간격(초)
     deedRescueGuards: 4,     //   둘러싼 방해 요소 수 (모두 물리치면 "고마워!" + 아이템 카드)
     deedRescueStay: 15,      //   기다려 주는 시간(초) — 못 도와줘도 벌은 없음
-    deedEscortFirst: 34,     // 친구 지켜주기: 첫 등장(초)
-    deedEscortEvery: 34,     //   이후 간격(초)
+    deedEscortFirst: 68,     // 친구 지켜주기: 첫 등장(초)
+    deedEscortEvery: 60,     //   이후 간격(초)
     friendHp: 100,           //   친구 체력 (방해 요소에 닿으면 줄어듦)
     friendSpeed: 0.75,       //   친구가 걷는 속도 (내가 곁에 있을 때만 걸음)
     friendWaitDist: 130,     //   이보다 멀면 친구가 무서워서 멈춰 기다림
@@ -321,7 +321,7 @@
     /** 레벨을 올리고 고를 카드 3장을 뽑는다 */
     _rollLevel() {
       const p = this.player;
-      p.level += 1; p.xp -= p.need; p.need = Math.max(2, Math.round((4 + p.level * 2.8) * 0.42));   // 짧은 판에서도 비슷하게 성장
+      p.level += 1; p.xp -= p.need; p.need = Math.max(2, Math.round((4 + p.level * 2.8) * 0.7));   // 짧은 판에서도 비슷하게 성장
       return this._rollPicks();
     }
     /** 아이템 카드 3장 (레벨업·선행 보상 공용) */
@@ -1126,7 +1126,7 @@
 
       if (p.hp <= 0) { this.over = true; this.result = 'dead'; }
       else if (this.bossDead) { this.over = true; this.result = 'clear'; }
-      else if (this.tick >= RUN_TICKS && (!(this.bossIdx < this.bossCount || this.bossAlive) || this.tick >= RUN_TICKS + OVERTIME_TICKS + (this.bossCount - 1) * 12 * TICK)) { this.over = true; this.result = 'survive'; }
+      else if (this.tick >= RUN_TICKS && (!(this.bossIdx < this.bossCount || this.bossAlive) || this.tick >= RUN_TICKS + OVERTIME_TICKS + (this.bossCount - 1) * 20 * TICK)) { this.over = true; this.result = 'survive'; }
     }
 
     /** 이번 판을 다음 판의 에코로 내보낸다. */

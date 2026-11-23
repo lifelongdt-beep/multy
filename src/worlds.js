@@ -493,22 +493,22 @@
 
   /* 한 판 길이 압축: 월드 데이터의 시각(초)은 2분 판 기준으로 적혀 있고, 실제로는 TIME_SCALE배로 줄여 쓴다 (약 72초 판).
    * 스폰 간격도 같이 줄여 1초당 적 밀도는 그대로 유지한다. */
-  const TIME_SCALE = 0.6;
+  const TIME_SCALE = 1.2;   // 한 판 약 144초
   // 월드별 큰 도전 체력 보정 (봇 실측: 필요한 에코 수를 갖추면 5번 중 3~4번 넘도록). 어두운 월드는 조준 거리가 짧아 화력이 낮다
-  const BOSS_HP_TUNE = { office: 0.9, home: 0.68, airport: 0.82, mountain: 0.8, stage: 0.85, subway: 1.08, gym: 1.05, hospital: 1.08 };
+  const BOSS_HP_TUNE = { school: 1.6, office: 0.9, home: 0.68, airport: 0.7, mountain: 0.8, stage: 0.85, subway: 1.08, gym: 0.95, hospital: 1.08 };
   for (const id in WORLDS) {
     const w = WORLDS[id], sc = (v) => Math.round(v * TIME_SCALE);
     if (BOSS_HP_TUNE[id]) w.rules.bossHp = BOSS_HP_TUNE[id];
     for (const wv of w.waves) { wv.from = sc(wv.from); wv.to = sc(wv.to); wv.interval = Math.max(10, Math.round(wv.interval * 0.85)); }
     for (const sw of w.swarms) sw.t = sc(sw.t);
     if (w.helper) w.helper.t = sc(w.helper.t);
-    // 큰 도전이 여러 번인 월드: 첫 보스 뒤로는 10초 간격 (앞 보스를 극복해야 다음이 나오므로 실제로는 극복 직후 연달아)
-    { const n = w.boss.times.length, t0 = Math.max(26, sc(w.boss.times[0]) - 6 * (n - 1)); w.boss.times = w.boss.times.map((_, i) => t0 + i * 10); }
+    // 큰 도전이 여러 번인 월드: 첫 보스 뒤로는 20초 간격 (앞 보스를 극복해야 다음이 나오므로 실제로는 극복 직후 연달아)
+    { const n = w.boss.times.length, t0 = Math.max(52, sc(w.boss.times[0]) - 12 * (n - 1)); w.boss.times = w.boss.times.map((_, i) => t0 + i * 20); }
     w.boss.fightSec = Math.max(10, Math.round(w.boss.fightSec * 0.8));
     if (w.rules.drops) { w.rules.drops.first = sc(w.rules.drops.first); }   // 낙하물 간격은 이미 짧은 판 기준
     for (const wv of w.waves) { if (wv.n >= 2) wv.n -= 1; wv.interval = Math.round(wv.interval * (id === 'school' ? 1.25 : 1.55)); }   // 동시에 나오는 적 줄이기
     for (const sw of w.swarms) sw.n = Math.max(4, Math.round(sw.n * 0.6));
-    if (w.rules.trains) { w.rules.trains.first = Math.round(w.rules.trains.first * 0.45); w.rules.trains.every = Math.max(9, Math.round(w.rules.trains.every * 0.3)); }
+    if (w.rules.trains) { w.rules.trains.first = Math.round(w.rules.trains.first * 0.9); w.rules.trains.every = Math.max(12, Math.round(w.rules.trains.every * 0.6)); }
   }
   const ORDER = ['school', 'academy', 'office', 'subway', 'home', 'gym', 'library', 'beach', 'airport', 'hospital', 'mountain', 'stage'];
 
