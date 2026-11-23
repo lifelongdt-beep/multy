@@ -499,7 +499,7 @@
     if (o.cape) { g.beginPath(); g.moveTo(-6, 0.5); g.quadraticCurveTo(-10.5, 8, -8.5, 14.5); g.lineTo(8.5, 14.5); g.quadraticCurveTo(10.5, 8, 6, 0.5); g.closePath(); fillStroke(g, '#e53935', 1.5); }   // 모두의 영웅: 빨간 망토
     if (o.stars) { const gl = g.createRadialGradient(0, -4, 2, 0, -4, 16); gl.addColorStop(0, 'rgba(255,170,230,.35)'); gl.addColorStop(1, 'rgba(255,170,230,0)'); g.fillStyle = gl; g.fillRect(-16, -20, 32, 34); }
     if (o.outer) outerBack(g, o);
-    if (o.girl && o.head !== 'hood') { rrect(g, -8.4, -12, 16.8, 13, 6.5); fillStroke(g, '#3b2b25', 1.6); }   // 여자 주인공: 뒷머리
+    if (o.girl && o.head !== 'hood') { rrect(g, -8.4, -12, 16.8, 13, 6.5); fillStroke(g, o.hair || '#3b2b25', 1.6); }   // 여자 주인공: 뒷머리
     oval(g, -3.2 + step * 1.2, 12, 2.6, 1.8); fillStroke(g, o.shoe || '#2a2440', 1.4);
     oval(g, 3.2 - step * 1.2, 12, 2.6, 1.8); fillStroke(g, o.shoe || '#2a2440', 1.4);
     if (o.outer === 'bag') { rrect(g, -9.5, -1, 5.5, 10.5, 2); fillStroke(g, o.oc, 1.6); g.fillStyle = '#ffd54f'; g.fillRect(-8.2, 3, 3, 1.4); }
@@ -511,7 +511,7 @@
     if (o.cross) { g.fillStyle = '#e2574c'; g.fillRect(-1, 5, 2, 5); g.fillRect(-2.5, 6.5, 5, 2); }
     if (o.neck) neckItem(g, o);
     if (o.bands) { for (const x of [-7.3, 5.3]) { rrect(g, x, 6.2, 2, 2.8, 0.8); fillStroke(g, '#ffffff', 1); g.fillStyle = '#2ee88a'; g.fillRect(x + 0.3, 7.2, 1.4, 0.8); } }   // 운동부: 양 손목 밴드
-    if (o.book) { rrect(g, 3.6, 4.6, 5.2, 6.4, 1); fillStroke(g, '#43a047', 1.3); g.fillStyle = '#fff8e1'; g.fillRect(4.4, 5.4, 0.9, 4.8); }        // 전교 1등: 손에 든 책
+    if (o.book) { rrect(g, 3.6, 4.6, 5.2, 6.4, 1); fillStroke(g, '#43a047', 1.3); g.fillStyle = '#fff8e1'; g.fillRect(4.4, 5.4, 0.9, 4.8); }        // 독서부: 손에 든 책
     if (o.sash) { g.save(); rrect(g, -5.8, 0, 11.6, 11.5, 4); g.clip(); g.beginPath(); g.moveTo(-6, -0.5); g.lineTo(-2.5, -0.5); g.lineTo(7, 11); g.lineTo(3.5, 11); g.closePath(); fillStroke(g, '#ffd54f', 1); g.restore(); circle(g, 1.2, 5.6, 1.6); fillStroke(g, '#ff7043', 0.9); }   // 학생회장: 금빛 어깨띠
     if (o.hand === 'brush') { line(g, [5.5, 10, 8.5, 2.5], 1.6, '#8d6e63'); circle(g, 8.8, 1.6, 1.5); fillStroke(g, '#e91e63', 0.9); circle(g, -2, 7, 0.9); g.fillStyle = '#42a5f5'; g.fill(); circle(g, 1.5, 3.5, 0.8); g.fillStyle = '#ffca28'; g.fill(); }   // 미술부: 붓 + 물감 자국
     if (o.hand === 'mic') { line(g, [6.5, 10.5, 7.8, 4.5], 1.8, '#455a64'); circle(g, 8, 3.4, 2.1); fillStroke(g, '#b0bec5', 1.1); }                // 방송부: 마이크
@@ -520,12 +520,12 @@
     if (o.armband) { rrect(g, 4.4, 1.2, 3.2, 4.2, 0.8); fillStroke(g, '#ffffff', 1.1); g.fillStyle = '#e53935'; g.fillRect(5.6, 1.9, 0.9, 2.8); g.fillRect(4.9, 2.85, 2.3, 0.9); }   // 보건 도우미: 팔 십자 완장
     if (o.head === 'hood') hoodBack(g, o);
     if (o.girl) {   // 여자 주인공: 양갈래(분홍 머리끈). 뒷머리는 몸보다 먼저 그림
-      for (const sx of [-1, 1]) { oval(g, sx * 9.2, 0.5, 2.6, 4); fillStroke(g, '#3b2b25', 1.4); circle(g, sx * 8.6, -3.2, 1.5); fillStroke(g, '#ff7eb6', 1); }
+      for (const sx of [-1, 1]) { oval(g, sx * 9.2, 0.5, 2.6, 4); fillStroke(g, o.hair || '#3b2b25', 1.4); circle(g, sx * 8.6, -3.2, 1.5); fillStroke(g, '#ff7eb6', 1); }
     }
     circle(g, 0, -6.5, 7.6); fillStroke(g, o.skin || '#ffd9b8', 1.8);
     const hidesHair = ['space'].indexOf(o.head) < 0 && ['cap', 'detective', 'knight', 'explorer', 'pilot', 'fire'].indexOf(o.head) >= 0;
-    if (!hidesHair) { g.beginPath(); g.arc(0, -7.2, 7.7, Math.PI * 1.02, Math.PI * 1.98); g.quadraticCurveTo(3, -9.5, -1, -8.5); g.quadraticCurveTo(-4, -8, -7.6, -6.5); g.closePath(); fillStroke(g, '#3b2b25', 1.6); }
-    if (o.spiky && !hidesHair && !o.head) { g.beginPath(); g.moveTo(-5, -12.6); g.lineTo(-3.6, -16.2); g.lineTo(-1.6, -13.6); g.lineTo(0.2, -16.8); g.lineTo(2, -13.6); g.lineTo(4.2, -15.8); g.lineTo(5.4, -12.2); g.closePath(); fillStroke(g, '#3b2b25', 1.4); }   // 운동부: 삐죽 머리 (모자를 쓰면 숨김)
+    if (!hidesHair) { g.beginPath(); g.arc(0, -7.2, 7.7, Math.PI * 1.02, Math.PI * 1.98); g.quadraticCurveTo(3, -9.5, -1, -8.5); g.quadraticCurveTo(-4, -8, -7.6, -6.5); g.closePath(); fillStroke(g, o.hair || '#3b2b25', 1.6); }
+    if (o.spiky && !hidesHair && !o.head) { g.beginPath(); g.moveTo(-5, -12.6); g.lineTo(-3.6, -16.2); g.lineTo(-1.6, -13.6); g.lineTo(0.2, -16.8); g.lineTo(2, -13.6); g.lineTo(4.2, -15.8); g.lineTo(5.4, -12.2); g.closePath(); fillStroke(g, o.hair || '#3b2b25', 1.4); }   // 운동부: 삐죽 머리 (모자를 쓰면 숨김)
     eye(g, -2.7, -4.6, 1.5, 'normal'); eye(g, 2.7, -4.6, 1.5, 'normal');
     if (o.girl) {   // 속눈썹 + (모자를 안 쓰면) 분홍 리본
       g.lineWidth = 0.9; g.strokeStyle = OL; g.beginPath(); g.moveTo(-4, -4.9); g.lineTo(-5.3, -5.4); g.moveTo(4, -4.9); g.lineTo(5.3, -5.4); g.stroke();
@@ -543,6 +543,7 @@
   let kidLook = 'boy';   // 주인공 모습: 'boy' | 'girl'
   let kidColor = null;   // 직접 고른 옷 색 (#hex). null = 복장 원래 색
   let kidSkin = null;    // 직접 고른 얼굴(피부) 색 (#hex). null = 기본
+  let kidHair = null;    // 직접 고른 머리 색 (#hex). null = 기본
   function shade(hex, k) {   // k<0 어둡게, k>0 밝게
     const n = parseInt(hex.slice(1), 16), f = (x) => Math.round(k < 0 ? x * (1 + k) : x + (255 - x) * k).toString(16).padStart(2, '0');
     return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
@@ -565,11 +566,12 @@
     }
     if (kidLook === 'girl') o.girl = true;
     if (kidSkin) o.skin = kidSkin;
+    if (kidHair) o.hair = kidHair;
     return Object.assign(o, CHAR[emo] || {});
   }
   function kidSprite(emo, step, of) {
     of = of || outfit;
-    return sprite(`kid:${kidLook}:${kidColor}:${kidSkin}:${emo}:${step}:${of.key}`, 32, 58, (g) => { g.translate(0, -1); drawKid(g, outfitOpts(emo, of), step); });
+    return sprite(`kid:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${step}:${of.key}`, 32, 58, (g) => { g.translate(0, -1); drawKid(g, outfitOpts(emo, of), step); });
   }
   const TEACHER = (g) => {
     rrect(g, -7, 2, 14, 15, 5); fillStroke(g, '#3fae8a', 1.8);                         // 가디건
@@ -875,7 +877,7 @@
     /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 파란 유령 */
     drawEcho(ctx, ec, emo, now, alpha) {
       const base = kidSprite(emo, 0);
-      const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${emo}:${outfit.key}`, base, '#6fd3ff', 0.55);
+      const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${outfit.key}`, base, '#6fd3ff', 0.55);
       const bob = Math.sin(now / 400 + ec.id) * 1.5;
       this.groundMark(ctx, ec.x, ec.y + 13 * K_KID, 9 * K_KID, '#6fd6ff', alpha * 1.4);
       ctx.globalAlpha = alpha * 1.25;
@@ -889,6 +891,8 @@
     setLook(look) { kidLook = look === 'girl' ? 'girl' : 'boy'; return kidLook; },
     /** 옷 색 (#hex, null이면 복장 원래 색) */
     /** 얼굴(피부) 색 (#hex, null이면 기본) */
+    /** 머리 색 (#hex, null이면 기본) */
+    setHair(hex) { kidHair = typeof hex === 'string' && /^#[0-9a-f]{6}$/i.test(hex) ? hex : null; return kidHair; },
     setSkin(hex) { kidSkin = typeof hex === 'string' && /^#[0-9a-f]{6}$/i.test(hex) ? hex : null; return kidSkin; },
     setColor(hex) { kidColor = typeof hex === 'string' && /^#[0-9a-f]{6}$/i.test(hex) ? hex : null; return kidColor; },
     setOutfit(cycle) { const W = root.EchoWorlds; outfit = W && W.outfitOf ? W.outfitOf(cycle) : outfit; return outfit; },
