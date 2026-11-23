@@ -822,7 +822,7 @@
       blit(ctx, c, g.x, g.y + bob);
     },
 
-    /** 발밑 표시: 적은 붉은 고리, 에코는 회색 고리 (한눈에 편 구분) */
+    /** 발밑 표시: 적은 붉은 고리 (에코는 머리 위 회색 고리) */
     groundMark(ctx, x, y, r, color, alpha) {
       ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = 1.6;
       ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.38, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
@@ -897,10 +897,15 @@
       const base = kidSprite(emo, 0);
       const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${outfit.key}`, base, ECHO_GRAY, 0.82);
       const bob = Math.sin(now / 400 + ec.id) * 1.5;
-      this.groundMark(ctx, ec.x, ec.y + 13 * K_KID, 9 * K_KID, ECHO_RING, alpha * 1.4);
       ctx.globalAlpha = alpha * 1.25;
       const dir = ec._lx !== undefined && ec.x < ec._lx ? -1 : 1; ec._lx = ec.x;
       blit(ctx, ghost, ec.x, ec.y - 4 + bob, K_KID, K_KID, dir < 0);
+      // 영혼의 고리: 발밑 대신 머리 위에 떠 있는 회색 고리 (살짝 빛나며 머리보다 조금 더 출렁임)
+      const hy = ec.y - 4 + bob - 17.5 * K_KID + Math.sin(now / 300 + ec.id) * 0.8, hr = 6.2 * K_KID;
+      ctx.globalAlpha = Math.min(1, alpha * 0.9); ctx.strokeStyle = ECHO_RING; ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.ellipse(ec.x, hy, hr, hr * 0.34, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = Math.min(1, alpha * 2.6); ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.ellipse(ec.x, hy, hr, hr * 0.34, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
     },
 
