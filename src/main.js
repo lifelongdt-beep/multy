@@ -85,7 +85,8 @@
     return { dx, dy };
   }
 
-  ['pointerdown', 'keydown'].forEach((t) => addEventListener(t, () => Sfx.unlock()));
+  ['pointerdown', 'keydown'].forEach((t) => addEventListener(t, () => { Sfx.unlock(); if (state === 'menu' && !menuMusicOn) { menuMusicOn = true; Music.play('menu'); } }));   // 첫 터치에 메인 화면 음악 (브라우저는 터치 전 소리를 막음)
+  let menuMusicOn = false;
 
   /* ---------- 연출 상태 ---------- */
   let shake = 0;
@@ -467,7 +468,7 @@
     if (!quitArmed) { quitArmed = true; $('quit').textContent = '⚠ 한 번 더 누르면 이번 판은 기록되지 않아요'; return; }
     quitArmed = false;
     if (tutorial) GameUI.finishTutorial();
-    tutorial = false; sim = null; state = 'menu'; Music.stop();
+    tutorial = false; sim = null; state = 'menu'; Music.stop(); Music.play('menu');
     $('pause').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh();
   }
   $('pauseBtn').onclick = () => { Sfx.play('click'); pauseGame(); };
@@ -645,7 +646,7 @@
   $('tSkip').onclick = () => { Sfx.unlock(); Sfx.play('click'); GameUI.finishTutorial(); $('tutorial').classList.add('hidden'); $('start').classList.remove('hidden'); };
   // 처음 실행이면 튜토리얼 안내부터
   if (!GameUI.tutorialDone()) { $('start').classList.add('hidden'); $('tutorial').classList.remove('hidden'); }
-  $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; };
+  $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; Music.play('menu'); };
   let resetArmed = false;   // 실수로 누르지 않게 두 번 눌러야 초기화
   const resetBtn = $('reset');   // 백업 화면 안으로 옮겨 다니므로 처음에 잡아 둔다
   resetBtn.onclick = () => {

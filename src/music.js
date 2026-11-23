@@ -324,7 +324,7 @@
       if (cur && cur.world !== worldId) { cur = null; pending = null; }
       want = { key: fileKey(worldId, null), world: worldId, boss: false };
       sync();
-      setTimeout(() => { for (const k in BOSS_FILES) loadFile('boss-' + k); }, 4000);   // 왕 곡은 미리 받아 두기 (왕이 나올 때 바로 바뀌게)
+      if (worldId !== 'menu') setTimeout(() => { for (const k in BOSS_FILES) loadFile('boss-' + k); }, 4000);   // 왕 곡은 미리 받아 두기 (왕이 나올 때 바로 바뀌게)
     },
     /** 보스 곡으로 전환/복귀. bossDef가 있으면 그 왕의 패턴(exam·spiral·charge·lane) 곡으로. 왕 사이 쉬는 동안(bossDef 없음)은 지금 곡 유지 */
     setBoss(on, bossDef) {
