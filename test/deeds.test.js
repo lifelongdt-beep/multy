@@ -79,9 +79,9 @@ test('도와준 사람은 싸우지 않고 손 흔들며 안전한 곳으로 떠
   assert.ok(s.cheer > 0, '응원을 남김');
   const a = s.allies[0], x0 = a.x;
   let thrown = 0;
-  for (let i = 0; i < 120; i++) { pick(s); s.step({ x: 0, y: 0 }); thrown = Math.max(thrown, s.bullets.filter((b) => b.owner === 'ally').length); }
+  for (let i = 0; i < 180; i++) { pick(s); s.step({ x: 0, y: 0 }); thrown = Math.max(thrown, s.bullets.filter((b) => b.owner === 'ally').length); }
   assert.strictEqual(thrown, 0, '도와준 사람은 싸우지 않는다');
-  assert.ok(s.allies.length === 0 || Math.abs(s.allies[0].x - x0) > 50, '손을 흔든 뒤 화면 밖으로 걸어 나감');
+  assert.ok(s.allies.length === 0 || Math.abs(s.allies[0].x - x0) > 50, '만세·손 흔들기 뒤 화면 밖으로 걸어 나감');
   run(s, TUNING.allySec * TICK, pick);
   assert.strictEqual(s.allies.length, 0, '안전한 곳으로 떠남');
   assert.strictEqual(s.cheer, 0, '응원은 시간이 지나면 끝');

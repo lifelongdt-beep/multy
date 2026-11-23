@@ -98,7 +98,7 @@
   let warmFx = [];      // 선행 순간 퍼지는 따뜻한 빛 {x, y, r, t}
   const THANKS = ['고마워!', '덕분이야 💛', '정말 고마워요', '너 최고야!', '살았다~', '고마워, 친구야', '복 받을 거야', '힘이 났어!'];
   const VISIT = ['지난번엔 고마웠어!', '은혜 갚으러 왔어 💛', '이거 받아!', '또 만났네!'];
-  function thanks(x, y, list) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: 0, max: 80 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
+  function thanks(x, y, list, delay) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: -(delay || 0), max: 80 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
   let headFlash = [];   // 새로 얻은 아이템: 주인공 머리 위에서 잠깐 반짝 {icon, t}
   // 보스 극복 연출: 슬로모션 → 부풀며 빛남 → 폭발·충격파·색종이 → 화면 번쩍
   let bossFx = null, slowmo = 0, whiteFlash = 0;
@@ -149,9 +149,10 @@
           if (ev.what === 'spot') { pickAnim = { t: 0, max: 26, item: ev.kind === 'pot' ? 'pot' : ev.kind === 'toy' ? 'teddy' : 'cup' }; Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
           else if (ev.what === 'rescued' || ev.what === 'escortDone' || ev.what === 'gaugeFull') {
             Sfx.play('levelup'); if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, '#ff8cc0', 12, false);
-            if (ev.x !== undefined) thanks(ev.x, ev.y, THANKS);
+            if (ev.x !== undefined && ev.what !== 'gaugeFull') { bubbles.push({ text: '만세!', x: ev.x, y: ev.y - 40, t: 0, max: 45 }); thanks(ev.x, ev.y, THANKS, 45); }   // 도와주면: 만세! → 고맙다는 말
+            else if (ev.x !== undefined) thanks(ev.x, ev.y, THANKS);
           }
-          else if (ev.what === 'cheer') bubbles.push({ text: '💗 응원 받는 중! 공격 +' + Math.round(EchoSim.TUNING.cheerDmg * 100) + '%', x: sim.player.x, y: sim.player.y - 44, t: -50, max: 100 });
+          else if (ev.what === 'cheer') bubbles.push({ text: '💗 응원 받는 중! 공격 +' + Math.round(EchoSim.TUNING.cheerDmg * 100) + '%', x: sim.player.x, y: sim.player.y - 44, t: -110, max: 100 });
           else if (ev.what === 'visitGift') { Sfx.play('levelup'); thanks(ev.x, ev.y, VISIT); }
           else if (ev.what === 'allyBye') { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 34, y: ev.y + (Math.random() - 0.5) * 20, t: -i * 3, max: 50 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); }   // 하트가 반짝이며 사라짐
           else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') { Sfx.play('heal'); if (ev.what === 'escortStart') escortTalk = { text: '같이 가 줄래?', t: 150 }; }
@@ -278,7 +279,8 @@
       // 떠나기 1초 전부터 반짝반짝 깜빡이며 흐려지고 머리 위로 하트가 피어오른다
       ctx.globalAlpha = a.t < 60 ? (a.t / 60) * (0.55 + 0.45 * Math.abs(Math.sin(now / 70))) : 1;
       if (a.t < 60 && a.t % 8 === 0) bubbles.push({ heart: true, x: a.x + (Math.random() - 0.5) * 20, y: a.y - 14, t: 0, max: 40 });
-      drawNPC(useArt, a.kind, a.x, a.y - (a.wave > 0 ? Math.abs(Math.sin(now / 160)) * 3 : 0), a.wave > 0 ? { name: 'wave', dir: sim.player.x < a.x ? -1 : 1 } : { name: 'walk', dir: a.dir });
+      const cheering = a.wave > 50, face = sim.player.x < a.x ? -1 : 1;
+      drawNPC(useArt, a.kind, a.x, a.y - (cheering ? Math.abs(Math.sin(now / 110)) * 6 : a.wave > 0 ? Math.abs(Math.sin(now / 160)) * 2 : 0), cheering ? { name: 'cheer', dir: face } : a.wave > 0 ? { name: 'wave', dir: face } : { name: 'walk', dir: a.dir });
     }
     ctx.globalAlpha = 1;
     // 지난 판에 도와준 사람이 찾아옴
@@ -315,8 +317,8 @@
         // 몸짓만으로 모자란 사정만 짧게: 처음 2초 + 5초마다 1.3초
         if (!near && (rs.t < 120 || rs.t % 300 < 80)) talkBubble(NEED_SHORT[rs.kind] || '도와주세요', rs.x, by + 4, 1, true);
       } else {
-        drawNPC(useArt, rs.kind, rs.x, rs.y + bob, rs.state === 'done' ? { name: 'cheer' } : { name: 'walk', dir: rs.x < W / 2 ? -1 : 1 });
-        if (rs.state === 'done') deedArt('heart', rs.x, by - 6, 18);
+        if (rs.state !== 'done') drawNPC(useArt, rs.kind, rs.x, rs.y + bob, { name: 'walk', dir: rs.x < W / 2 ? -1 : 1 });   // 구했으면 '도와준 사람'이 이어서 만세·인사
+        else deedArt('heart', rs.x, by - 14, 18);
       }
       ctx.globalAlpha = 1;
     }
@@ -338,7 +340,7 @@
         else if (d2 < 75 && ahead) fpose = { name: 'walkHold', dir: es.dir, ang: reachAng(es.x, es.y, p.x, p.y) };   // 손잡고 함께 걷기
         else fpose = { name: 'walk', dir: es.dir };
       } else fpose = es.state === 'done' ? { name: 'cheer' } : { name: 'cower' };
-      drawNPC(useArt, 'friend', es.x + (es.inv > 20 ? Math.sin(now / 25) * 1.6 : 0), es.y - step, fpose);   // 맞으면 움찔움찔
+      if (es.state !== 'done') drawNPC(useArt, 'friend', es.x + (es.inv > 20 ? Math.sin(now / 25) * 1.6 : 0), es.y - step, fpose);   // 무사히 도착하면 '도와준 사람'이 이어서 만세·인사   // 맞으면 움찔움찔
       ctx.globalAlpha = es.state === 'walk' ? 1 : Math.max(0, es.fade / 90);
       if (es.state === 'walk') {
         const w = 26, f = Math.max(0, es.hp / es.maxhp);
