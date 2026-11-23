@@ -1027,8 +1027,9 @@
 
     /** 발밑 표시: 적은 붉은 고리 (에코는 머리 위 회색 고리) */
     groundMark(ctx, x, y, r, color, alpha) {
-      ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.38, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+      const a0 = ctx.globalAlpha;   // 사라지는 중이면 그 흐림을 그대로 이어받음
+      ctx.globalAlpha = a0 * alpha; ctx.strokeStyle = color; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.38, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = a0;
     },
     shadow(ctx, x, y, r) { ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.34, 0, 0, Math.PI * 2); ctx.fill(); },
 
@@ -1044,8 +1045,11 @@
       if (e.warn) { sx *= 1 + Math.sin(now / 30) * 0.06; }          // 돌진 직전 부르르
       const k = boss ? 1.1 : K_EN, fy = e.y + r * 0.95 * k;
       this.shadow(ctx, e.x, fy, r * 0.85 * k);
-      this.groundMark(ctx, e.x, fy, r * 1.05 * k, '#ff4d6d', boss ? 0.8 : 0.6);
+      this.groundMark(ctx, e.x, fy, r * 1.05 * k, '#ff3355', boss ? 0.95 : 0.85);
       const flip = !spec.noFlip && e.x > px;   // 주인공 쪽을 바라봄 (글자가 있는 그림은 뒤집지 않음)
+      // 빨간 테두리: 모양을 따라 빨간 윤곽을 둘러 회색·반투명한 에코와 한눈에 구분 (밝은 배경·어두운 배경 모두)
+      const rim = tinted(`enR:${boss ? e.def.name : e.type}:${r}`, base, '#ff2f55'), d = boss ? 2.2 : 1.6;
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; blit(ctx, rim, e.x + Math.cos(a) * d, e.y - hop + Math.sin(a) * d, sx * k, sy * k, flip); }
       blit(ctx, base, e.x, e.y - hop, sx * k, sy * k, flip);
       if (e.flash > 0) { ctx.globalAlpha = 0.7; blit(ctx, tinted(`enW:${boss ? e.def.name : e.type}:${r}`, base, '#ffffff'), e.x, e.y - hop, sx * k, sy * k, flip); ctx.globalAlpha = 1; }
       if (boss && base.face) {   // 왕의 실시간 표정

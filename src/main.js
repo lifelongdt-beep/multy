@@ -856,7 +856,7 @@
     // 적
     const lifeT = EchoSim.TUNING.enemyLifeSec * TICK, fadeT = EchoSim.TUNING.enemyFadeTicks, darkWorld = !!sim.world.rules.sight;
     for (const e of sim.enemies) {
-      ctx.globalAlpha = e.age > lifeT - fadeT ? Math.max(0.1, (lifeT - e.age) / fadeT) : 1;   // 곧 사라질 방해 요소는 흐려진다
+      ctx.globalAlpha = e.age > lifeT - fadeT ? Math.max(0.35, (lifeT - e.age) / fadeT) : 1;   // 곧 사라질 방해 요소는 흐려진다 (너무 흐려 에코처럼 보이지 않게 최소 0.35)
       if (darkWorld && e.type !== 'boss') { ctx.strokeStyle = 'rgba(255,120,140,.95)'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 4, 0, 7); ctx.stroke(); }   // 어두운 월드: 밝은 테두리로 잘 보이게
       if (useArt && Art.hasEnemy(e)) Art.drawEnemy(ctx, e, now, sim.player.x);
       else {
