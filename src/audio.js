@@ -214,7 +214,8 @@
     lose:     { gap: 0,   fn: () => [392, 330, 262].forEach((f, i) => tone(f, f * 0.9, 0.3, 'sine', 0.08, i * 0.18)) },
     train:    { gap: 400, fn: () => { tone(220, 220, 0.25, 'sawtooth', 0.09); tone(277, 277, 0.25, 'sawtooth', 0.07); tone(220, 200, 0.25, 'sawtooth', 0.09, 0.3); tone(277, 250, 0.25, 'sawtooth', 0.07, 0.3); } },
     bossDown: { gap: 300, fn: bossDownSound },
-    click:    { gap: 0,   fn: () => tone(500, 700, 0.06, 'triangle', 0.05) },
+    // 귀여운 "뽀옹♪": 물방울이 톡 튀듯 빠르게 올라가는 음 + 살짝 높은 반짝 음
+    click:    { gap: 40,  fn: () => { tone(620, 1240, 0.07, 'sine', 0.07); soft(1568, 0.09, 'sine', 0.035, 0.055); } },
     dropWarn: { gap: 300, fn: () => { tone(880, 660, 0.12, 'sine', 0.04); tone(880, 660, 0.12, 'sine', 0.04, 0.16); } },
     dropHit:  { gap: 90,  fn: () => { tone(160, 50, 0.22, 'sine', 0.16); noise(0.12, 0.05); } },
   };
