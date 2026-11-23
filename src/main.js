@@ -124,6 +124,7 @@
 
   function handleEvents() {
     for (const ev of sim.drainEvents()) {
+      if (tutorial) tipEvent(ev.k === 'deed' ? ev.what : ev.k === 'dropWarn' ? 'drop' : ev.k);   // 처음 생긴 일이면 튜토리얼 안내
       switch (ev.k) {
         case 'shoot': Sfx.play('shoot'); break;
         case 'dmg':
@@ -139,18 +140,17 @@
           break;
         case 'gem': Sfx.play('gem'); break;
         case 'levelup': Sfx.play('levelup'); break;
-        case 'hurt': tipEvent('hurt'); shake = Math.max(shake, 7); hurtFlash = 1; Sfx.play('hurt'); vibrate(ev.dmg); break;
+        case 'hurt': shake = Math.max(shake, 7); hurtFlash = 1; Sfx.play('hurt'); vibrate(ev.dmg); break;
         case 'nova': shake = Math.max(shake, 3); Sfx.play('nova'); break;
         case 'echoDown': Sfx.play('echoDown'); break;
         case 'heal': Sfx.play('heal'); break;
         case 'banner': if (!ev.hint) banner = { text: ev.text, t: 150 }; break;   // 설명성 안내는 튜토리얼 안내(tipEvent)가 실제 순간에 맞춰 대신 보여 줌   // 설명성 문구는 튜토리얼에서만
         case 'swarm': edgeFlash = 40; Sfx.play('boss'); break;
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 90 }; shake = 10; Sfx.play('boss'); break;
-        case 'helper': Sfx.play('heal'); tipEvent('helper'); break;
-        case 'helped': tipEvent('helped'); playerCheer = 40; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 34 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
+        case 'helper': Sfx.play('heal'); break;
+        case 'helped': playerCheer = 40; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 34 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
         case 'warm': warmFx.push({ x: ev.x, y: ev.y, r: ev.r, t: 0 }); break;
         case 'deed':   // 선행: 소리·반짝임만 (설명은 튜토리얼 안내에서)
-          if (ev.what === 'rescueStart') tipEvent('rescue'); else if (ev.what === 'escortStart') tipEvent('escort'); else if (ev.what === 'cheer') tipEvent('cheer');
           if (ev.what === 'spot') { pickAnim = { t: 0, max: 26, item: ev.kind === 'pot' ? 'pot' : ev.kind === 'toy' ? 'teddy' : 'cup' }; Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
           else if (ev.what === 'rescued' || ev.what === 'escortDone' || ev.what === 'gaugeFull') {
             Sfx.play('levelup'); if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, '#ff8cc0', 12, false);
@@ -163,7 +163,7 @@
           else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') { Sfx.play('heal'); if (ev.what === 'escortStart') escortTalk = { text: '같이 가 줄래?', t: 150 }; }
           break;
         case 'trainPass': { const em = (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'; Sfx.pass(ev.dir, em === '🚆' || em === '🛒', em === '🌊'); break; }
-        case 'dropWarn': Sfx.play('dropWarn'); tipEvent('drop'); break;
+        case 'dropWarn': Sfx.play('dropWarn'); break;
         case 'dropHit': Sfx.play('dropHit'); shake = Math.max(shake, 4); if (artOn()) Art.burst(ev.x, ev.y, '#d7c7a5', 8, false); break;
         case 'train': Sfx.warn((sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': if (tutorial) banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
@@ -430,9 +430,12 @@
     while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { tipPush(tips[tipIdx].text); tipIdx++; }
     const bt = sim.world.boss.times[0];
     if (!bossTipDone && sim.tick >= (bt - EchoTutorial.BOSS_SOON) * TICK) { bossTipDone = true; tipPush(EchoTutorial.BOSS_TIP); }
-    if (!endTipDone && sim.tick >= (bt + 18) * TICK) { endTipDone = true; tipPush(EchoTutorial.END_TIP); }
+    if (!endTipDone && sim.tick >= (bt + EchoTutorial.END_AFTER) * TICK) { endTipDone = true; EchoTutorial.END_TIPS.forEach(tipPush); }
     if (sim.choices) tipEvent('cards');
-    if (sim.deeds && sim.deeds.spots.length) tipEvent('spot');
+    // 상태로 알 수 있는 '처음': 탄이 날아옴 · 선생님 원 안에 들어감 · 바닥에 선행 거리가 생김
+    if (sim.ebullets.length) tipEvent('shot');
+    if (sim.helperShield && sim.helperShield()) tipEvent('shield');
+    if (sim.deeds && sim.deeds.spots.length) tipEvent('spotSeen');
   }
   /** 줄 선 안내를 하나씩 꺼내 보여 준다 (매 프레임) */
   function pumpTips(now) {

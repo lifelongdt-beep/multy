@@ -149,3 +149,20 @@ test('튜토리얼 판은 더 길고 왕도 그만큼 늦게 나온다 · 모든
   const last = T.TIPS[T.TIPS.length - 1].sec;
   assert.ok(last < b.world.boss.times[0] - T.BOSS_SOON, '일반 안내는 왕 안내 전에 끝남');
 });
+
+test('튜토리얼 상황 안내: 원 안 탄 방어·쓰레기를 줍는 이유·사람을 돕는 이유와 보상을 모두 설명한다', () => {
+  const E = T.EVENT_TIPS;
+  for (const k of ['shield', 'spotSeen', 'spot', 'gaugeFull', 'rescueStart', 'rescued', 'escortStart', 'escortDone', 'helper', 'shot', 'drop', 'boss']) assert.ok(E[k], '안내 있음: ' + k);
+  assert.match(E.shield, /탄/); assert.match(E.shield, /부딪히면/);
+  assert.match(E.spotSeen, /깨끗/);
+  assert.match(E.rescued, /보상/); assert.match(E.rescued, /응원/);
+  assert.match(E.escortDone, /보상/);
+  assert.match(E.helper, /보상/);
+});
+
+test('튜토리얼 안내의 숫자는 실제 규칙과 같다 (작은 선행 개수·응원 공격력)', () => {
+  const { TUNING } = require('../src/sim.js');
+  assert.ok(T.EVENT_TIPS.spot.includes(TUNING.deedGaugeNeed + '개'));
+  assert.ok(T.EVENT_TIPS.gaugeFull.includes(TUNING.deedGaugeNeed + '개'));
+  assert.ok(T.EVENT_TIPS.rescued.includes('+' + Math.round(TUNING.cheerDmg * 100) + '%'));
+});
