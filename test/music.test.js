@@ -32,8 +32,8 @@ test('보스 곡: 같은 조에서 더 빠르고, 어두운 화성 단음계에 
     assert.ok(b.bpm > w.bpm, `${id}: 보스 템포 ${b.bpm} > ${w.bpm}`);
     assert.strictEqual(bs.scale, 'harmonic');
     assert.strictEqual(((bs.root - Mu.SONGS[id].root) % 12 + 12) % 12, 0, '같은 조(근음)');
-    const count = (c, k) => c.events.filter((e) => e.kind === k).length;
-    assert.ok(count(b, 'hat') > count(w, 'hat') || count(w, 'hat') === b.steps, `${id}: 하이햇`);
+    const count = (c, k) => c.events.filter((e) => e.kind === k).length / c.bars;   // 마디당 (월드 곡 16마디, 왕 곡 8마디)
+    assert.ok(count(b, 'hat') > count(w, 'hat') || count(w, 'hat') === 16, `${id}: 하이햇`);
     assert.ok(count(b, 'bass') >= count(w, 'bass'), `${id}: 베이스`);
   }
 });
@@ -66,4 +66,19 @@ test('왕 테마는 캐릭터 특징을 따른다 (악기·효과음): 시계·�
   assert.ok(storm.has('storm') && storm.has('brass'), '태풍: 폭풍 + 금관');
   assert.ok(dizzy.has('wobble'), '멀미: 흔들리는 소리');
   assert.ok(Mu.compose('school', { name: '졸음 마왕', pattern: 'exam' }).bpm < Mu.compose('school', { name: '급행열차', pattern: 'lane' }).bpm, '졸음은 느리고 열차는 빠르다');
+});
+
+test('월드 곡은 장소에 어울리는 악기로 16마디(A→B), 월드마다 리드 악기·장소 소리가 다르다', () => {
+  const lead = new Set(), amb = new Set();
+  for (const id of ORDER) {
+    const c = Mu.compose(id, false), s = Mu.SONGS[id];
+    assert.strictEqual(c.bars, 16, `${id}: 16마디`);
+    assert.ok(c.events.some((e) => e.inst === s.lead.inst), `${id}: 리드 악기 ${s.lead.inst}`);
+    assert.ok(c.events.some((e) => e.step >= 128 && s.counter && e.inst === s.counter.inst), `${id}: B 구간 두 번째 선율`);
+    lead.add(`${s.lead.inst}|${s.counter.inst}`); if (s.amb) amb.add(s.amb);
+  }
+  assert.strictEqual(lead.size, ORDER.length, '월드마다 다른 악기 편성');
+  assert.ok(amb.size >= 9, '장소의 소리');
+  const kinds = (id) => new Set(Mu.compose(id, false).events.map((e) => e.kind));
+  assert.ok(kinds('beach').has('wave') && kinds('subway').has('clack') && kinds('mountain').has('bird'), '파도·선로·새소리');
 });
