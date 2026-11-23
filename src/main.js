@@ -1053,7 +1053,18 @@
       ctx.globalAlpha = Math.min(1, toast.t / 30);
       ctx.textAlign = 'center'; ctx.fillStyle = '#ffd34d';
       // 긴 안내는 ' · ' 에서 줄을 나눠 여러 줄로 (작아지거나 잘리지 않게), 뒤에 반투명 띠
-      const lines = toast.text.split(' · '), y0 = H * 0.36 + 30;
+      // ' · ' 로 나눈 뒤에도 화면보다 길면 띄어쓰기에서 한 번 더 줄바꿈
+      ctx.font = 'bold 14px sans-serif';
+      const lines = [];
+      for (const part of toast.text.split(' · ')) {
+        let cur = '';
+        for (const w of part.split(' ')) {
+          const next = cur ? cur + ' ' + w : w;
+          if (cur && ctx.measureText(next).width > W - 24) { lines.push(cur); cur = w; } else cur = next;
+        }
+        if (cur) lines.push(cur);
+      }
+      const y0 = H * 0.36 + 30;
       ctx.fillStyle = 'rgba(8,10,20,.55)'; ctx.fillRect(4, y0 - 13, W - 8, lines.length * 20 + 6);
       ctx.fillStyle = '#ffd34d'; lines.forEach((ln, i) => fitText(ln, W / 2, y0 + i * 20, 14));
       ctx.globalAlpha = 1;
