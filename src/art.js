@@ -563,6 +563,98 @@
   /* ---------- 배경 (월드별) ---------- */
   const BG = {};        // worldId -> (g, W, H) 그리기 함수 (art-worlds.js가 채움)
   const HELPER = {};    // worldId -> (g) 도우미 그리기 함수
+  const LOOK = { school: { sleeve: '#3fae8a', s: 1 } };   // 사람별 소매 색·크기 (art-worlds.js가 채움)
+
+  /* ---------- 팔·다리와 몸짓: 행동을 보고 어떤 도움이 필요한지/주고받는지 알 수 있게 ---------- */
+  const SKIN = '#ffd9b8', PANTS = '#454a63';
+  function limb(g, x0, y0, x1, y1, col, w) {
+    g.lineCap = 'round'; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1);
+    g.strokeStyle = OL; g.lineWidth = w + 2; g.stroke(); g.strokeStyle = col; g.lineWidth = w; g.stroke();
+  }
+  function palm(g, x, y, r) { circle(g, x, y, r || 1.9); fillStroke(g, SKIN, 1.1); }
+  /** 사람(선생님·도우미·선행 인물) 포즈. 좌표는 사람 그림 기준(어깨 ±6.3,4.5 · 엉덩이 ±3.3,16), 오른쪽(+x)을 바라봄.
+   *  돌려주는 값: L/R 손 위치, lf/rf 발 위치, prop(손에 든 소품) */
+  function personPose(name, t, ang) {
+    const SL = [-6.3, 4.5], SR = [6.3, 4.5];
+    const at = (S, a, len) => [S[0] + Math.cos(a) * len, S[1] + Math.sin(a) * len];
+    const sw = Math.sin(t * 2.2) * 0.5;
+    const P = { L: [-8.6, 13 + sw], R: [8.6, 13 - sw], lf: [-3.6, 20.5], rf: [3.6, 20.5], prop: null };
+    switch (name) {
+      case 'wave':        // 손을 흔들어 부른다 (이리 와 줘!)
+        P.R = at(SR, -1.2 + 0.5 * Math.sin(t * 10), 11); break;
+      case 'beckon':      // 손짓으로 부른다 (이리 오렴) – 팔을 앞으로 뻗었다 당겼다
+        P.R = at(SR, -0.35, 7.5 + 3.5 * Math.abs(Math.sin(t * 5))); break;
+      case 'cower': {     // 무서워서 두 손으로 얼굴을 가리고 무릎을 모은다. 가끔 한 손을 내려 살짝 내다본다
+        const peek = Math.sin(t * 1.7) > 0.55;
+        P.L = [-3.6, -3.2]; P.R = peek ? [7.5, 8] : [3.6, -3.2];
+        P.lf = [-1.8, 20.5]; P.rf = [1.8, 20.5]; break;
+      }
+      case 'carry': {     // 무거운 짐을 양손에 들고 힘겨워한다 (팔이 아래로 축 처짐)
+        const k = Math.sin(t * 3) * 0.8;
+        P.L = [-8.2, 17.5 + k]; P.R = [8.2, 17.5 - k]; P.prop = 'bags';
+        P.lf = [-4.6, 20.5]; P.rf = [4.6, 20.5]; break;
+      }
+      case 'lost':        // 길을 잃음: 한 손으로 머리를 긁적이고 한 손엔 지도
+        P.R = [6.8 + Math.sin(t * 14) * 1.2, -12.5]; P.L = [-9, 8]; P.prop = 'map'; break;
+      case 'reach':       // 손을 뻗는다 (ang 방향: 도움을 청하거나 도와준다)
+        P.R = at(SR, ang || 0, 11.5); break;
+      case 'pat':         // 머리를 쓰다듬듯 손을 뻗어 토닥토닥 (선생님이 도와준다)
+        P.R = at(SR, (ang || 0) - 0.25 + Math.sin(t * 9) * 0.22, 12); break;
+      case 'cheer': {     // 만세! (도움을 받아 기뻐함)
+        const k = Math.sin(t * 9) * 1.5;
+        P.L = [-9.5, -9 + k]; P.R = [9.5, -9 - k]; break;
+      }
+      case 'walk': {      // 걷기: 팔다리를 번갈아
+        const k = Math.sin(t * 10);
+        P.L = [-8 + k * 1.8, 13 + k]; P.R = [8 + k * 1.8, 13 - k];
+        P.lf = [-3.6 + k * 2.2, 20.5 - Math.max(0, k) * 1.2]; P.rf = [3.6 - k * 2.2, 20.5 - Math.max(0, -k) * 1.2]; break;
+      }
+      case 'walkHold': {  // 걸으면서 한 손은 나를 향해 (손잡고 함께 가기)
+        const k = Math.sin(t * 10);
+        P.L = [-8 + k * 1.8, 13 + k]; P.R = at(SR, ang || 0, 11.5);
+        P.lf = [-3.6 + k * 2.2, 20.5 - Math.max(0, k) * 1.2]; P.rf = [3.6 - k * 2.2, 20.5 - Math.max(0, -k) * 1.2]; break;
+      }
+      case 'hurt':        // 맞아서 머리를 감싼다
+        P.L = [-8.2, -5]; P.R = [8.2, -5]; P.lf = [-2.5, 20.5]; P.rf = [2.5, 20.5]; break;
+      case 'give':        // 두 손으로 선물을 내민다
+        P.L = [6, 10]; P.R = [11, 9]; P.prop = 'gift'; break;
+      case 'throw': {     // 하트를 던지며 응원
+        const k = (t * 1.6) % 1;
+        P.R = at(SR, -2.4 + k * 2.6, 11); P.L = [-9, -8 + Math.sin(t * 9)]; break;
+      }
+      default: break;     // idle
+    }
+    return P;
+  }
+  function drawPersonProp(g, P, t) {
+    if (P.prop === 'bags') {          // 양손의 무거운 장바구니
+      for (const h of [P.L, P.R]) { rrect(g, h[0] - 3.4, h[1] + 0.5, 6.8, 6.5, 1.5); fillStroke(g, '#8d6e63', 1.3); g.fillStyle = '#a5d6a7'; g.fillRect(h[0] - 2.4, h[1] + 0.2, 2, 1.6); }
+    } else if (P.prop === 'map') {    // 펼친 지도 (물음표)
+      const h = P.L; rrect(g, h[0] - 4, h[1] - 3.5, 7, 6, 0.8); fillStroke(g, '#fff3c4', 1.1);
+      g.fillStyle = '#e57373'; g.font = 'bold 5px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', h[0] - 0.5, h[1] - 0.4);
+    } else if (P.prop === 'teach') {  // 다른 손엔 펼친 책 (가르쳐 줌)
+      const h = P.L; rrect(g, h[0] - 4.5, h[1] - 4, 9, 6, 1); fillStroke(g, '#fffde7', 1.1); line(g, [h[0], h[1] - 4, h[0], h[1] + 2], 0.8);
+    }
+  }
+  /** 사람 몸짓 그리기: 다리(몸 뒤) → 몸 그림 → 팔·손·소품(몸 앞). 화면 좌표 손 위치를 돌려준다 */
+  function drawPersonPosed(ctx, c, look, x, y, pose, t) {
+    const s = look.s || 1, dir = pose.dir < 0 ? -1 : 1;
+    const P = personPose(pose.name, t, pose.ang);
+    const enter = () => { ctx.save(); ctx.translate(x, y); ctx.scale(K_KID * dir, K_KID); ctx.translate(0, 2 + 17 * (1 - s)); ctx.scale(s, s); };
+    enter();
+    limb(ctx, -3.3, 15, P.lf[0], P.lf[1] - 1, PANTS, 3.2); limb(ctx, 3.3, 15, P.rf[0], P.rf[1] - 1, PANTS, 3.2);
+    oval(ctx, P.lf[0] - 0.6, P.lf[1], 2.6, 1.6); fillStroke(ctx, '#2a2440', 1.2); oval(ctx, P.rf[0] + 0.6, P.rf[1], 2.6, 1.6); fillStroke(ctx, '#2a2440', 1.2);
+    ctx.restore();
+    blit(ctx, c, x, y, K_KID, K_KID, dir < 0);
+    enter();
+    limb(ctx, -6.3, 4.5, P.L[0], P.L[1], look.sleeve, 3); limb(ctx, 6.3, 4.5, P.R[0], P.R[1], look.sleeve, 3);
+    if (P.prop === 'bags' || P.prop === 'gift') drawPersonProp(ctx, P, t);
+    palm(ctx, P.L[0], P.L[1]); palm(ctx, P.R[0], P.R[1]);
+    if (P.prop === 'map' || P.prop === 'teach') drawPersonProp(ctx, P, t);
+    ctx.restore();
+    const toScreen = (q) => [x + dir * K_KID * s * q[0], y + K_KID * (2 + 17 * (1 - s) + s * q[1])];
+    return { L: toScreen(P.L), R: toScreen(P.R), feetY: y + K_KID * (2 + 17 * (1 - s) + s * 21.5) };
+  }
   function vignette(g, W, H) {
     const vg = g.createRadialGradient(W / 2, H * 0.48, H * 0.25, W / 2, H * 0.5, H * 0.75);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(5,6,16,.55)');
@@ -720,13 +812,40 @@
       if (e.flash > 0) { ctx.globalAlpha = 0.7; blit(ctx, tinted(`enW:${boss ? e.def.name : e.type}:${r}`, base, '#ffffff'), e.x, e.y - hop, sx * k, sy * k, flip); ctx.globalAlpha = 1; }
     },
 
-    drawPlayer(ctx, p, emo, moving, dir, now, blink) {
-      const step = moving ? (Math.floor(now / 110) % 2 ? 1 : -1) : 0;
+    /** 주인공. act(선택): {pose:'pick', k:0~1} 줍기 · {pose:'reach', tx, ty} 돕기(손 내밀기) · {pose:'learn'} 손 들고 배우기.
+     *  오른손의 화면 위치를 돌려준다 (주운 물건을 손에 들려 그릴 때) */
+    drawPlayer(ctx, p, emo, moving, dir, now, blink, act) {
+      const pose = act && act.pose;
+      if (pose === 'reach' || pose === 'learn') { if (Math.abs(act.tx - p.x) > 3) dir = act.tx < p.x ? -1 : 1; }   // 돕는 사람 쪽을 바라봄
+      const step = moving && pose !== 'pick' ? (Math.floor(now / 110) % 2 ? 1 : -1) : 0;
       const bob = moving ? Math.abs(Math.sin(now / 110 * Math.PI / 2)) * 1.6 : Math.sin(now / 500) * 0.5;
       this.shadow(ctx, p.x, p.y + 13 * K_KID, 8 * K_KID);
       if (blink) ctx.globalAlpha = 0.4;
-      blit(ctx, kidSprite(emo, step), p.x, p.y - 4 - bob, K_KID, K_KID, dir < 0);
+      // 줍기: 무릎을 굽혀 몸을 낮췄다가 일어선다 (발 위치는 그대로)
+      const crouch = pose === 'pick' ? Math.sin(Math.min(1, act.k) * Math.PI) : 0;
+      const sy = K_KID * (1 - 0.2 * crouch), feet = p.y - 4 - bob + 13 * K_KID, cy = feet - 13 * sy;
+      blit(ctx, kidSprite(emo, step), p.x, cy, K_KID, sy, dir < 0);
+      // 팔 (몸 앞)
+      const f = dir < 0 ? -1 : 1, sleeve = outfitOpts(emo, outfit).body, t = now / 1000;
+      const sw = moving ? Math.sin(now / 110 * Math.PI / 2) * 1.6 : Math.sin(t * 2) * 0.3;
+      let L = [-7.4, 9.2 - sw], R = [7.4, 9.2 + sw];
+      if (pose === 'pick') {
+        const k = act.k;
+        R = k < 0.45 ? [6.5 + k * 4, 9 + k * 12] : [8.5 - (k - 0.45) * 4, 14.4 - (k - 0.45) * 40];   // 손을 바닥까지 뻗어 집고 → 번쩍 들어 올림
+        L = [-6.5, 10];
+      } else if (pose === 'reach') {
+        const a = Math.atan2(act.ty - p.y, Math.abs(act.tx - p.x) || 1);
+        const ca = Math.max(-1.1, Math.min(1.1, a));
+        R = [5.4 + Math.cos(ca) * 10, 2.6 + Math.sin(ca) * 10];          // 그 사람 쪽으로 손을 내민다
+      } else if (pose === 'learn') {
+        R = [6.5 + Math.sin(t * 6) * 0.8, -9.5];                           // 손 들고 "네!" (배우는 중)
+      }
+      ctx.save(); ctx.translate(p.x, cy); ctx.scale(K_KID * f, sy); ctx.translate(0, -1);
+      limb(ctx, -5.4, 2.6, L[0], L[1], sleeve, 2.8); limb(ctx, 5.4, 2.6, R[0], R[1], sleeve, 2.8);
+      palm(ctx, L[0], L[1], 1.8); palm(ctx, R[0], R[1], 1.8);
+      ctx.restore();
       ctx.globalAlpha = 1;
+      return [p.x + f * K_KID * R[0], cy + sy * (R[1] - 1)];
     },
 
     /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 파란 유령 */
@@ -761,6 +880,15 @@
       const k = (size || 18) / 24; blit(ctx, c, x, y, k, k); return true;
     },
     drawTeacher(ctx, x, y) { this.drawHelper(ctx, 'school', x, y); },
+    /** 팔다리와 몸짓이 있는 사람: id = 월드 id(도우미) 또는 'npc:child|elder|friend'.
+     *  pose = {name:'idle|wave|beckon|cower|carry|lost|reach|pat|cheer|walk|walkHold|hurt|give|throw', dir:±1, ang} */
+    drawPerson(ctx, id, x, y, pose, now) {
+      const key = HELPER[id] ? id : 'school', fn = HELPER[id] || TEACHER;
+      const c = sprite('helper:' + key, 24, 42, (g) => { g.translate(0, 2); fn(g); });
+      const look = LOOK[key] || LOOK.school, s = look.s || 1;
+      this.shadow(ctx, x, y + K_KID * (2 + 17 * (1 - s) + s * 21), 9 * K_KID * s);
+      return drawPersonPosed(ctx, c, look, x, y, pose || { name: 'idle' }, (now || performance.now()) / 1000);
+    },
     drawHelper(ctx, worldId, x, y) {
       const fn = HELPER[worldId] || TEACHER;
       const c = sprite('helper:' + (HELPER[worldId] ? worldId : 'school'), 24, 42, (g) => { g.translate(0, 2); fn(g); });
@@ -830,7 +958,7 @@
     },
     clearParticles() { parts = []; },
     // art-worlds.js가 나머지 월드의 그림을 등록할 때 쓰는 도구
-    _kit: { ENEMY, BOSS, BG, HELPER, OL, circle, oval, rrect, fillStroke, eye },
+    _kit: { ENEMY, BOSS, BG, HELPER, LOOK, OL, circle, oval, rrect, fillStroke, eye },
   };
 
   root.Art = Art;

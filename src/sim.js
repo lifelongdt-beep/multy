@@ -838,7 +838,7 @@
         const sp = d.spots[i];
         if (Math.hypot(p.x - sp.x, p.y - sp.y) < p.r + 12) {
           d.spots.splice(i, 1); d.gauge += 1; d.spotCount += 1; this.fx.push({ x: sp.x, y: sp.y, t: 20, kind: 'deed' });
-          this._ev({ k: 'deed', what: 'spot', x: sp.x, y: sp.y });
+          this._ev({ k: 'deed', what: 'spot', x: sp.x, y: sp.y, kind: sp.kind });
           if (d.gauge >= T.deedGaugeNeed) { d.gauge = 0; this._ev({ k: 'deed', what: 'gaugeFull' }); this._deedReward(false); }
         } else if (--sp.t <= 0) d.spots.splice(i, 1);
       }

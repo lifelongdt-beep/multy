@@ -7,7 +7,7 @@
   'use strict';
   const Art = root.Art;
   if (!Art) return;
-  const { ENEMY, BOSS, BG, HELPER, OL, circle, oval, rrect, fillStroke, eye } = Art._kit;
+  const { ENEMY, BOSS, BG, HELPER, LOOK, OL, circle, oval, rrect, fillStroke, eye } = Art._kit;
   const TAU = Math.PI * 2;
 
   function shade(hex, k) {   // 색을 밝게(k>0)/어둡게(k<0)
@@ -444,6 +444,10 @@
     if (o.glasses) { g.lineWidth = 1.2; g.strokeStyle = OL; circle(g, -2.9, -4.5, 2.4); g.stroke(); circle(g, 2.9, -4.5, 2.4); g.stroke(); }
     circle(g, -2.9, -4.3, 0.95); g.fillStyle = OL; g.fill(); circle(g, 2.9, -4.3, 0.95); g.fill();
     if (o.beard) { g.beginPath(); g.arc(0, -3, 6.5, 0.1 * Math.PI, 0.9 * Math.PI); g.lineTo(-5.5, -1); g.closePath(); fillStroke(g, hc, 1.2); }
+    else if (o.sad) {   // 걱정스러운 얼굴: 시옷 눈썹 + 내려간 입
+      g.lineWidth = 1.1; g.strokeStyle = OL; g.beginPath(); g.moveTo(-4.6, -6.1); g.lineTo(-1.5, -7.1); g.moveTo(4.6, -6.1); g.lineTo(1.5, -7.1); g.stroke();
+      g.beginPath(); g.arc(0, 0.4, 1.8, 1.15 * Math.PI, 1.85 * Math.PI); g.lineWidth = 1.2; g.stroke();
+    }
     else { g.beginPath(); g.arc(0, -1.3, 1.8, 0.1 * Math.PI, 0.9 * Math.PI); g.lineWidth = 1.2; g.strokeStyle = OL; g.stroke(); }
     oval(g, -5, -2, 1.3, 0.8); g.fillStyle = 'rgba(255,120,120,.45)'; g.fill(); oval(g, 5, -2, 1.3, 0.8); g.fill();
   }
@@ -460,14 +464,16 @@
     mountain: { hair: 'helmet', outfit: '#ff7043', vest: '#ffe082' },
     stage:    { hair: 'short', hairCol: '#7b1fa2', outfit: '#6a1b9a', headset: true },
   };
-  for (const id in H) HELPER[id] = (g) => person(g, H[id]);
+  for (const id in H) { HELPER[id] = (g) => person(g, H[id]); LOOK[id] = { sleeve: H[id].outfit, s: 1 }; }
   // 선행: 도움이 필요한 사람들 (아이·할머니·친구)
   const NPC = {
     child:  { s: 0.78, o: { hair: 'short', hairCol: '#5d4037', outfit: '#ffb74d', scarf: '#4fc3f7' } },
     elder:  { s: 0.95, o: { hair: 'bun', hairCol: '#e0e0e0', outfit: '#a1887f', glasses: true } },
     friend: { s: 0.9,  o: { hair: 'long', hairCol: '#3b2b25', outfit: '#81c784', book: '#ffd54f' } },
   };
-  for (const k in NPC) HELPER['npc:' + k] = (g) => { g.translate(0, 17 * (1 - NPC[k].s)); g.scale(NPC[k].s, NPC[k].s); person(g, NPC[k].o); };
+  for (const k in NPC) { HELPER['npc:' + k] = (g) => { g.translate(0, 17 * (1 - NPC[k].s)); g.scale(NPC[k].s, NPC[k].s); person(g, NPC[k].o); }; LOOK['npc:' + k] = { sleeve: NPC[k].o.outfit, s: NPC[k].s };
+    const so = Object.assign({}, NPC[k].o, { sad: true });   // 도움이 필요할 때의 걱정스러운 얼굴
+    HELPER['npc:' + k + ':sad'] = (g) => { g.translate(0, 17 * (1 - NPC[k].s)); g.scale(NPC[k].s, NPC[k].s); person(g, so); }; LOOK['npc:' + k + ':sad'] = LOOK['npc:' + k]; }
 
   /* ---------- 배경 ---------- */
   function floorPlanks(g, W, H2, base, step) { g.fillStyle = base; g.fillRect(0, 0, W, H2); for (let y = 0, i = 0; y < H2; y += step, i++) { g.fillStyle = i % 2 ? 'rgba(255,255,255,.02)' : 'rgba(0,0,0,.05)'; g.fillRect(0, y, W, step); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, y, W, 1); } }
