@@ -255,7 +255,15 @@
     // 작은 선행 거리: 은은한 분홍 빛 + 물건 (적보다 아래), 사람들은 적보다 위에 그려 가려지지 않게
     if (!people) for (const sp of d.spots) {
       const a = Math.min(1, sp.t / 60), pul = 0.5 + 0.5 * Math.sin(now / 260 + sp.x);
-      ctx.globalAlpha = a * (0.25 + 0.2 * pul); ctx.fillStyle = '#ff8cc0'; ctx.beginPath(); ctx.arc(sp.x, sp.y, 15, 0, 7); ctx.fill();
+      // 줍는 물건 표시: 빨간 원(적) 대신 하늘색 빛 + 반짝이 4개가 천천히 돈다 (적·친구·에코와 다른 색)
+      const gl = ctx.createRadialGradient(sp.x, sp.y, 2, sp.x, sp.y, 17);
+      gl.addColorStop(0, 'rgba(190,240,255,.55)'); gl.addColorStop(1, 'rgba(190,240,255,0)');
+      ctx.globalAlpha = a * (0.6 + 0.4 * pul); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(sp.x, sp.y, 17, 0, 7); ctx.fill();
+      ctx.fillStyle = '#e8fbff';
+      for (let k = 0; k < 4; k++) {
+        const ang = now / 700 + k * Math.PI / 2 + sp.x, rx = sp.x + Math.cos(ang) * 14, ry = sp.y + Math.sin(ang) * 9, r = 2.6 + 1.2 * Math.sin(now / 180 + k);
+        ctx.beginPath(); ctx.moveTo(rx, ry - r); ctx.quadraticCurveTo(rx, ry, rx + r, ry); ctx.quadraticCurveTo(rx, ry, rx, ry + r); ctx.quadraticCurveTo(rx, ry, rx - r, ry); ctx.quadraticCurveTo(rx, ry, rx, ry - r); ctx.fill();
+      }
       ctx.globalAlpha = a; deedArt(sp.kind === 'litter' ? 'cup' : sp.kind === 'pot' ? 'pot' : 'teddy', sp.x, sp.y, 20);
       // 지나가며 주워 달라는 표시: 위에서 통통 튀는 작은 화살표
       const ay = sp.y - 20 - Math.abs(Math.sin(now / 220 + sp.x)) * 5;
@@ -805,7 +813,7 @@
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
       ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
       if (tutorial) ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
-      if (tutorial && hp.state === 'wait') { ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.fillText(hp.prog > 0 ? '조언을 듣는 중…' : '곁에 가서 잠시 머물러 보세요', hp.x, hp.y + hp.r + 12); }
+      if (tutorial && hp.state === 'wait') { ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; const ht = hp.prog > 0 ? '조언을 듣는 중…' : '곁에 가서 잠시 머물러 보세요', hw = ctx.measureText(ht).width / 2; ctx.fillText(ht, Math.max(hw + 4, Math.min(W - hw - 4, hp.x)), hp.y + hp.r + 12); }   // 화면 밖으로 잘리지 않게
       ctx.globalAlpha = 1;
     }
 
