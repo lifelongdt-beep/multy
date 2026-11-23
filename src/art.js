@@ -1019,4 +1019,11 @@
   };
 
   root.Art = Art;
+  // 월드 이모지는 어디서든(메뉴·일시정지·배너) 직접 그린 월드 엠블럼으로
+  if (root.Glyphs && root.Glyphs.picture && root.document) {
+    const WE = { school: '🏫', academy: '📖', office: '🏢', subway: '🚇', home: '🏠', gym: '🏋️', library: '📚', beach: '🏖️', airport: '✈️', hospital: '🏥', mountain: '🏔️', stage: '🎤' };
+    for (const id in WE) root.Glyphs.picture(WE[id], (ctx, x, y, size) => Art.drawWorld(ctx, id, x, y, size));
+    root.Glyphs.picture('⛰️', (ctx, x, y, size) => Art.drawWorld(ctx, 'mountain', x, y, size));
+    root.Glyphs.picture('🎭', (ctx, x, y, size) => Art.drawWorld(ctx, 'stage', x, y, size));
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -158,8 +158,8 @@
 
   /* ---------- 집: 밤 거실 ---------- */
   BG.home = (g, W, H) => {
-    woodFloor(g, 0, 0, W, H, '#3a2c2a', 20, 51);
-    g.fillStyle = 'rgba(14,16,40,.45)'; g.fillRect(0, 0, W, H);
+    woodFloor(g, 0, 0, W, H, '#4a3a34', 20, 51);
+    g.fillStyle = 'rgba(14,16,40,.28)'; g.fillRect(0, 0, W, H);
     wall(g, W, 92, '#232a48', '#1d2340');
     // 창문과 달빛
     withShadow(g, 6, 3, () => box(g, W - 130, 12, 104, 66, 3, '#4a3b30'));

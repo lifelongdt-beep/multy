@@ -495,7 +495,7 @@
    * 스폰 간격도 같이 줄여 1초당 적 밀도는 그대로 유지한다. */
   const TIME_SCALE = 1.2;   // 한 판 약 144초
   // 월드별 큰 도전 체력 보정 (봇 실측: 필요한 에코 수를 갖추면 5번 중 3~4번 넘도록). 어두운 월드는 조준 거리가 짧아 화력이 낮다
-  const BOSS_HP_TUNE = { school: 1.6, office: 0.9, home: 0.68, airport: 0.7, mountain: 0.8, stage: 0.85, subway: 1.08, gym: 0.95, hospital: 1.08 };
+  const BOSS_HP_TUNE = { school: 1.6, office: 0.9, home: 0.68, beach: 0.9, airport: 0.67, mountain: 0.74, stage: 0.85, subway: 1.08, gym: 0.95, hospital: 1.08 };
   for (const id in WORLDS) {
     const w = WORLDS[id], sc = (v) => Math.round(v * TIME_SCALE);
     if (BOSS_HP_TUNE[id]) w.rules.bossHp = BOSS_HP_TUNE[id];

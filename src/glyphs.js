@@ -175,12 +175,21 @@
     if (/‍/.test(k)) return G[base] ? base : '🧑';
     return k;
   }
-  const has = (e) => !!G[keyOf(e)];
+  const PIC = {};   // 이모지 → 색칠한 그림 (월드 엠블럼 등). picture()로 등록
+  const has = (e) => { const k = keyOf(e); return !!(PIC[k] || G[k]); };
+  const picUrl = {};
+  function picture(e, drawFn) { const k = e.replace(/️/g, ''); PIC[k] = drawFn; delete picUrl[k]; }
+  function picSrc(k) {
+    if (picUrl[k]) return picUrl[k];
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    PIC[k](c.getContext('2d'), 32, 32, 64); return (picUrl[k] = c.toDataURL());
+  }
 
   /* ---------- SVG (메뉴) ---------- */
   function svg(e, size) {
-    const g = G[keyOf(e)]; if (!g) return '';
-    const s = size || 18;
+    const k0 = keyOf(e), s = size || 18;
+    if (PIC[k0] && root.document) { const d = typeof s === 'number' ? s + 'px' : s; return `<img class="gly pic" src="${picSrc(k0)}" style="width:${d};height:${d}" alt="">`; }
+    const g = G[k0]; if (!g) return '';
     const body = g.map((l) => `<path d="${l.d}" fill="${l.f || 'none'}"${l.s ? ` stroke="${l.s}" stroke-width="${l.w}" stroke-linejoin="round" stroke-linecap="round"` : ''}/>`).join('');
     return `<svg class="gly" width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
   }
@@ -196,7 +205,9 @@
   function paths(k) { let p = pathCache.get(k); if (!p) { p = G[k].map((l) => ({ p: new Path2D(l.d), f: l.f, s: l.s, w: l.w })); pathCache.set(k, p); } return p; }
   /** (cx, cy)를 가운데로 size 크기 그림 */
   function draw(ctx, e, cx, cy, size) {
-    const k = keyOf(e); if (!G[k]) return false;
+    const k = keyOf(e);
+    if (PIC[k]) { PIC[k](ctx, cx, cy, size * 1.1); return true; }
+    if (!G[k]) return false;
     ctx.save(); ctx.translate(cx - size / 2, cy - size / 2); ctx.scale(size / 24, size / 24);
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     for (const l of paths(k)) { if (l.f) { ctx.fillStyle = l.f; ctx.fill(l.p); } if (l.s) { ctx.strokeStyle = l.s; ctx.lineWidth = l.w; ctx.stroke(l.p); } }
@@ -250,5 +261,5 @@
     const st = document.createElement('style'); st.textContent = '.gly{vertical-align:-.2em;display:inline-block}'; document.head.appendChild(st);
     if (document.body) watch(document.body); else document.addEventListener('DOMContentLoaded', () => watch(document.body));
   }
-  root.Glyphs = { svg, html, draw, has, keyOf, list: () => Object.keys(G).filter((k) => G[k]) };
+  root.Glyphs = { svg, html, draw, has, keyOf, picture, list: () => Object.keys(G).filter((k) => G[k]) };
 })(typeof window !== 'undefined' ? window : globalThis);

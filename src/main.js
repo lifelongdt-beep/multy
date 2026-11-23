@@ -600,8 +600,9 @@
   if (!GameUI.tutorialDone()) { $('start').classList.add('hidden'); $('tutorial').classList.remove('hidden'); }
   $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; };
   let resetArmed = false;   // 실수로 누르지 않게 두 번 눌러야 초기화
-  $('reset').onclick = () => {
-    const label = (t) => { $('reset').innerHTML = Icons.svg('trash') + `<span>${t}</span>`; };
+  const resetBtn = $('reset');   // 백업 화면 안으로 옮겨 다니므로 처음에 잡아 둔다
+  resetBtn.onclick = () => {
+    const label = (t) => { resetBtn.innerHTML = Icons.svg('trash') + `<span>${t}</span>`; };
     if (!resetArmed) { resetArmed = true; label(`에코 ${echoes.length}명 지우기? 한 번 더`); setTimeout(() => { resetArmed = false; label('에코 기록 초기화'); }, 3000); return; }
     resetArmed = false; echoes = []; runCount = 0; save(); label('초기화됨'); GameUI.refresh();
   };
@@ -613,7 +614,7 @@
   $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); muteIcon(); };   // 위 버튼: 전체 켜기/끄기
   $('bMusic').onclick = () => { Sfx.setMusic(!Sfx.musicOn()); muteIcon(); };
   $('bSfx').onclick = () => { Sfx.setSfx(!Sfx.sfxOn()); Sfx.play('click'); muteIcon(); };
-  Icons.apply(); muteIcon(); $('reset').innerHTML = Icons.svg('trash') + '<span>에코 기록 초기화</span>'; $('again').innerHTML = Icons.svg('retry') + '<span>한 판만 더</span>';
+  Icons.apply(); muteIcon(); resetBtn.innerHTML = Icons.svg('trash') + '<span>에코 기록 초기화</span>'; $('again').innerHTML = Icons.svg('retry') + '<span>한 판만 더</span>';
 
   /* ---------- 렌더 ---------- */
   /** 화면 폭(W-16)에 맞게 글자 크기를 줄여서 가운데 정렬로 그린다 */
@@ -924,7 +925,7 @@
     const sight = sim.world.rules.sight;
     if (sight) {
       const g = ctx.createRadialGradient(p.x, p.y, sight * 0.75, p.x, p.y, sight * 1.25);
-      g.addColorStop(0, 'rgba(4,6,14,0)'); g.addColorStop(1, 'rgba(4,6,14,.62)');
+      g.addColorStop(0, 'rgba(4,6,14,0)'); g.addColorStop(1, 'rgba(4,6,14,.46)');
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     }
     // 바람 월드: 지금 바람 방향 표시
@@ -948,7 +949,10 @@
 
     // HUD
     // 위쪽 정보 줄: 검은 띠 대신 아주 옅은 그라데이션 (적이 비쳐 보이게), 글자는 그림자로 읽기 쉽게
-    { const hg = ctx.createLinearGradient(0, 0, 0, 52); hg.addColorStop(0, 'rgba(0,0,0,.32)'); hg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 52); }
+    { const hg = ctx.createLinearGradient(0, 0, 0, 52); hg.addColorStop(0, 'rgba(0,0,0,.32)'); hg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 52);
+      // 정보가 있는 자리에는 반투명 받침: 위로 올라온 적이 글자·막대와 겹쳐 보이지 않게
+      const pill = (x, y, w, h) => { ctx.fillStyle = 'rgba(10,12,26,.62)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, 8) : ctx.rect(x, y, w, h); ctx.fill(); };
+      pill(3, 3, 145, 27); pill(W / 2 - 30, 2, 60, sim.bossCount > 1 ? 33 : 21); pill(W - 112, 3, 109, 33); }
     ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ff5d73'; ctx.fillRect(8, 8, 100 * Math.max(0, p.hp / p.maxhp), 8);
@@ -1033,7 +1037,11 @@
     // 배너 / 시너지 토스트
     if (banner.t > 0) {
       ctx.globalAlpha = Math.min(1, banner.t / 30);
-      ctx.textAlign = 'center'; ctx.fillStyle = /^[⚠]/.test(banner.text) ? '#ff5d73' : '#ffe58a'; fitText(banner.text, W / 2, H * 0.36, 18);   // 화면 위쪽(보스 체력 막대·HUD)과 겹치지 않게 가운데 쪽에
+      // 보스가 나와 있으면 체력 막대 바로 아래 좁은 띠에, 아니면 화면 가운데 위쪽에. 어두운 받침 위에 써서 싸움 장면을 덜 가린다
+      const bossOn = sim.enemies.some((e) => e.type === 'boss'), by = bossOn ? 92 : H * 0.36, bs = bossOn ? 14 : 18;
+      ctx.font = `bold ${bs}px sans-serif`; const bw = Math.min(W - 12, ctx.measureText(banner.text).width + 26);
+      ctx.fillStyle = 'rgba(10,12,26,.6)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(W / 2 - bw / 2, by - bs * 0.95, bw, bs * 1.7, 10) : ctx.rect(W / 2 - bw / 2, by - bs * 0.95, bw, bs * 1.7); ctx.fill();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = /^[⚠]/.test(banner.text) ? '#ff5d73' : '#ffe58a'; fitText(banner.text, W / 2, by - bs * 0.1, bs); ctx.textBaseline = 'alphabetic';   // 화면 위쪽(보스 체력 막대·HUD)과 겹치지 않게 가운데 쪽에
       ctx.globalAlpha = 1;
     }
     if (toast.t > 0) {

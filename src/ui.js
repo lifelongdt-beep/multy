@@ -498,7 +498,11 @@
     };
     body.appendChild(load);
     body.appendChild(msg);
+    // 지우기는 실수로 누르지 않게 메뉴가 아닌 백업 화면 맨 아래에 (두 번 눌러야 지워짐)
+    body.appendChild(el('div', 'msg', '지금 월드의 에코(과거의 나) 기록을 지워요. 학점·강화는 그대로예요.'));
+    if (resetBtn) body.appendChild(resetBtn);
   }
+  const resetBtn = document.getElementById('reset');
 
   /* ---------- 연결 ---------- */
   $('bWorld').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🗺️ 월드 선택', renderWorlds); };

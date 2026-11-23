@@ -89,10 +89,10 @@
     friendHp: 100,           //   친구 체력 (방해 요소에 닿으면 줄어듦)
     friendSpeed: 0.75,       //   친구가 걷는 속도 (내가 곁에 있을 때만 걸음)
     friendWaitDist: 130,     //   이보다 멀면 친구가 무서워서 멈춰 기다림
-    deedSpotEvery: 3,        // 작은 선행 거리(쓰레기·쓰러진 화분·떨어진 인형)가 생기는 간격(초)
-    deedSpotMax: 3,
+    deedSpotEvery: 6,        // 작은 선행 거리(쓰레기·쓰러진 화분·떨어진 인형)가 생기는 간격(초)
+    deedSpotMax: 2,
     deedSpotLife: 10,        //   사라지기까지(초)
-    deedGaugeNeed: 5,        //   이만큼 모으면 아이템 카드
+    deedGaugeNeed: 4,        //   이만큼 모으면 아이템 카드
     allySec: 5,              // 도와준 사람이 손을 흔들고 안전한 곳(화면 밖)으로 떠나는 데 걸리는 최대 시간(초)
     allyWave: 95,            //   떠나기 전 제자리에서: 먼저 만세(앞 45틱) → 손 흔들어 인사(뒤 50틱)
     allySpeed: 1.5,          //   걸어서 떠나는 속도
