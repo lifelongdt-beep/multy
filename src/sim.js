@@ -45,6 +45,9 @@
     bossAdaptMin: 0.7, bossAdaptMax: 4,     // 상점·아이템으로 강해져도 보스가 거의 따라온다 → 큰 도전은 에코가 있어야 넘는다
     bossDmgExp: 0.8,         // 보스전 피해 배율 = (최대체력/기본체력)^0.8 (체력이 높을수록 한 방이 더 아프다)
     baseHp: 110,             // 기본 최대 체력
+    orbDmg: 2.5,             // 형광펜 한 개 피해 (기본 공격 배수)
+    orbDmgPer: 0.15,         //   형광펜이 하나 늘 때마다 한 개당 피해 +15%
+    orbCd: 12,               //   형광펜 하나가 같은 적을 다시 때리기까지(틱)
     trainMinDmg: 60,         // 열차에 치이면 최소 이만큼, 또는 최대 체력의 trainHpFrac 중 큰 쪽 (치명적!)
     trainHpFrac: 0.6,
     dropMinDmg: 22,          // 떨어지는 물건(낙하물)에 맞으면 최소 이만큼, 또는 최대 체력의 dropHpFrac 중 큰 쪽
@@ -175,7 +178,8 @@
       novaR,
       novaDmg: (6 + 5 * st.nova) * base,
       orbN: st.orbit,
-      orbDmg: 2.5 * base,
+      orbDmg: TUNING.orbDmg * base * (1 + TUNING.orbDmgPer * Math.max(0, st.orbit - 1)),   // 하나 늘 때마다 한 개당 피해도 +15%
+      orbR: 34 + 2.5 * Math.max(0, st.orbit - 1),   // 도는 거리도 34 → 최대 44
       regen: (T.regenPer * st.regen + b.regen) / TICK,
       syn,
     };
@@ -437,7 +441,7 @@
         type, def: b, emoji: b.emoji, name: b.name, idx: idx || 0,
         label: type === 'boss' && this.bossCount > 1 ? `${b.name} ${(idx || 0) + 1}/${this.bossCount}` : b.name,
         x, y, hp, maxhp: hp, r: b.r, speed: b.speed * (1 + progress * TUNING.enemySpeedGrowth) * (this.world.rules.speedMul || 1) * this.mul.speed * (type === 'boss' ? 1 + TUNING.bossLaterSpeed * (idx || 0) : 1), dmg: b.dmg, xp: b.xp,
-        flash: 0, ocd: 0, cd: Math.round(cdBase * (0.4 + 0.6 * this.rng())), dashT: 0, dvx: 0, dvy: 0, warn: false,
+        flash: 0, cd: Math.round(cdBase * (0.4 + 0.6 * this.rng())), dashT: 0, dvx: 0, dvy: 0, warn: false,
         phase: 1, t: 0, cst: 0, cw: 0,
       });
     }
@@ -599,14 +603,18 @@
           if (owner === 'player') this._ev({ k: 'nova' });
         }
       } else a.novaCd = undefined;
+      // 형광펜: 개수만큼 따로 때린다 (형광펜마다 같은 적을 다시 때리기까지 ORB_CD 틱). 모을수록 같은 적에게도 확실히 세짐
+      const who = owner === 'player' ? 'p' : 'e' + a.id;
       for (let k = 0; k < d.orbN; k++) {
         const ang = t * 0.07 + (k * Math.PI * 2) / d.orbN;
-        const ox = a.x + Math.cos(ang) * 34, oy = a.y + Math.sin(ang) * 34;
+        const ox = a.x + Math.cos(ang) * d.orbR, oy = a.y + Math.sin(ang) * d.orbR, key = who + k;
         this.orbs.push({ x: ox, y: oy, owner, ang });
         for (const e of this.enemies) {
-          if (e.ocd > 0 || e.hp <= 0) continue;
+          if (e.hp <= 0) continue;
+          const last = e.oc && e.oc[key];
+          if (last !== undefined && t - last < TUNING.orbCd) continue;
           const rr = e.r + 6;
-          if ((e.x - ox) * (e.x - ox) + (e.y - oy) * (e.y - oy) < rr * rr) { this._hitEnemy(e, d.orbDmg * pm, owner, false); e.ocd = 12; }
+          if ((e.x - ox) * (e.x - ox) + (e.y - oy) * (e.y - oy) < rr * rr) { this._hitEnemy(e, d.orbDmg * pm, owner, false); (e.oc || (e.oc = {}))[key] = t; }
         }
       }
     }
@@ -1045,7 +1053,6 @@
           }
         }
         if (e.flash > 0) e.flash -= 1;
-        if (e.ocd > 0) e.ocd -= 1;
         const bt = e.def;
         const ax = p.x - e.x, ay = p.y - e.y;
         const dist = Math.hypot(ax, ay) || 1;

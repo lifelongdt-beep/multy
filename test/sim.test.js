@@ -332,3 +332,23 @@ test('총알 단계: 강해질수록 단계가 오르고(30가지 모양 · 30�
   const b = s.bullets.find((x) => x.owner === 'player');
   assert.ok(b && b.tier >= 7, `공격 Lv3이면 7단계 이상 (${b && b.tier})`);
 });
+
+test('형광펜: 많이 모을수록 같은 적 하나에게도 더 세게 (형광펜마다 따로 때림 + 레벨마다 +15%)', () => {
+  const S = require('../src/sim.js');
+  const dealt = (n) => {
+    const s = new S.Sim({ seed: 5, events: false, world: 'school' });
+    s.player.stats.orbit = n; s.player.stats.rate = 0;
+    s.spawnTimer = 1e9; s.enemies.length = 0;
+    s._make(Object.keys(s.world.enemies)[0], s.player.x + 36, s.player.y);
+    const e = s.enemies[s.enemies.length - 1]; e.hp = e.maxhp = 1e9; e.speed = 0;
+    let sum = 0;
+    for (let i = 0; i < 240; i++) { const h0 = e.hp; e.x = s.player.x + 36 + n * 2.5 - 2.5; e.y = s.player.y; s.player.hp = 1e9; s.step({ dx: 0, dy: 0 }); sum += h0 - e.hp; s.enemies = [e]; s.bullets = []; }
+    return sum;
+  };
+  const one = dealt(1), five = dealt(5);
+  assert.ok(one > 0, '형광펜 1개도 때림');
+  assert.ok(five > one * 4, `5개면 4배 넘게: 1개 ${one.toFixed(0)} · 5개 ${five.toFixed(0)}`);
+  const zero = { rate: 0, multi: 0, dmg: 0, speed: 0, magnet: 0, pierce: 0, crit: 0, nova: 0, orbit: 0, regen: 0, echo: 0, heal: 0 };
+  const d1 = S.derive(Object.assign({}, zero, { orbit: 1 })), d5 = S.derive(Object.assign({}, zero, { orbit: 5 }));
+  assert.ok(d5.orbDmg > d1.orbDmg && d5.orbR > d1.orbR, '레벨이 오르면 한 개당 피해·도는 거리도 커짐');
+});
