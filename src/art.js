@@ -511,7 +511,7 @@
     if (o.cross) { g.fillStyle = '#e2574c'; g.fillRect(-1, 5, 2, 5); g.fillRect(-2.5, 6.5, 5, 2); }
     if (o.neck) neckItem(g, o);
     if (o.bands) { for (const x of [-7.3, 5.3]) { rrect(g, x, 6.2, 2, 2.8, 0.8); fillStroke(g, '#ffffff', 1); g.fillStyle = '#2ee88a'; g.fillRect(x + 0.3, 7.2, 1.4, 0.8); } }   // 운동부: 양 손목 밴드
-    if (o.book) { rrect(g, 3.6, 4.6, 5.2, 6.4, 1); fillStroke(g, '#43a047', 1.3); g.fillStyle = '#fff8e1'; g.fillRect(4.4, 5.4, 0.9, 4.8); }        // 전교 1등: 손에 든 책
+    if (o.book) { rrect(g, 3.6, 4.6, 5.2, 6.4, 1); fillStroke(g, '#43a047', 1.3); g.fillStyle = '#fff8e1'; g.fillRect(4.4, 5.4, 0.9, 4.8); }        // 독서부: 손에 든 책
     if (o.sash) { g.save(); rrect(g, -5.8, 0, 11.6, 11.5, 4); g.clip(); g.beginPath(); g.moveTo(-6, -0.5); g.lineTo(-2.5, -0.5); g.lineTo(7, 11); g.lineTo(3.5, 11); g.closePath(); fillStroke(g, '#ffd54f', 1); g.restore(); circle(g, 1.2, 5.6, 1.6); fillStroke(g, '#ff7043', 0.9); }   // 학생회장: 금빛 어깨띠
     if (o.hand === 'brush') { line(g, [5.5, 10, 8.5, 2.5], 1.6, '#8d6e63'); circle(g, 8.8, 1.6, 1.5); fillStroke(g, '#e91e63', 0.9); circle(g, -2, 7, 0.9); g.fillStyle = '#42a5f5'; g.fill(); circle(g, 1.5, 3.5, 0.8); g.fillStyle = '#ffca28'; g.fill(); }   // 미술부: 붓 + 물감 자국
     if (o.hand === 'mic') { line(g, [6.5, 10.5, 7.8, 4.5], 1.8, '#455a64'); circle(g, 8, 3.4, 2.1); fillStroke(g, '#b0bec5', 1.1); }                // 방송부: 마이크

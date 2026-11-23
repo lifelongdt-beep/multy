@@ -19,7 +19,7 @@
                 desc: '균형 잡힌 기본 캐릭터 · 레벨마다 체력 +6, 공격 +4%', mods: { maxhp: 6, dmgMul: 1.04 }, lvOnly: true },
     athlete:  { id: 'athlete',  emoji: '🏃',   name: '운동부',     rarity: 'common', cost: 2000,
                 desc: '체력 +20, 이동 +15%, 공격 간격 +10% · 운동화 시작', mods: { maxhp: 20, speedMul: 1.15, cooldownMul: 1.1, startStats: { speed: 1 } } },
-    genius:   { id: 'genius',   emoji: '🤓',   name: '전교 1등',   rarity: 'common', cost: 4000,
+    genius:   { id: 'genius',   emoji: '🤓',   name: '독서부',     rarity: 'common', cost: 4000,
                 desc: '공격 +25%, 체력 -20 · 시험 만점(치명타) 시작', mods: { maxhp: -20, dmgMul: 1.25, startStats: { crit: 1 } } },
     nurse:    { id: 'nurse',    emoji: '🧑‍⚕️', name: '보건 도우미', rarity: 'common', cost: 6500,
                 desc: '체력 +10, 초당 재생 +0.7 · 급식 시간 시작', mods: { maxhp: 10, regen: 0.7, startStats: { regen: 1 } } },
