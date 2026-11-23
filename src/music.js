@@ -362,7 +362,7 @@
 
   /* ================= 녹음 곡 (assets/music/*.mp3) =================
    * 실제 악기 소리로 만든 곡(tools/music/compose.py)을 먼저 쓰고, 파일을 못 불러오면(오프라인·file:// 등) 위의 코드 음악이 대신 나온다.
-   * 월드 12곡 + 메인 화면 곡. 왕 곡은 코드 음악으로 왕마다 다르게(특징에 맞춘 악기·효과음). 곡이 바뀔 때는 0.8초 동안 부드럽게 넘어간다 */
+   * 월드 12곡 (메인 화면에서는 고른 월드의 곡). 왕 곡은 코드 음악으로 왕마다 다르게(특징에 맞춘 악기·효과음). 곡이 바뀔 때는 0.8초 동안 부드럽게 넘어간다 */
   const FILE_BASE = 'assets/music/';
   const fileBuf = {};                   // key -> AudioBuffer | 'fail' | Promise(불러오는 중)
   let want = null;                      // 지금 나와야 할 곡 {key, world, boss, bossName, pattern}
