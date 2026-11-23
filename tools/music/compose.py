@@ -1,5 +1,5 @@
 """Echo Rush 배경음악 작곡기 (3판)
-월드 12곡 + 메인 화면 1곡: 조용하지만 상큼하고 신나게 — 밝은 장조, 통통 튀는 리듬(엇박·스트럼·보사노바·피치카토), 장조 5음계 멜로디, 월드마다 다른 악기.
+월드 12곡 (메인 화면에서는 고른 월드의 곡): 조용하지만 상큼하고 신나게 — 밝은 장조, 통통 튀는 리듬(엇박·스트럼·보사노바·피치카토), 장조 5음계 멜로디, 월드마다 다른 악기.
 왕 4곡: 정말 무섭게 — 낮은 현악 오스티나토·금관·팀파니·타이코에 불협화음 합창, 소름 돋는 첼레스타, 효과음 신스, 심장 박동, 시타르 등.
 연주 세기·박자를 사람처럼 미세하게 흔든다. FluidSynth + FluidR3 General MIDI 사운드폰트로 렌더링.
 사용:  python3 tools/music/compose.py [곡 id ...]   (없으면 전부)
@@ -27,7 +27,6 @@ CELLO, CONTRA = 42, 43
 
 # 월드 곡 (+ 메인 화면): lead=멜로디(A), lead2=멜로디(B), comp=반주 악기·스타일, bass=베이스 악기·스타일, bell=꾸밈, perc=타악 스타일
 WORLD = {
-  'menu':     dict(bpm=116, root=65, scale='major',      prog=[0,4,5,3], lead=WHISTLE,   lead2=GLOCK,    comp=(NYLON, 'strum'),   bass=(ABASS, 'bounce'),  bell=GLOCK,   perc='clap',   seed=7),    # 메인: 휘슬·기타 스트럼·글로켄
   'school':   dict(bpm=120, root=60, scale='major',      prog=[0,4,5,3], lead=XYLO,      lead2=PICCOLO,  comp=(PIZZ, 'offbeat'),  bass=(PIZZ, 'bounce'),   bell=GLOCK,   perc='clap',   seed=11),   # 아침 등교: 실로폰·피콜로·피치카토
   'academy':  dict(bpm=112, root=67, scale='major',      prog=[0,3,4,0], lead=MARIMBA,   lead2=KALIMBA,  comp=(HARPSI, 'arp'),     bass=(FINGER, 'bounce'), bell=None,    perc='tick',   seed=23),   # 사각사각 공부: 마림바·칼림바·하프시코드·우드블록
   'office':   dict(bpm=120, root=53, scale='major',      prog=[1,4,0,5], lead=VIBES,     lead2=CLARINET, comp=(EP, 'jazz'),       bass=(ABASS, 'walk'),    bell=None,    perc='brush',  swing=0.3, seed=37),   # 경쾌한 재즈 업무
@@ -322,4 +321,4 @@ def render(sid):
     print(f'{sid:13s} {L:5.1f}s  {os.path.getsize(dst) // 1024} KB')
 
 if __name__ == '__main__':
-    for sid in (sys.argv[1:] or list(WORLD) + list(BOSS)): render(sid)
+    for sid in (sys.argv[1:] or list(WORLD)): render(sid)   # 왕 곡은 게임 속 코드 음악(왕마다 다름)을 쓴다. 파일로 만들려면 id를 직접 적기

@@ -81,6 +81,24 @@
     charge: { scale: 'minor',    drums: 'march',   lead: 'riff',  bass: 'x.x.x.x.xxx.x.x.', bpm: 1.3,  progs: [[0, 5, 6, 4], [0, 6, 5, 6], [0, 3, 6, 4], [0, 0, 6, 5]], tag: '돌진' },
     lane:   { scale: 'dorian',   drums: 'express', lead: 'arp',   bass: 'x.xxx.xxx.xxx.xx', bpm: 1.28, progs: [[0, 6, 5, 6], [0, 3, 6, 4], [0, 6, 3, 4]], tag: '질주' },
   };
+  /* 왕의 특징에 맞춘 소리 (이름에 든 말로 고름). inst: 악기 소리 · style: 선율 방식 · sfx: 효과음 · bpm: 빠르기 배율 */
+  const CHAR_PROFILES = [
+    { keys: ['시험', '진도', '완벽', '작심'], p: { tag: '째깍째깍 시계', lead: { inst: 'bell', style: 'alarm', oct: 2 }, bass: 'organ', sfx: ['tick', 'heart'] } },
+    { keys: ['지연 폭탄'], p: { tag: '시한폭탄', lead: { inst: 'glitch', style: 'alarm', oct: 2 }, bass: 'growl', sfx: ['tick', 'sting'], bpm: 1.15 } },
+    { keys: ['무대 공포'], p: { tag: '조명 아래 떨림', lead: { inst: 'wobble', style: 'lullaby', oct: 1 }, bass: 'organ', pad: 'choir', sfx: ['heart', 'gong'], bpm: 0.9 } },
+    { keys: ['불안', '공포', '분실'], p: { tag: '두근두근 공포', lead: { inst: 'choir', style: 'lullaby', oct: 1 }, bass: 'growl', pad: 'choir', sfx: ['heart', 'sting'], bpm: 0.9 } },
+    { keys: ['졸음', '불면'], p: { tag: '으스스한 자장가', lead: { inst: 'bell', style: 'lullaby', oct: 2 }, bass: 'organ', pad: 'choir', sfx: ['gong'], bpm: 0.72, scale: 'harmonic' } },
+    { keys: ['슬럼프', '정체', '귀차', '피로'], p: { tag: '무겁게 짓누름', lead: { inst: 'organ', style: 'stomp', oct: 1 }, bass: 'growl', pad: 'choir', sfx: ['storm'], bpm: 0.75 } },
+    { keys: ['번아웃', '땡볕'], p: { tag: '타오르는 열기', lead: { inst: 'brass', style: 'riff', oct: 1 }, bass: 'growl', sfx: ['sting', 'gong'], scale: 'harmonic', bpm: 1.05 } },
+    { keys: ['급행', '열차', '환승', '무리'], p: { tag: '질주하는 열차', lead: { inst: 'brass', style: 'riff', oct: 1 }, bass: 'organ', sfx: ['tick'], bpm: 1.12 } },
+    { keys: ['멀미', '해파리', '잡념', '어질', '집중', '고산', '시차'], p: { tag: '어질어질 소용돌이', lead: { inst: 'wobble', style: 'swirl', oct: 2 }, bass: 'growl', pad: 'choir', sfx: ['sting'], scale: 'phrygian', swing: 0.22 } },
+    { keys: ['태풍', '파도', '난기류', '눈보라', '낙석'], p: { tag: '몰아치는 폭풍', lead: { inst: 'brass', style: 'stomp', oct: 1 }, bass: 'growl', pad: 'choir', sfx: ['storm', 'gong'], bpm: 1.05 } },
+    { keys: ['근육통', '거인', '대장'], p: { tag: '쿵쿵 거인의 발걸음', lead: { inst: 'brass', style: 'stomp', oct: 1 }, bass: 'growl', pad: 'organ', sfx: ['gong', 'heart'], bpm: 0.8 } },
+    { keys: ['야식', '무한', '불규칙'], p: { tag: '멈출 수 없는 유혹', lead: { inst: 'glitch', style: 'glitch', oct: 2 }, bass: 'organ', sfx: ['sting'], swing: 0.3 } },
+    { keys: ['독감', '감기'], p: { tag: '콜록콜록 오한', lead: { inst: 'wobble', style: 'alarm', oct: 2 }, bass: 'growl', pad: 'choir', sfx: ['sting'], bpm: 0.95 } },
+    { keys: ['비교'], p: { tag: '빠져드는 늪', lead: { inst: 'choir', style: 'lullaby', oct: 1 }, bass: 'growl', pad: 'choir', sfx: ['storm'], bpm: 0.8, scale: 'phrygian' } },
+  ];
+  const charProfile = (name) => { for (const c of CHAR_PROFILES) if (c.keys.some((k) => String(name).includes(k))) return c.p; return null; };
   const hashStr = (s) => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.codePointAt(0), 16777619); return h >>> 0; };
   /** bossDef: {name, pattern} — 없으면 그 월드의 기본 보스 곡 (예전과 같음) */
   function bossThemeSong(id, bossDef) {
@@ -93,7 +111,20 @@
       lead: { wave: waves[Math.floor(r() * waves.length)], oct: st.lead === 'riff' ? 1 : 2, style: st.lead },
       bass: { wave: r() < 0.5 ? 'sawtooth' : 'square', pat: st.bass }, pad: { wave: 'sawtooth', vol: 0.03 }, drums: st.drums,
       seed: h % 100000 + 7, boss: true, riff: Math.floor(r() * 4), rot: Math.floor(r() * 7),   // rot: 멜로디 시작 위치 (보스마다 다른 선율)
+      ...charSong(bossDef.name, s, st, r),
     };
+  }
+  /** 왕의 특징(이름)에 맞춘 악기·선율·효과음·빠르기 */
+  function charSong(name, s, st, r) {
+    const p = charProfile(name); if (!p) return {};
+    const out = { lead: { wave: 'sawtooth', oct: p.lead.oct, style: p.lead.style, inst: p.lead.inst }, sfx: p.sfx || [], tag: p.tag };
+    out.bass = { wave: 'sawtooth', pat: p.lead.style === 'stomp' ? 'x.......x.......' : st.bass, inst: p.bass };
+    out.pad = { wave: 'sawtooth', vol: 0.035, inst: p.pad || null };
+    if (p.scale) out.scale = p.scale;
+    if (p.swing) out.swing = p.swing;
+    if (p.bpm) out.bpm = Math.max(78, Math.min(166, Math.round(s.bpm * st.bpm * p.bpm + (r() - 0.5) * 10)));
+    out.name = `${name}의 테마 (${p.tag})`;
+    return out;
   }
 
   /** 곡 한 바퀴(8마디)의 이벤트 목록. boss: true(월드 기본 보스 곡) 또는 보스 정의 {name, pattern} */
@@ -123,26 +154,36 @@
       for (let i = 0; i < 16; i++) {
         if (song.bass.pat[i] !== 'x') continue;
         const fifth = !song.boss && i % 8 === 6 && r() < 0.5;
-        ev.push({ step: bar * 16 + i, kind: 'bass', midi: noteOf(song, fifth ? chord + 4 : chord, -2), len: song.boss ? 1 : 2, wave: song.bass.wave, vol: song.boss ? 0.16 : 0.2 });
+        ev.push({ step: bar * 16 + i, kind: 'bass', midi: noteOf(song, fifth ? chord + 4 : chord, -2), len: song.boss ? (song.bass.inst && song.lead.style === 'stomp' ? 6 : 1) : 2, wave: song.bass.wave, vol: song.boss ? 0.16 : 0.2, inst: song.bass.inst });
       }
       // 패드: 마디 내내 코드
-      for (const t of tones.slice(0, 3)) ev.push({ step: bar * 16, kind: 'pad', midi: noteOf(song, t, 0), len: 16, wave: song.pad.wave, vol: song.pad.vol });
+      for (const t of tones.slice(0, 3)) ev.push({ step: bar * 16, kind: 'pad', midi: noteOf(song, t, 0), len: 16, wave: song.pad.wave, vol: song.pad.vol, inst: song.pad.inst });
+      if (song.boss && song.pad.inst === 'choir' && bar % 2 === 1) ev.push({ step: bar * 16, kind: 'pad', midi: noteOf(song, tones[0], 0) + 1, len: 16, wave: 'sawtooth', vol: song.pad.vol * 0.8, inst: 'choir' });   // 반음 부딪힘: 소름
       // 리드
       const st = song.lead.style;
-      if (st === 'swirl') {   // 소용돌이: 두 옥타브를 오르내리는 16분 아르페지오
+      if (st === 'lullaby') {   // 으스스한 자장가: 느리게, 가끔 반음 어긋남
+        const pat = [0, 2, 1, 2, 0, 2, 1, 4];
+        for (let i = 0; i < 8; i += 2) { const t = tones[pat[(i / 2 + bar + (song.rot || 0)) % pat.length] % tones.length]; const m = noteOf(song, t, song.lead.oct) + ((bar % 4 === 3 && i === 6) ? 1 : 0); ev.push({ step: bar * 16 + i * 2, kind: 'lead', midi: m, len: 4, wave: song.lead.wave, vol: 0.07, inst: song.lead.inst }); }
+      } else if (st === 'stomp') {   // 쿵-쿵 무거운 발걸음: 2분음표 리프
+        const pick = [0, 0, 4, 3]; const m = noteOf(song, chord + pick[(bar + (song.rot || 0)) % 4], song.lead.oct);
+        ev.push({ step: bar * 16, kind: 'lead', midi: m, len: 6, wave: song.lead.wave, vol: 0.08, inst: song.lead.inst }); ev.push({ step: bar * 16 + 8, kind: 'lead', midi: m - 1 + (bar % 2), len: 6, wave: song.lead.wave, vol: 0.07, inst: song.lead.inst });
+        if (bar % 2) ev.push({ step: bar * 16 + 14, kind: 'lead', midi: m + 3, len: 2, wave: song.lead.wave, vol: 0.06, inst: song.lead.inst });
+      } else if (st === 'glitch') {   // 멈출 수 없는 반복: 같은 음을 툭툭 + 갑자기 튀는 음
+        for (let i = 0; i < 16; i++) { if (r() < 0.45) continue; const t = tones[(i % 3 === 0 ? 0 : Math.floor(r() * tones.length))]; ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, t, song.lead.oct) + (r() < 0.12 ? 6 : 0), len: 1, wave: 'square', vol: 0.05, inst: song.lead.inst }); }
+      } else if (st === 'swirl') {   // 소용돌이: 두 옥타브를 오르내리는 16분 아르페지오
         const order = [0, 1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 3, 2, 1];
-        for (let i = 0; i < 16; i++) { const k = order[(i + (song.rot || 0)) % 16], t = tones[k % 3] + 7 * Math.floor(k / 3); ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, t, song.lead.oct - 1), len: 1, wave: song.lead.wave, vol: 0.045 }); }
+        for (let i = 0; i < 16; i++) { const k = order[(i + (song.rot || 0)) % 16], t = tones[k % 3] + 7 * Math.floor(k / 3); ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, t, song.lead.oct - 1), len: 1, wave: song.lead.wave, vol: 0.045, inst: song.lead.inst }); }
       } else if (st === 'riff') {   // 돌진: 근음·5도·옥타브로 만든 힘찬 리프 (보스마다 리듬 다름)
         const RIFFS = ['x.x.xx.x.x.xx.x.', 'xx.x.xx.xx.x.x.x', 'x..xx..xx.x.x.xx', 'x.xx.x.xx.xx.x.x'], rf = RIFFS[song.riff || 0];
         const pick = [0, 4, 7, 4, 0, 7, 4, 2];
         let n = song.rot || 0;
-        for (let i = 0; i < 16; i++) if (rf[i] === 'x') ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, chord + pick[n++ % pick.length], song.lead.oct), len: 1, wave: song.lead.wave, vol: 0.055 });
+        for (let i = 0; i < 16; i++) if (rf[i] === 'x') ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, chord + pick[n++ % pick.length], song.lead.oct), len: 1, wave: song.lead.wave, vol: 0.055, inst: song.lead.inst });
       } else if (st === 'arp' || st === 'alarm') {
         const order = st === 'alarm' ? [0, 1, 2, 1, 0, 2, 1, 2] : [0, 1, 2, 3 % tones.length, 2, 1, 0, 1];
         const every = st === 'alarm' ? 1 : 2;   // 보스는 16분, 일반은 8분
         for (let i = 0; i < 16; i += every) {
           const t = tones[order[(i / every + (song.rot || 0)) % order.length] % tones.length] + (st === 'alarm' && bar % 2 ? 1 : 0);
-          ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, t, song.lead.oct), len: every, wave: song.lead.wave, vol: st === 'alarm' ? 0.05 : 0.07 });
+          ev.push({ step: bar * 16 + i, kind: 'lead', midi: noteOf(song, t, song.lead.oct), len: every, wave: song.lead.wave, vol: st === 'alarm' ? 0.05 : 0.07, inst: song.lead.inst });
         }
       } else {
         const src = bar >= 4 && bar < 6 ? phrase[bar - 4] : null;   // 5~6마디는 앞 구절 반복
@@ -166,6 +207,15 @@
           ev.push({ step: bar * 16 + n.j * 2, kind: st === 'bell' ? 'bell' : 'lead', midi: noteOf(song, n.deg, song.lead.oct), len, wave: song.lead.wave, vol: st === 'bell' ? 0.09 : 0.07 });
         }
       }
+    }
+    // 왕의 효과음: 째깍(시계) · 심장 박동 · 폭풍 · 징 · 찌르는 소리
+    for (const fx of song.sfx || []) for (let bar = 0; bar < bars; bar++) {
+      const b0 = bar * 16;
+      if (fx === 'tick') for (let i = 0; i < 16; i += 2) ev.push({ step: b0 + i, kind: 'tick', vol: i % 4 ? 0.6 : 1 });
+      if (fx === 'heart') for (const i of [0, 2, 8, 10]) ev.push({ step: b0 + i, kind: 'heart', vol: i % 8 ? 0.7 : 1 });
+      if (fx === 'storm' && bar % 4 === 0) ev.push({ step: b0, kind: 'storm', len: 48, vol: 1 });
+      if (fx === 'gong' && bar % 4 === 0) ev.push({ step: b0, kind: 'gong', vol: 1 });
+      if (fx === 'sting' && bar % 4 === 3) ev.push({ step: b0 + 12, kind: 'sting', vol: 1 });
     }
     return { name: song.name, bpm: song.bpm, swing: song.swing || 0, bars, steps, events: ev };
   }
@@ -196,7 +246,50 @@
   }
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
+  /** 왕 곡용 악기 소리: 종(bell)·오르간·금관·합창·흔들리는 소리(wobble)·으르렁(growl)·튀는 소리(glitch) */
+  function instVoice(c, o, e, t, dur) {
+    const f = hz(e.midi), v = e.vol, end = t + dur;
+    const env = (g, att, rel, peak) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + att); g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(att + 0.03, rel)); };
+    const osc = (type, freq, det) => { const x = c.createOscillator(); x.type = type; x.frequency.setValueAtTime(freq, t); if (det) x.detune.setValueAtTime(det, t); return x; };
+    const g = c.createGain(); g.connect(o);
+    const go = (nodes, stopAt) => nodes.forEach((x) => { x.start(t); x.stop(stopAt + 0.05); });
+    switch (e.inst) {
+      case 'bell': {   // 맑지만 차가운 종: 기음 + 비화성 배음(2.76배)
+        const a = osc('sine', f), b = osc('sine', f * 2.76), gb = c.createGain(); gb.gain.value = 0.35;
+        a.connect(g); b.connect(gb); gb.connect(g); env(g, 0.005, dur * 2.2, v * 1.2); go([a, b], t + dur * 2.2); break;
+      }
+      case 'organ': {  // 낮고 무거운 오르간
+        const a = osc('square', f), b = osc('sine', f * 2), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
+        a.connect(lp); b.connect(lp); lp.connect(g); env(g, 0.04, dur, v * 0.8); go([a, b], end); break;
+      }
+      case 'brass': {  // 거친 금관: 톱니파 + 열렸다 닫히는 필터
+        const a = osc('sawtooth', f), a2 = osc('sawtooth', f, 9), lp = c.createBiquadFilter(); lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(500, t); lp.frequency.exponentialRampToValueAtTime(2800, t + 0.06); lp.frequency.exponentialRampToValueAtTime(1100, t + Math.max(0.1, dur));
+        a.connect(lp); a2.connect(lp); lp.connect(g); env(g, 0.02, dur, v); go([a, a2], end); break;
+      }
+      case 'choir': {  // 어두운 합창: 살짝 어긋난 톱니파 둘 + 느린 시작
+        const a = osc('sawtooth', f, -10), b = osc('sawtooth', f, 10), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500;
+        a.connect(lp); b.connect(lp); lp.connect(g); env(g, Math.min(0.35, dur * 0.4), dur, v * 0.7); go([a, b], end); break;
+      }
+      case 'wobble': { // 어질어질: 크게 흔들리는 음높이
+        const a = osc('triangle', f), lfo = osc('sine', 5.2), ld = c.createGain(); ld.gain.value = f * 0.035;
+        lfo.connect(ld); ld.connect(a.frequency); a.connect(g); env(g, 0.03, dur, v * 1.1); go([a, lfo], end); break;
+      }
+      case 'growl': {  // 으르렁 베이스: 필터가 꿈틀
+        const a = osc('sawtooth', f), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 6; lp.frequency.value = 420;
+        const lfo = osc('sine', 3), ld = c.createGain(); ld.gain.value = 260; lfo.connect(ld); ld.connect(lp.frequency);
+        a.connect(lp); lp.connect(g); env(g, 0.01, dur, v * 1.2); go([a, lfo], end); break;
+      }
+      case 'glitch': { // 툭툭 튀는 소리: 중간에 음이 갑자기 바뀜
+        const a = osc('square', f); a.frequency.setValueAtTime(f * (Math.random() < 0.5 ? 2 : 0.5), t + dur * 0.5);
+        a.connect(g); env(g, 0.003, dur * 0.8, v * 0.8); go([a], end); break;
+      }
+      default: return false;
+    }
+    return true;
+  }
   function voice(c, o, e, t, dur) {
+    if (e.inst && instVoice(c, o, e, t, dur)) return;
     const osc = c.createOscillator(), g = c.createGain();
     osc.type = e.wave || 'sine'; osc.frequency.setValueAtTime(hz(e.midi), t);
     let node = osc;
@@ -213,6 +306,27 @@
     osc.start(t); osc.stop(t + rel + 0.05);
   }
   function drum(c, o, e, t) {
+    if (e.kind === 'heart') {   // 쿵-쿵 심장 박동 (아주 낮게)
+      const x = c.createOscillator(), g = c.createGain(); x.frequency.setValueAtTime(70, t); x.frequency.exponentialRampToValueAtTime(38, t + 0.14);
+      g.gain.setValueAtTime(0.55 * e.vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2); x.connect(g); g.connect(o); x.start(t); x.stop(t + 0.25); return;
+    }
+    if (e.kind === 'gong') {    // 징: 낮고 오래 울리는 금속음
+      for (const [fr, vv] of [[98, 0.22], [147.5, 0.12], [233, 0.06]]) { const x = c.createOscillator(), g = c.createGain(); x.frequency.setValueAtTime(fr, t); x.frequency.linearRampToValueAtTime(fr * 0.985, t + 3); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vv * e.vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 3.2); x.connect(g); g.connect(o); x.start(t); x.stop(t + 3.3); }
+      return;
+    }
+    if (e.kind === 'storm' || e.kind === 'tick' || e.kind === 'sting') {
+      const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf; s.loop = e.kind === 'storm';
+      if (e.kind === 'storm') {   // 휘몰아치는 바람: 필터가 오르내림
+        const L = (e.len || 48) * (60 / (cur ? cur.comp.bpm : 120) / 4);
+        f.type = 'bandpass'; f.Q.value = 0.8; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(1400, t + L * 0.5); f.frequency.exponentialRampToValueAtTime(260, t + L);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16 * e.vol, t + L * 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + L);
+        s.connect(f); f.connect(g); g.connect(o); s.start(t); s.stop(t + L + 0.05); return;
+      }
+      if (e.kind === 'tick') { f.type = 'highpass'; f.frequency.value = 5200; g.gain.setValueAtTime(0.12 * e.vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.025); s.connect(f); f.connect(g); g.connect(o); s.start(t, Math.random() * 0.5, 0.04); return; }
+      // sting: 확 찌르는 소리 (잡음 + 아래로 떨어지는 음)
+      f.type = 'highpass'; f.frequency.value = 2000; g.gain.setValueAtTime(0.14 * e.vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); s.connect(f); f.connect(g); g.connect(o); s.start(t, 0, 0.4);
+      const x = c.createOscillator(), xg = c.createGain(); x.type = 'sawtooth'; x.frequency.setValueAtTime(880, t); x.frequency.exponentialRampToValueAtTime(110, t + 0.4); xg.gain.setValueAtTime(0.06 * e.vol, t); xg.gain.exponentialRampToValueAtTime(0.0001, t + 0.42); x.connect(xg); xg.connect(o); x.start(t); x.stop(t + 0.45); return;
+    }
     if (e.kind === 'kick') {
       const osc = c.createOscillator(), g = c.createGain();
       osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
@@ -238,7 +352,7 @@
       const sdNow = 60 / cur.comp.bpm / 4;
       const t = nextT + (step % 2 ? cur.comp.swing * sdNow : 0);
       for (const e of cur.byStep[step % cur.comp.steps]) {
-        if (e.kind === 'kick' || e.kind === 'snare' || e.kind === 'hat') drum(c, o, e, t);
+        if (e.kind === 'kick' || e.kind === 'snare' || e.kind === 'hat' || e.kind === 'heart' || e.kind === 'gong' || e.kind === 'storm' || e.kind === 'tick' || e.kind === 'sting') drum(c, o, e, t);
         else voice(c, o, e, t, e.len * sdNow);
       }
       step = (step + 1) % cur.comp.steps;
@@ -248,14 +362,13 @@
 
   /* ================= 녹음 곡 (assets/music/*.mp3) =================
    * 실제 악기 소리로 만든 곡(tools/music/compose.py)을 먼저 쓰고, 파일을 못 불러오면(오프라인·file:// 등) 위의 코드 음악이 대신 나온다.
-   * 월드 12곡 + 왕 4곡(패턴별: exam·spiral·charge·lane). 곡이 바뀔 때는 0.8초 동안 부드럽게 넘어간다 */
+   * 월드 12곡 (메인 화면에서는 고른 월드의 곡). 왕 곡은 코드 음악으로 왕마다 다르게(특징에 맞춘 악기·효과음). 곡이 바뀔 때는 0.8초 동안 부드럽게 넘어간다 */
   const FILE_BASE = 'assets/music/';
-  const BOSS_FILES = { exam: 1, spiral: 1, charge: 1, lane: 1 };
   const fileBuf = {};                   // key -> AudioBuffer | 'fail' | Promise(불러오는 중)
   let want = null;                      // 지금 나와야 할 곡 {key, world, boss, bossName, pattern}
   let fileNow = null;                   // 재생 중인 녹음 곡 {key, src, gain, startT, buf}
   let filePausedAt = null;              // 일시정지한 위치(초)
-  const fileKey = (world, boss) => boss ? 'boss-' + (BOSS_FILES[boss.pattern] ? boss.pattern : 'exam') : world;
+  const fileKey = (world, boss) => boss ? null : world;   // 왕 곡은 코드 음악: 왕마다 특징에 맞춘 다른 곡 (39종)
   function loadFile(key) {
     const c = ctx(); if (!c) return Promise.resolve(null);
     const v = fileBuf[key];
@@ -287,7 +400,7 @@
   /** 원하는 곡(want)에 맞춰: 녹음 곡이 준비됐으면 그걸로, 아니면 코드 음악으로 (녹음 곡이 도착하면 그때 바꿈) */
   function sync(fromSynth) {
     const w = want; if (!w || !playing) return;
-    const v = fileBuf[w.key];
+    const v = w.key ? fileBuf[w.key] : 'fail';
     if (v && v !== 'fail' && !v.then) {
       if (paused) return;
       if (!fileNow || fileNow.key !== w.key) { fileStart(w.key, v, 0, true); synthQuiet = true; }
@@ -297,7 +410,7 @@
       if (fileNow && fileNow.key !== w.key) fileStop(true);
       if (synthQuiet) { synthQuiet = false; const c = ctx(); if (c) nextT = c.currentTime + 0.05; }   // 쉬던 코드 음악을 지금부터 (밀린 박을 몰아 치지 않게)
       synthWant(w, fromSynth);
-      if (!v || v.then) loadFile(w.key).then(() => { if (want === w) sync(); });
+      if (w.key && (!v || v.then)) loadFile(w.key).then(() => { if (want === w) sync(); });
     }
   }
   let synthQuiet = false;               // 녹음 곡이 나오는 동안 코드 음악은 쉼
@@ -324,7 +437,6 @@
       if (cur && cur.world !== worldId) { cur = null; pending = null; }
       want = { key: fileKey(worldId, null), world: worldId, boss: false };
       sync();
-      if (worldId !== 'menu') setTimeout(() => { for (const k in BOSS_FILES) loadFile('boss-' + k); }, 4000);   // 왕 곡은 미리 받아 두기 (왕이 나올 때 바로 바뀌게)
     },
     /** 보스 곡으로 전환/복귀. bossDef가 있으면 그 왕의 패턴(exam·spiral·charge·lane) 곡으로. 왕 사이 쉬는 동안(bossDef 없음)은 지금 곡 유지 */
     setBoss(on, bossDef) {
