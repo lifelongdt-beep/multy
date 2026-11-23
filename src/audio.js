@@ -157,7 +157,7 @@
     bp.frequency.setValueAtTime(700, t); bp.frequency.exponentialRampToValueAtTime(1300, t + dur * 0.4); bp.frequency.exponentialRampToValueAtTime(260, t + dur);
     const pk = heavy ? 0.22 : 0.18, g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(pk * 0.6, t + 0.04); g.gain.linearRampToValueAtTime(pk, t + dur * 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);   // 바로 들리게 (늦게 커지지 않게)
     src.connect(bp); bp.connect(g); g.connect(out); src.start(t); src.stop(t + dur + 0.02);
-    if (!heavy) {   // 가벼운 것(책수레·공 등): 굴러가는 바퀴 소리를 지나가는 동안 바로 들려줌
+    if (!heavy) {   // 가벼운 것(돌풍·지친 마음·병균 등): 굴러가는 바퀴 소리를 지나가는 동안 바로 들려줌
       for (let k = 0; k < 7; k++) { const tk = t + 0.02 + k * 0.12, near = 1 - Math.abs(k - 3) / 4; const ko = c.createOscillator(), kg = c.createGain(); ko.type = 'triangle'; ko.frequency.setValueAtTime(520, tk); ko.frequency.exponentialRampToValueAtTime(300, tk + 0.04); kg.gain.setValueAtTime(0.035 * (0.4 + near), tk); kg.gain.exponentialRampToValueAtTime(0.0001, tk + 0.05); ko.connect(kg); kg.connect(out); ko.start(tk); ko.stop(tk + 0.07); }
       return;
     }
@@ -192,11 +192,11 @@
   const WARN = {
     '🚆': () => { tone(220, 220, 0.25, 'sawtooth', 0.09); tone(277, 277, 0.25, 'sawtooth', 0.07); tone(220, 200, 0.25, 'sawtooth', 0.09, 0.3); tone(277, 250, 0.25, 'sawtooth', 0.07, 0.3); },   // 빵빵
     '🌊': () => { fnoise(1.1, 0.16, 'lowpass', 260, 1800, 0, 0.75); tone(70, 55, 1.0, 'sine', 0.06); fnoise(0.5, 0.05, 'bandpass', 2400, 900, 0.75, 0.05); },                                   // 쏴아아 (밀려오는 파도)
-    '📚': () => { for (let i = 0; i < 3; i++) { tone(1568, 1568, 0.12, 'triangle', 0.06, i * 0.14); tone(2093, 2093, 0.08, 'sine', 0.03, i * 0.14 + 0.02); } fnoise(0.4, 0.03, 'highpass', 3000, 5000, 0, 0.05); },   // 딸랑딸랑 + 바퀴 끽
-    '🏐': () => { [0, 0.24, 0.42, 0.54].forEach((d, i) => tone(240 - i * 20, 90, 0.1, 'sine', 0.14 - i * 0.02, d)); },                                                                     // 통·통·통 (튀어 오는 공)
+    '🌪': () => { fnoise(0.9, 0.14, 'bandpass', 500, 2200, 0, 0.3); fnoise(0.6, 0.05, 'highpass', 2500, 5000, 0.2, 0.1); tone(330, 520, 0.5, 'sawtooth', 0.025); },              // 휘이잉 (조급함 돌풍)
+    '😩': () => { [0, 0.26, 0.46, 0.6].forEach((d, i) => tone(200 - i * 18, 80, 0.12, 'sine', 0.13 - i * 0.02, d)); tone(300, 180, 0.5, 'triangle', 0.03, 0.1); },                 // 쿵·쿵·쿵 + 한숨 (굴러오는 지친 마음)
     '🛒': () => { tone(1250, 1250, 0.07, 'square', 0.04); tone(1250, 1250, 0.07, 'square', 0.04, 0.11); fnoise(0.45, 0.05, 'bandpass', 900, 600, 0.05, 0.03); },                              // 삐빅 + 덜컹
-    '🛏️': () => { tone(880, 880, 0.35, 'sine', 0.07); tone(660, 660, 0.45, 'sine', 0.07, 0.3); },                                                                                         // 딩-동 (병원 안내음)
-    '💡': () => { tone(110, 110, 0.35, 'sawtooth', 0.04); tone(120, 125, 0.35, 'square', 0.025); tone(400, 1600, 0.18, 'square', 0.03, 0.3); },                                              // 지지직 + 슈웅 (조명 장치)
+    '🦠': () => { for (let i = 0; i < 5; i++) tone(500 + (i % 2) * 140, 260, 0.08, 'square', 0.03, i * 0.09); fnoise(0.5, 0.04, 'bandpass', 1500, 700, 0, 0.1); },                    // 꾸물꾸물 (병균 떼)
+    '😨': () => { tone(110, 110, 0.5, 'sawtooth', 0.035); tone(116, 120, 0.5, 'square', 0.02); tone(520, 500, 0.4, 'sine', 0.03, 0.1); tone(554, 530, 0.4, 'sine', 0.025, 0.1); },   // 웅- 불안한 떨림 (긴장 그림자)
   };
 
   const DEF = {

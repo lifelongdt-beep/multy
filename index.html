@@ -34,6 +34,7 @@
   #reward{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;max-width:330px;font-size:12px;line-height:1.3;min-height:0}
   #reward>div{background:rgba(255,255,255,.07);border:1px solid rgba(255,211,77,.25);border-radius:10px;padding:3px 8px}
   #reward>div.wide{flex-basis:100%;background:rgba(255,211,77,.12)}
+  button.danger{color:#ff9aa8;border-color:rgba(255,93,115,.45)}
   #reward>div.deedchip{display:flex;align-items:center;justify-content:center;gap:2px;background:rgba(255,140,192,.12);border-color:rgba(255,140,192,.35)}
   #reward>div.deedchip span{margin-left:4px}
   h1{margin:0;font-size:28px} h2{margin:0;font-size:22px}
@@ -146,7 +147,8 @@
     <div class="row"><button id="bShop" class="sub" style="font-size:15px;padding:10px 18px" data-icon="shop">상점</button><button id="bLook" class="sub" style="font-size:15px;padding:10px 18px" data-icon="shirt">내 캐릭터</button></div>
     <div id="more" style="display:flex;flex-direction:column;gap:8px;align-items:center">
       <div class="row"><button id="bDeed" class="sub" data-icon="heart">선행</button><button id="bQuest" class="sub" data-icon="trophy">과제·미션</button><button id="bBackup" class="sub" data-icon="save">백업</button></div>
-      <div class="row"><button id="bTutorial" class="sub" data-icon="book">튜토리얼</button><button id="reset" class="sub">에코 기록 초기화</button></div>
+      <div class="row"><button id="bTutorial" class="sub" data-icon="book">튜토리얼</button></div>
+      <div id="dangerHold" hidden><button id="reset" class="sub danger">에코 기록 초기화</button></div>
     </div>
   </div>
 
