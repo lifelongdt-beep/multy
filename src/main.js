@@ -63,7 +63,11 @@
     if (!drag) return; const p = toLogical(ev); drag.px = p.x; drag.py = p.y;
     let vx = p.x - drag.ax, vy = p.y - drag.ay; const len = Math.hypot(vx, vy);
     if (len > 46) { drag.ax += vx / len * (len - 46); drag.ay += vy / len * (len - 46); vx = p.x - drag.ax; vy = p.y - drag.ay; }
-    input.dx = vx / 46; input.dy = vy / 46;
+    // 손떨림 무시(DEAD 이하) + 반경의 절반(FULL)만 당겨도 최대 속도 → 급히 피할 때 기민하게
+    const DEAD = 4, FULL = 23, m = Math.hypot(vx, vy);
+    if (m <= DEAD) { input.dx = 0; input.dy = 0; return; }
+    const k = Math.min(1, (m - DEAD) / (FULL - DEAD)) / m;
+    input.dx = vx * k; input.dy = vy * k;
   }
   const endDrag = () => { drag = null; input.dx = 0; input.dy = 0; };
   cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
