@@ -340,7 +340,8 @@
   /* ---------- 연결 ---------- */
   $('bWorld').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🗺️ 월드 선택', renderWorlds); };
   $('bShop').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏪 상점', renderShop); };
-  $('bMore').onclick = () => { Sfx.unlock(); Sfx.play('click'); const m = $('more'), open = m.style.display === 'none'; m.style.display = open ? 'flex' : 'none'; $('bMore').textContent = open ? '⋯ 접기' : '⋯ 더보기'; };
+  $('bMore').onclick = () => { Sfx.unlock(); Sfx.play('click'); const m = $('more'), open = m.style.display === 'none'; m.style.display = open ? 'flex' : 'none'; $('bMore').innerHTML = Icons.svg('dots') + `<span>${open ? '접기' : '더보기'}</span>`; };
+  if (window.Icons) $('bMore').innerHTML = Icons.svg('dots') + '<span>더보기</span>';
   const openLook = () => { Sfx.unlock(); Sfx.play('click'); lookPreview = null; openPanel('👕 내 캐릭터', renderLook); };
   $('bLook').onclick = openLook; $('outfitPv').onclick = openLook; $('outfitPv').style.cursor = 'pointer';
   $('bDeed').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💛 선행', renderDeeds); };

@@ -113,7 +113,7 @@
     artPref = artPref === 'new' ? 'old' : 'new';
     try { localStorage.setItem('echo-art', artPref); } catch (e) { /* 무시 */ }
     if (window.Art) Art.clearParticles();
-    const b = document.getElementById('artBtn'); if (b) b.textContent = artPref === 'new' ? '🎨 그림체: 새 그림체' : '🎨 그림체: 이전';
+    const b = document.getElementById('artBtn'); if (b) b.innerHTML = Icons.svg('palette') + `<span>그림체: ${artPref === 'new' ? '새 그림체' : '이전'}</span>`;
   }
   window.EchoArt = { toggle: toggleArt, get pref() { return artPref; } };
   let lastPX = null, lastPY = null, faceDir = 1;   // 자동 선택된 아이템 아이콘 반짝임 {id, icon, t}
@@ -308,7 +308,7 @@
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
     ['start', 'levelup', 'end', 'tutorial', 'pause'].forEach((id) => $(id).classList.add('hidden'));
-    $('again').textContent = '한 판만 더';
+    $('again').innerHTML = Icons.svg('retry') + '<span>한 판만 더</span>';
     Music.play(sim.world.id);   // 월드별 배경음악 (보스가 나오면 frame에서 보스 곡으로 전환)
     if (tutorial) banner = { text: '📘 튜토리얼 · 과거의 나 10명과 함께!', t: 150 };
   }
@@ -345,7 +345,7 @@
   $('resume').onclick = () => { Sfx.play('click'); quitArmed = false; resumeGame(); };
   $('quit').onclick = () => { Sfx.play('click'); quitRun(); };
   $('artBtn').onclick = () => { Sfx.play('click'); toggleArt(); render(); };
-  $('artBtn').textContent = artPref === 'new' ? '🎨 그림체: 새 그림체' : '🎨 그림체: 이전';
+  $('artBtn').innerHTML = Icons.svg('palette') + `<span>그림체: ${artPref === 'new' ? '새 그림체' : '이전'}</span>`;
   // 앱을 내리거나 다른 창으로 가면 자동으로 일시정지 (전화·알림 등)
   document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
   addEventListener('blur', () => pauseGame());
@@ -441,7 +441,7 @@
       '🔁 12개 월드를 모두 넘으면 다음 회차가 열리고 새 복장 장식을 얻어요.',
     ].forEach((t) => { const d = document.createElement('div'); d.textContent = t; d.className = 'wide'; $('reward').appendChild(d); });
     $('cheer').textContent = `👻 ${sim.world.name}의 왕은 에코 ${sim.world.boss.needEchoes}명이 모이면 넘을 수 있어요. 시작 버튼 아래 "👻 에코 0 / ${sim.world.boss.needEchoes}명"을 확인해 보세요!`;
-    $('again').textContent = '이제 진짜 시작! ▶';
+    $('again').innerHTML = Icons.svg('play') + '<span>이제 진짜 시작!</span>';
     $('end').classList.remove('hidden');
   }
 
@@ -513,10 +513,13 @@
   $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; };
   let resetArmed = false;   // 실수로 누르지 않게 두 번 눌러야 초기화
   $('reset').onclick = () => {
-    if (!resetArmed) { resetArmed = true; $('reset').textContent = `⚠ 에코 ${echoes.length}명 지우기? 한 번 더`; setTimeout(() => { resetArmed = false; $('reset').textContent = '에코 기록 초기화'; }, 3000); return; }
-    resetArmed = false; echoes = []; runCount = 0; save(); $('reset').textContent = '초기화됨'; GameUI.refresh();
+    const label = (t) => { $('reset').innerHTML = Icons.svg('trash') + `<span>${t}</span>`; };
+    if (!resetArmed) { resetArmed = true; label(`에코 ${echoes.length}명 지우기? 한 번 더`); setTimeout(() => { resetArmed = false; label('에코 기록 초기화'); }, 3000); return; }
+    resetArmed = false; echoes = []; runCount = 0; save(); label('초기화됨'); GameUI.refresh();
   };
-  $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); $('mute').textContent = Sfx.isMuted() ? '🔇' : '🔊'; };
+  const muteIcon = () => { $('mute').innerHTML = Icons.svg(Sfx.isMuted() ? 'soundOff' : 'soundOn', 17); };
+  $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); muteIcon(); };
+  Icons.apply(); muteIcon(); $('reset').innerHTML = Icons.svg('trash') + '<span>에코 기록 초기화</span>'; $('again').innerHTML = Icons.svg('retry') + '<span>한 판만 더</span>';
 
   /* ---------- 렌더 ---------- */
   /** 화면 폭(W-16)에 맞게 글자 크기를 줄여서 가운데 정렬로 그린다 */
