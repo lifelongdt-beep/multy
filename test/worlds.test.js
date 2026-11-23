@@ -545,7 +545,7 @@ test('체력 계열이 과하지 않다: 기본 체력 110, 재생·회복량 �
   assert.ok(d.regen * 60 < 8, `초당 재생 ${(d.regen * 60).toFixed(1)}`);
 });
 
-test('열차에 치이면 최대 체력의 40%가 깎인다 (막을 수 없는 큰 피해)', () => {
+test('열차에 치이면 최대 체력의 trainHpFrac(60%)이 깎인다 (막을 수 없는 큰 피해)', () => {
   const hit = (bonus, boss) => {
     const s = new Sim({ seed: 3, events: false, world: 'subway', bonus });
     s.player.x = 180; s.player.y = 300; s.bossAlive = !!boss;
@@ -555,11 +555,11 @@ test('열차에 치이면 최대 체력의 40%가 깎인다 (막을 수 없는 �
     return { lost: hp0 - s.player.hp, mx };
   };
   const a = hit({}, false);
-  assert.ok(a.lost >= a.mx * 0.4 - 1e-6, `기본 체력 ${a.mx}에서 ${a.lost.toFixed(1)} 감소`);
+  assert.ok(TUNING.trainHpFrac >= 0.6); assert.ok(a.lost >= a.mx * TUNING.trainHpFrac - 1e-6, `기본 체력 ${a.mx}에서 ${a.lost.toFixed(1)} 감소`);
   const rich = hit({ maxhp: 100 }, false);
-  assert.ok(rich.lost >= rich.mx * 0.4 - 1e-6 && rich.lost > a.lost, `체력이 높아도 비례해서 아픔: ${rich.lost.toFixed(1)}/${rich.mx}`);
+  assert.ok(rich.lost >= rich.mx * TUNING.trainHpFrac - 1e-6 && rich.lost > a.lost, `체력이 높아도 비례해서 아픔: ${rich.lost.toFixed(1)}/${rich.mx}`);
   assert.ok(Math.abs(hit({}, true).lost - a.lost) < 1e-6, '보스전 배율에도 영향 없이 고정');
-  const tiny = hit({ maxhp: -60 }, false);
+  const tiny = hit({ maxhp: -45 }, false);   // 체력이 적어 60%가 최소 피해보다 작은 경우
   assert.ok(tiny.lost >= TUNING.trainMinDmg - 1e-6, `최소 ${TUNING.trainMinDmg} 피해: ${tiny.lost.toFixed(1)}`);
   // 한 대에 두 번 맞지 않는다
   const s = new Sim({ seed: 3, events: false, world: 'subway' });
