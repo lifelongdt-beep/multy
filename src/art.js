@@ -212,6 +212,16 @@
   };
   function heartPathAt(g, x, y, r) { g.save(); g.translate(x, y); heartPath(g, r); g.restore(); }
   const DEED_ART = {
+    atkUp(g) {   // 응원 = 공격력 업: 분홍 방패 배지 + 위로 선 칼 + 위쪽 화살표
+      g.beginPath(); g.moveTo(0, -11); g.quadraticCurveTo(8, -9, 10, -7); g.quadraticCurveTo(10, 5, 0, 11); g.quadraticCurveTo(-10, 5, -10, -7); g.quadraticCurveTo(-8, -9, 0, -11); g.closePath(); fillStroke(g, '#ff6fa8', 1.8);
+      g.save(); g.clip(); const gr = g.createLinearGradient(-8, -10, 8, 10); gr.addColorStop(0, 'rgba(255,255,255,.4)'); gr.addColorStop(1, 'rgba(120,0,60,.25)'); g.fillStyle = gr; g.fillRect(-12, -12, 24, 24); g.restore();
+      g.save(); g.rotate(-0.15);
+      g.beginPath(); g.moveTo(0, -8); g.lineTo(2, -5.5); g.lineTo(2, 3); g.lineTo(-2, 3); g.lineTo(-2, -5.5); g.closePath(); fillStroke(g, '#eef3ff', 1.3);   // 칼날
+      g.beginPath(); g.rect(-4.5, 3, 9, 2); fillStroke(g, '#ffd84d', 1.2);   // 손잡이 가드
+      g.beginPath(); g.rect(-1.2, 5, 2.4, 3.6); fillStroke(g, '#a0643c', 1.1);
+      g.restore();
+      g.beginPath(); g.moveTo(7, -2); g.lineTo(10.5, -6.5); g.lineTo(14, -2); g.lineTo(11.6, -2); g.lineTo(11.6, 2); g.lineTo(9.4, 2); g.lineTo(9.4, -2); g.closePath(); fillStroke(g, '#7dffb2', 1.2);   // 위 화살표
+    },
     sprout(g) {
       oval(g, 0, 9, 8, 2.4); g.fillStyle = '#8a5a3a'; g.fill();
       g.strokeStyle = OL; g.lineWidth = 3.4; g.beginPath(); g.moveTo(0, 9); g.quadraticCurveTo(-1, 2, 0, -3); g.stroke();
