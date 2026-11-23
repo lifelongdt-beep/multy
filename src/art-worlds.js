@@ -426,9 +426,15 @@
   }
 
   /* ---------- 도우미 (사람) ---------- */
+  /** 사람 (2등신): 머리는 크게(옛 좌표의 1.3배, 중심 0,-8), 몸은 짧게(y 4~15). 팔·다리는 Art.drawPerson이 포즈에 맞춰 따로 그린다.
+   *  옛 좌표로 만든 장식(조끼·넥타이·앞치마·책·모자·안경 등)은 아래 변환으로 새 몸·머리 위치에 옮겨 그린다 */
+  const P_HEAD = (g) => { g.translate(0, -8); g.scale(1.3, 1.3); g.translate(0, 6); };
+  const P_BODY = (g) => { g.translate(0, 4); g.scale(0.94, 0.747); g.translate(0, -2); };
   function person(g, o) {
     const skin = o.skin || '#ffd9b8';
-    rrect(g, -7, 2, 14, 15, 5); fillStroke(g, o.outfit, 1.8);                                  // 몸
+    rrect(g, -6.6, 4, 13.2, 11.2, 4.5); fillStroke(g, o.outfit, 1.8);                              // 몸 (짧게)
+    g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-5.4, 5.4, 2.6, 7.5);                        // 윗면 빛
+    g.save(); P_BODY(g);
     if (o.vest) { rrect(g, -7, 2, 14, 15, 5); g.save(); g.clip(); g.fillStyle = o.vest; g.fillRect(-7, 2, 4.5, 15); g.fillRect(2.5, 2, 4.5, 15); g.restore(); }
     if (o.tie) { g.beginPath(); g.moveTo(0, 3); g.lineTo(1.6, 6); g.lineTo(0, 12); g.lineTo(-1.6, 6); g.closePath(); fillStroke(g, o.tie, 1); }
     if (o.apron) { rrect(g, -4.5, 6, 9, 10, 2); fillStroke(g, o.apron, 1.2); }
@@ -436,28 +442,24 @@
     if (o.cross) { g.fillStyle = '#e53935'; g.fillRect(-1, 5, 2, 6); g.fillRect(-3, 7, 6, 2); }
     if (o.whistle) { line(g, [-3, 2, 0, 8, 3, 2], 1, '#333'); circle(g, 0, 9, 1.4); fillStroke(g, '#ffd54f', 0.8); }
     if (o.scarf) { rrect(g, -6, 1, 12, 3, 1.5); fillStroke(g, o.scarf, 1.2); }
-    circle(g, 0, -6, 8); fillStroke(g, skin, 1.8);                                          // 머리
+    g.restore();
+    g.save(); P_HEAD(g);
     const hc = o.hairCol || '#3b2b25';
-    if (o.hair === 'bun') { circle(g, 0, -15.5, 3.8); fillStroke(g, hc, 1.6); }
-    if (o.hair === 'long') { rrect(g, -9, -10, 18, 15, 6); g.save(); g.globalCompositeOperation = 'destination-over'; g.fillStyle = hc; g.fill(); g.restore(); }
-    if (o.hair !== 'helmet' && o.hair !== 'cap') { g.beginPath(); g.arc(0, -6.8, 8.1, Math.PI, Math.PI * 2); g.quadraticCurveTo(2, -9, -8.1, -6.2); g.closePath(); fillStroke(g, hc, 1.6); }
-    if (o.hair === 'cap') { g.beginPath(); g.arc(0, -7.5, 8.2, Math.PI, Math.PI * 2); g.closePath(); fillStroke(g, o.capCol || '#283593', 1.6); rrect(g, -1, -9, 11, 3, 1.5); fillStroke(g, o.capCol || '#283593', 1.4); }
-    if (o.hair === 'helmet') { g.beginPath(); g.arc(0, -7, 8.8, Math.PI, Math.PI * 2); g.closePath(); fillStroke(g, '#ffca28', 1.8); rrect(g, -10, -8, 20, 2.6, 1.2); fillStroke(g, '#ffb300', 1.2); }
-    if (o.nurseCap) { rrect(g, -5, -15.5, 10, 4.5, 1.5); fillStroke(g, '#ffffff', 1.4); g.fillStyle = '#e53935'; g.fillRect(-0.6, -14.8, 1.2, 3); g.fillRect(-1.5, -13.9, 3, 1.2); }
-    if (o.sunhat) { oval(g, 0, -11, 12, 3); fillStroke(g, '#ffe082', 1.4); g.beginPath(); g.arc(0, -11, 6.5, Math.PI, Math.PI * 2); fillStroke(g, '#ffe082', 1.4); }
-    if (o.headset) { g.beginPath(); g.arc(0, -6, 9.2, Math.PI * 1.1, Math.PI * 1.9); g.lineWidth = 1.6; g.strokeStyle = OL; g.stroke(); line(g, [-8.5, -3, -5, 1], 1.2); circle(g, -4.5, 1.3, 1.2); g.fillStyle = OL; g.fill(); }
-    if (o.hair !== 'helmet' && o.hair !== 'cap') { g.strokeStyle = 'rgba(255,240,220,.35)'; g.lineWidth = 1.3; g.beginPath(); g.arc(-1, -8.5, 5.4, Math.PI * 1.15, Math.PI * 1.5); g.stroke(); }   // 머릿결 빛
+    if (o.hair === 'long') { rrect(g, -9, -10, 18, 15, 6); fillStroke(g, hc, 1.4); }                 // 긴 뒷머리 (머리 뒤)
+    for (const sx of [-1, 1]) { circle(g, sx * 7.9, -5.2, 1.5); fillStroke(g, skin, 1.1); }          // 귀
+    circle(g, 0, -6, 8); fillStroke(g, skin, 1.6);                                                   // 머리
+    if (o.hair === 'bun') { circle(g, 0, -15.5, 3.8); fillStroke(g, hc, 1.5); }
+    if (o.hair !== 'helmet' && o.hair !== 'cap') { g.beginPath(); g.arc(0, -6.8, 8.1, Math.PI, Math.PI * 2); g.quadraticCurveTo(2, -9, -8.1, -6.2); g.closePath(); fillStroke(g, hc, 1.5); }
+    if (o.hair === 'cap') { g.beginPath(); g.arc(0, -7.5, 8.2, Math.PI, Math.PI * 2); g.closePath(); fillStroke(g, o.capCol || '#283593', 1.5); rrect(g, -1, -9, 11, 3, 1.5); fillStroke(g, o.capCol || '#283593', 1.3); }
+    if (o.hair === 'helmet') { g.beginPath(); g.arc(0, -7, 8.8, Math.PI, Math.PI * 2); g.closePath(); fillStroke(g, '#ffca28', 1.6); rrect(g, -10, -8, 20, 2.6, 1.2); fillStroke(g, '#ffb300', 1.1); }
+    if (o.nurseCap) { rrect(g, -5, -15.5, 10, 4.5, 1.5); fillStroke(g, '#ffffff', 1.3); g.fillStyle = '#e53935'; g.fillRect(-0.6, -14.8, 1.2, 3); g.fillRect(-1.5, -13.9, 3, 1.2); }
+    if (o.sunhat) { oval(g, 0, -11, 12, 3); fillStroke(g, '#ffe082', 1.3); g.beginPath(); g.arc(0, -11, 6.5, Math.PI, Math.PI * 2); fillStroke(g, '#ffe082', 1.3); }
+    if (o.headset) { g.beginPath(); g.arc(0, -6, 9.2, Math.PI * 1.1, Math.PI * 1.9); g.lineWidth = 1.5; g.strokeStyle = OL; g.stroke(); line(g, [-8.5, -3, -5, 1], 1.1); circle(g, -4.5, 1.3, 1.1); g.fillStyle = OL; g.fill(); }
+    if (o.hair !== 'helmet' && o.hair !== 'cap') { g.strokeStyle = 'rgba(255,240,220,.35)'; g.lineWidth = 1.2; g.beginPath(); g.arc(-1, -8.5, 5.4, Math.PI * 1.15, Math.PI * 1.5); g.stroke(); }   // 머릿결 빛
     // 얼굴: 눈·입은 게임 중 실시간으로 그린다 (Art.drawPerson의 표정). 안경·수염만 그림에
-    if (o.glasses) { g.lineWidth = 1.2; g.strokeStyle = OL; circle(g, -2.9, -4.5, 2.4); g.stroke(); circle(g, 2.9, -4.5, 2.4); g.stroke(); }
-    if (o.beard) { g.beginPath(); g.arc(0, -3, 6.5, 0.1 * Math.PI, 0.9 * Math.PI); g.lineTo(-5.5, -1); g.closePath(); fillStroke(g, hc, 1.2); }
-    return;
-    if (o.beard) { g.beginPath(); g.arc(0, -3, 6.5, 0.1 * Math.PI, 0.9 * Math.PI); g.lineTo(-5.5, -1); g.closePath(); fillStroke(g, hc, 1.2); }
-    else if (o.sad) {   // 걱정스러운 얼굴: 시옷 눈썹 + 내려간 입
-      g.lineWidth = 1.1; g.strokeStyle = OL; g.beginPath(); g.moveTo(-4.6, -6.1); g.lineTo(-1.5, -7.1); g.moveTo(4.6, -6.1); g.lineTo(1.5, -7.1); g.stroke();
-      g.beginPath(); g.arc(0, 0.4, 1.8, 1.15 * Math.PI, 1.85 * Math.PI); g.lineWidth = 1.2; g.stroke();
-    }
-    else { g.beginPath(); g.arc(0, -1.3, 1.8, 0.1 * Math.PI, 0.9 * Math.PI); g.lineWidth = 1.2; g.strokeStyle = OL; g.stroke(); }
-    oval(g, -5, -2, 1.3, 0.8); g.fillStyle = 'rgba(255,120,120,.45)'; g.fill(); oval(g, 5, -2, 1.3, 0.8); g.fill();
+    if (o.glasses) { g.lineWidth = 1.1; g.strokeStyle = OL; circle(g, -2.9, -4.5, 2.4); g.stroke(); circle(g, 2.9, -4.5, 2.4); g.stroke(); }
+    if (o.beard) { g.beginPath(); g.arc(0, -3, 6.5, 0.1 * Math.PI, 0.9 * Math.PI); g.lineTo(-5.5, -1); g.closePath(); fillStroke(g, hc, 1.1); }
+    g.restore();
   }
   const H = {
     academy:  { hair: 'short', hairCol: '#2d2d3a', outfit: '#5c7cfa', glasses: true, book: '#ffd54f' },
