@@ -322,4 +322,4 @@ def render(sid):
     print(f'{sid:13s} {L:5.1f}s  {os.path.getsize(dst) // 1024} KB')
 
 if __name__ == '__main__':
-    for sid in (sys.argv[1:] or list(WORLD) + list(BOSS)): render(sid)
+    for sid in (sys.argv[1:] or list(WORLD)): render(sid)   # 왕 곡은 게임 속 코드 음악(왕마다 다름)을 쓴다. 파일로 만들려면 id를 직접 적기

@@ -57,3 +57,13 @@ test('왕마다 다른 배경음악: 39종 보스 모두 곡이 다르고(조·�
   const scaleOf = (p) => Mu.bossThemeSong('school', { name: 'x', pattern: p }).scale;
   assert.strictEqual(new Set(['exam', 'spiral', 'charge', 'lane'].map(scaleOf)).size, 4);
 });
+
+test('왕 테마는 캐릭터 특징을 따른다 (악기·효과음): 시계·자장가·폭풍·어질어질', () => {
+  const kinds = (name) => new Set(Mu.compose('school', { name, pattern: 'exam' }).events.map((e) => e.inst || e.kind));
+  const exam = kinds('시험 불안'), sleep = kinds('졸음 마왕'), storm = kinds('태풍'), dizzy = kinds('멀미');
+  assert.ok(exam.has('tick') && exam.has('bell'), '시험 불안: 째깍 시계 + 종소리');
+  assert.ok(sleep.has('gong') && sleep.has('bell'), '졸음 마왕: 으스스한 자장가');
+  assert.ok(storm.has('storm') && storm.has('brass'), '태풍: 폭풍 + 금관');
+  assert.ok(dizzy.has('wobble'), '멀미: 흔들리는 소리');
+  assert.ok(Mu.compose('school', { name: '졸음 마왕', pattern: 'exam' }).bpm < Mu.compose('school', { name: '급행열차', pattern: 'lane' }).bpm, '졸음은 느리고 열차는 빠르다');
+});
