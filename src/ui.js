@@ -97,7 +97,7 @@
       card.appendChild(el('div', '', it.o.name + (it.o.variant ? ` 🎨${it.o.variant + 1}` : '')));
       card.appendChild(el('div', 'st', '★'.repeat(it.o.stars)));
       paintOutfit(cv, it.cycle, 1, false);
-      card.onclick = () => { lookPreview = it.cycle === cur ? null : it.cycle; Sfx.play('click'); rerender(); $('panel').scrollTop = 0; };
+      card.onclick = () => { lookPreview = it.cycle === cur ? null : it.cycle; Sfx.play('click'); rerender(); };   // 화면 위치는 그대로
       map.appendChild(card);
     }
     body.appendChild(map);
@@ -115,7 +115,7 @@
         const cv = el('canvas'); cv.width = 64; cv.height = 80; cell.appendChild(cv);
         cell.appendChild(el('small', '', `${c + 1}회차`)); cell.appendChild(el('div', 'st', '★'.repeat(o.stars)));
         paintOutfit(cv, c, 1, false);
-        cell.onclick = () => { lookPreview = c === cur ? null : c; Sfx.play('click'); rerender(); $('panel').scrollTop = 0; };
+        cell.onclick = () => { lookPreview = c === cur ? null : c; Sfx.play('click'); rerender(); };   // 화면 위치는 그대로
         cells.appendChild(cell);
       }
       line.appendChild(cells); body.appendChild(line);
