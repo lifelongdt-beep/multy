@@ -58,6 +58,14 @@
     { id: 'navy',   name: '남색',   hex: '#2b3a73' },
     { id: 'white',  name: '하양',   hex: '#e6e9f0' },
     { id: 'brown',  name: '갈색',   hex: '#7a5643' },
+    // 추가 색 (저장은 번호라 기존 색 뒤에 붙임)
+    { id: 'red',    name: '빨강',   hex: '#d9483b' },
+    { id: 'green',  name: '초록',   hex: '#3fa66a' },
+    { id: 'sky',    name: '하늘',   hex: '#5ab0e8' },
+    { id: 'yellow', name: '노랑',   hex: '#f2c23a' },
+    { id: 'pink',   name: '분홍',   hex: '#ee7fae' },
+    { id: 'mint',   name: '민트',   hex: '#5fcfb8' },
+    { id: 'black',  name: '검정',   hex: '#2b2b33' },
   ];
   /** 주인공 얼굴(피부) 색 */
   const KID_SKINS = [
@@ -66,6 +74,8 @@
     { id: 'tan',    name: '구릿빛',   hex: '#e5ad7f' },
     { id: 'brown',  name: '갈색',     hex: '#b5774c' },
     { id: 'deep',   name: '진한 갈색', hex: '#7c4d30' },
+    { id: 'wheat',  name: '밀색',     hex: '#f0c69a' },
+    { id: 'dark',   name: '짙은 갈색', hex: '#5a3522' },
   ];
   /** 에코(과거의 나) 모습: 사람 유령 대신 귀여운 동료 하나로. 학점을 써서 순서대로 하나씩 연다 (첫 번째는 기본) */
   const ECHO_FORMS = [
@@ -129,6 +139,11 @@
     { id: 'blond',  name: '금발',   hex: '#e3bd57' },
     { id: 'auburn', name: '적갈색', hex: '#9c4a2a' },
     { id: 'silver', name: '은색',   hex: '#c7ccd6' },
+    { id: 'pink',   name: '분홍',   hex: '#ef8cb8' },
+    { id: 'blue',   name: '파랑',   hex: '#4a78d8' },
+    { id: 'green',  name: '초록',   hex: '#4fae6a' },
+    { id: 'purple', name: '보라',   hex: '#8a5ad8' },
+    { id: 'orange', name: '주황',   hex: '#e8833a' },
   ];
   function kidHair(save) { const c = KID_HAIRS[save && save.hair]; return c && c.id !== 'dark' ? c.hex : null; }
   function kidSkin(save) { const c = KID_SKINS[save && save.skin]; return c && c.id !== 'peach' ? c.hex : null; }
