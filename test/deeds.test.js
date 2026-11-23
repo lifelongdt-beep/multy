@@ -101,3 +101,25 @@ test('응원 중에는 내 총알과 에코 총알의 위력이 cheerDmg만큼 �
   const mk = (cheer) => { const s = new Sim({ seed: 3, echoes: [], world: 'school' }); s._make(Object.keys(s.world.enemies)[0], s.player.x + 60, s.player.y); s.cheer = cheer; s._fire(s.player.x, s.player.y, { dmg: 10, shots: 1, crit: 0, critMul: 2, pierce: 0 }, 'player', 1); return s.bullets[s.bullets.length - 1].dmg; };
   assert.ok(Math.abs(mk(100) - mk(0) * (1 + TUNING.cheerDmg)) < 1e-9);
 });
+
+test('선생님 구역 안에 있으면 적 탄은 막아 주지만, 몸으로 부딪히면 그대로 아프다', () => {
+  const s = new Sim({ seed: 4, echoes: [], world: 'school' });
+  s.enemies = [];
+  s._spawnHelper(); const h = s.helper; h.stay = 1e9; h.need = 1e9;
+  s.player.x = h.x; s.player.y = h.y; s.player.inv = 0;
+  assert.ok(s.helperShield(), '구역 안: 보호 중');
+  const hp0 = s.player.hp;
+  s.ebullets.push({ x: h.x + h.r + 30, y: h.y, vx: -4, vy: 0, dmg: 10, life: 200, r: 4 });
+  for (let i = 0; i < 40; i++) s.step({ x: 0, y: 0 });
+  assert.strictEqual(s.ebullets.length, 0, '탄은 막혀서 사라짐');
+  assert.strictEqual(s.player.hp, hp0, '탄에는 다치지 않음');
+  assert.ok(s.blocked >= 1);
+  // 몸으로 부딪히는 방해 요소
+  s._make(Object.keys(s.world.enemies)[0], s.player.x + 2, s.player.y);
+  s.player.inv = 0;
+  for (let i = 0; i < 5; i++) s.step({ x: 0, y: 0 });
+  assert.ok(s.player.hp < hp0, '몸으로 부딪히면 에너지가 깎임');
+  // 구역 밖이면 보호 없음
+  s.player.x = h.x + h.r + 60;
+  assert.ok(!s.helperShield(), '구역 밖: 보호 없음');
+});

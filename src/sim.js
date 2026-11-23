@@ -841,6 +841,12 @@
       }
     }
 
+    /** 지금 선생님(도우미)의 보호를 받는 중인가: 기다리는 도우미의 상담 구역 안에 내가 있으면 적 탄을 막아 준다 */
+    helperShield() {
+      const hz = this.helper, p = this.player;
+      return !!hz && hz.state === 'wait' && Math.hypot(p.x - hz.x, p.y - hz.y) < hz.r + p.r;
+    }
+
     /** 도우미 곁(상담 구역)에 머무르면 게이지가 차고, 가득 차면 조언 카드를 받는다. 적은 도우미를 건드리지 못한다. */
     _updateHelper() {
       const hp = this.helper;
@@ -998,10 +1004,15 @@
       }
 
       // 적 탄환
+      // 선생님(도우미) 곁의 상담 구역 안에 있으면 날아오는 탄을 구역 테두리에서 막아 준다 (몸으로 부딪히는 건 그대로 아픔)
+      const hz = this.helper, shield = this.helperShield();
       for (let i = this.ebullets.length - 1; i >= 0; i--) {
         const b = this.ebullets[i];
         b.x += b.vx; b.y += b.vy; b.life -= 1;
         let dead = b.life <= 0 || b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20;
+        if (!dead && shield && (b.x - hz.x) * (b.x - hz.x) + (b.y - hz.y) * (b.y - hz.y) < hz.r * hz.r) {
+          dead = true; this.fx.push({ x: b.x, y: b.y, t: 14, kind: 'block' }); this.blocked = (this.blocked || 0) + 1;
+        }
         if (!dead && p.inv === 0) {
           const rr = p.r + b.r;
           if ((p.x - b.x) * (p.x - b.x) + (p.y - b.y) * (p.y - b.y) < rr * rr) { this._hurtPlayer(b.dmg); dead = true; }

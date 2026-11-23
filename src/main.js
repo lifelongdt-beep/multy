@@ -783,6 +783,10 @@
       ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r + 8, 0, 7); ctx.fill();
       ctx.strokeStyle = 'rgba(255,225,120,.9)'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 6]);
       ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      if (sim.helperShield && sim.helperShield()) {   // 보호 중: 구역 테두리가 또렷한 금빛 막으로 (적 탄을 막아 줌)
+        ctx.globalAlpha = fadeA * (0.55 + 0.25 * Math.sin(performance.now() / 180)); ctx.strokeStyle = '#ffe58a'; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r, 0, 7); ctx.stroke(); ctx.globalAlpha = fadeA;
+      }
       if (hp.prog > 0 && hp.state === 'wait') {
         ctx.strokeStyle = '#7dffb2'; ctx.lineWidth = 5;
         ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r - 5, -Math.PI / 2, -Math.PI / 2 + (hp.prog / hp.need) * Math.PI * 2); ctx.stroke();
@@ -894,6 +898,7 @@
     for (const f of sim.fx) {
       ctx.globalAlpha = Math.min(1, f.t / 12);
       if (f.kind === 'pop') { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(f.x, f.y, 14 - f.t, 0, 7); ctx.stroke(); }
+      else if (f.kind === 'block') { const k = 1 - f.t / 14; ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffe58a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(f.x, f.y, 3 + k * 9, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }   // 선생님 구역이 막아 낸 탄
       else if (f.kind === 'hurt') { ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.arc(f.x, f.y, 16 - f.t, 0, 7); ctx.fill(); }
       else if (f.kind === 'echoUp') { ctx.globalAlpha = f.t / 40; ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, 4 + f.t * 0.6, 0, 7); ctx.stroke(); }
       else if (f.kind === 'vanish') { ctx.globalAlpha *= 0.35; ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(f.x, f.y, 24 - f.t, 0, 7); ctx.fill(); }
