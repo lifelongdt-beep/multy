@@ -500,7 +500,10 @@ test('에코 모습: 기본은 기억 별, 학점으로 순서대로 하나씩 �
   assert.deepStrictEqual(M.sanitize({ echo: { owned: ['zzz', 'robot'], pick: 'zzz' } }).echo, { owned: ['star', 'robot'], pick: 'star' });
   assert.deepStrictEqual(M.sanitize({}).echo, { owned: ['star'], pick: 'star' }, '예전 저장은 기본');
   let total = 0; for (let i = 0; i < 20; i++) total += M.echoFormCost(i);
-  assert.ok(total > 50000 && total < 300000, '전부 여는 데 드는 학점: ' + total);
+  assert.ok(total > 3000000 && total < 8000000, '전부 여는 데 드는 학점: ' + total);
+  const last = M.ECHO_FORMS.length - 1, oldLast = 150 * last + 40 * last * last;
+  assert.ok(Math.abs(M.echoFormCost(last) / oldLast - 100) < 2, '마지막은 예전 값의 100배');
+  for (let i = 2; i <= last; i++) assert.ok(M.echoFormCost(i) / M.echoFormCost(i - 1) >= 1.2, '점점 비싸짐');
 });
 
 test('에코 모습: 뒤에 연 모습일수록 에코 공격력이 조금씩 강해진다 (고른 모습 기준)', () => {
