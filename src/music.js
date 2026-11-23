@@ -229,7 +229,7 @@
     s.start(t, Math.random() * 0.5, len + 0.02);
   }
 
-  function tick() {
+  let tick = function () {
     const c = ctx(); if (!c || !cur || !playing || paused) return;
     const o = out(c);
     while (nextT < c.currentTime + LOOKAHEAD) {
@@ -246,32 +246,112 @@
     }
   }
 
+  /* ================= 녹음 곡 (assets/music/*.mp3) =================
+   * 실제 악기 소리로 만든 곡(tools/music/compose.py)을 먼저 쓰고, 파일을 못 불러오면(오프라인·file:// 등) 위의 코드 음악이 대신 나온다.
+   * 월드 12곡 + 왕 4곡(패턴별: exam·spiral·charge·lane). 곡이 바뀔 때는 0.8초 동안 부드럽게 넘어간다 */
+  const FILE_BASE = 'assets/music/';
+  const BOSS_FILES = { exam: 1, spiral: 1, charge: 1, lane: 1 };
+  const fileBuf = {};                   // key -> AudioBuffer | 'fail' | Promise(불러오는 중)
+  let want = null;                      // 지금 나와야 할 곡 {key, world, boss, bossName, pattern}
+  let fileNow = null;                   // 재생 중인 녹음 곡 {key, src, gain, startT, buf}
+  let filePausedAt = null;              // 일시정지한 위치(초)
+  const fileKey = (world, boss) => boss ? 'boss-' + (BOSS_FILES[boss.pattern] ? boss.pattern : 'exam') : world;
+  function loadFile(key) {
+    const c = ctx(); if (!c) return Promise.resolve(null);
+    const v = fileBuf[key];
+    if (v === 'fail') return Promise.resolve(null);
+    if (v && v.then) return v;
+    if (v) return Promise.resolve(v);
+    if (typeof fetch !== 'function' || (root.location && root.location.protocol === 'file:')) { fileBuf[key] = 'fail'; return Promise.resolve(null); }
+    const pr = fetch(FILE_BASE + key + '.mp3').then((r) => { if (!r.ok) throw new Error('no file'); return r.arrayBuffer(); })
+      .then((a) => new Promise((res, rej) => { const q = c.decodeAudioData(a, res, rej); if (q && q.then) q.then(res, rej); }))
+      .then((buf) => { fileBuf[key] = buf; return buf; })
+      .catch(() => { fileBuf[key] = 'fail'; return null; });
+    fileBuf[key] = pr; return pr;
+  }
+  function fileStop(fade) {
+    if (!fileNow) return;
+    const c = ctx(), f = fileNow; fileNow = null;
+    try { if (c && fade) { f.gain.gain.setValueAtTime(f.gain.gain.value, c.currentTime); f.gain.gain.linearRampToValueAtTime(0.0001, c.currentTime + 0.8); f.src.stop(c.currentTime + 0.85); } else f.src.stop(); } catch (e) { /* 이미 멈춤 */ }
+  }
+  function fileStart(key, buf, offset, fade) {
+    const c = ctx(); if (!c) return;
+    fileStop(true);
+    const src = c.createBufferSource(), gain = c.createGain();
+    src.buffer = buf; src.loop = true; src.connect(gain); gain.connect(out(c));
+    const t = c.currentTime + 0.02, off = (offset || 0) % buf.duration;
+    gain.gain.setValueAtTime(fade ? 0.0001 : 1, t); if (fade) gain.gain.linearRampToValueAtTime(1, t + 0.8);
+    src.start(t, off);
+    fileNow = { key, src, gain, startT: t - off, buf };
+  }
+  /** 원하는 곡(want)에 맞춰: 녹음 곡이 준비됐으면 그걸로, 아니면 코드 음악으로 (녹음 곡이 도착하면 그때 바꿈) */
+  function sync(fromSynth) {
+    const w = want; if (!w || !playing) return;
+    const v = fileBuf[w.key];
+    if (v && v !== 'fail' && !v.then) {
+      if (paused) return;
+      if (!fileNow || fileNow.key !== w.key) { fileStart(w.key, v, 0, true); synthQuiet = true; }
+      return;
+    }
+    if (v === 'fail' || !v || v.then) {
+      if (fileNow && fileNow.key !== w.key) fileStop(true);
+      if (synthQuiet) { synthQuiet = false; const c = ctx(); if (c) nextT = c.currentTime + 0.05; }   // 쉬던 코드 음악을 지금부터 (밀린 박을 몰아 치지 않게)
+      synthWant(w, fromSynth);
+      if (!v || v.then) loadFile(w.key).then(() => { if (want === w) sync(); });
+    }
+  }
+  let synthQuiet = false;               // 녹음 곡이 나오는 동안 코드 음악은 쉼
+  function synthWant(w) {
+    const c = ctx(); if (!c) return;
+    const bossArg = w.boss ? (w.bossName ? { name: w.bossName, pattern: w.pattern } : true) : false;
+    if (!cur) { cur = prep(w.world, bossArg); pending = null; step = 0; nextT = c.currentTime + 0.08; if (!timer) timer = setInterval(tick, 25); tick(); return; }
+    const target = pending || cur;
+    if (target.world === w.world && target.boss === !!w.boss && (target.bossName || null) === (w.bossName || null)) return;
+    pending = prep(w.world, bossArg);
+  }
+  const tickSynth = tick;
+  tick = function () { if (synthQuiet) return; tickSynth(); };
+
   root.Music = {
     compose, SONGS, bossSong, bossThemeSong,
+    /** 지금 녹음 곡이 나오는지 (테스트·디버그용) */
+    get source() { return fileNow ? 'file:' + fileNow.key : (playing && !synthQuiet ? 'synth' : 'none'); },
     /** 월드 곡 재생 시작 (같은 곡이면 그대로) */
     play(worldId) {
       const c = ctx(); if (!c) return;
-      if (playing && cur && cur.world === worldId && !cur.boss && !pending) { this.resume(); return; }
-      cur = prep(worldId, false); pending = null; step = 0; nextT = c.currentTime + 0.08;
-      playing = true; paused = false;
-      if (!timer) timer = setInterval(tick, 25);
-      tick();
+      if (playing && want && want.world === worldId && !want.boss) { this.resume(); return; }
+      playing = true; paused = false; filePausedAt = null;
+      if (cur && cur.world !== worldId) { cur = null; pending = null; }
+      want = { key: fileKey(worldId, null), world: worldId, boss: false };
+      sync();
+      if (worldId !== 'menu') setTimeout(() => { for (const k in BOSS_FILES) loadFile('boss-' + k); }, 4000);   // 왕 곡은 미리 받아 두기 (왕이 나올 때 바로 바뀌게)
     },
-    /** 보스 곡으로 전환/복귀 (다음 박에서 바뀜) */
-    /** bossDef가 있으면 그 왕의 테마로 (왕이 바뀌면 곡도 바뀜). 왕 사이 쉬는 동안(bossDef 없음)은 지금 곡 유지 */
+    /** 보스 곡으로 전환/복귀. bossDef가 있으면 그 왕의 패턴(exam·spiral·charge·lane) 곡으로. 왕 사이 쉬는 동안(bossDef 없음)은 지금 곡 유지 */
     setBoss(on, bossDef) {
-      if (!playing || !cur) return;
-      const target = pending || cur;
-      if (!on) { if (target.boss) pending = prep(cur.world, false); return; }
-      if (!bossDef) { if (!target.boss) pending = prep(cur.world, true); return; }
-      if (target.boss && target.bossName === bossDef.name) return;
-      pending = prep(cur.world, { name: bossDef.name, pattern: bossDef.pattern });
+      if (!playing || !want) return;
+      const w = want;
+      if (!on) { if (w.boss) { want = { key: fileKey(w.world, null), world: w.world, boss: false }; sync(); } return; }
+      if (!bossDef) { if (!w.boss) { want = { key: fileKey(w.world, { pattern: 'exam' }), world: w.world, boss: true, pattern: 'exam' }; sync(); } return; }
+      const key = fileKey(w.world, bossDef);
+      if (w.boss && w.key === key && w.bossName === bossDef.name) return;
+      want = { key, world: w.world, boss: true, bossName: bossDef.name, pattern: bossDef.pattern };
+      sync();
     },
-    pause() { paused = true; },
-    resume() { const c = ctx(); if (!c || !playing) return; if (paused) { paused = false; nextT = c.currentTime + 0.05; } },
-    stop() { playing = false; paused = false; pending = null; cur = null; if (timer) { clearInterval(timer); timer = null; } },
+    pause() {
+      paused = true;
+      if (fileNow) { const c = ctx(); filePausedAt = { key: fileNow.key, at: c ? c.currentTime - fileNow.startT : 0 }; fileStop(false); }
+    },
+    resume() {
+      const c = ctx(); if (!c || !playing) return;
+      if (!paused) return;
+      paused = false; nextT = c.currentTime + 0.05;
+      const v = want && fileBuf[want.key];
+      if (filePausedAt && v && v !== 'fail' && !v.then && filePausedAt.key === want.key) { fileStart(want.key, v, filePausedAt.at, false); synthQuiet = true; filePausedAt = null; return; }
+      filePausedAt = null; sync();
+    },
+    stop() { playing = false; paused = false; pending = null; cur = null; want = null; filePausedAt = null; fileStop(false); synthQuiet = false; if (timer) { clearInterval(timer); timer = null; } },
     setMuted(m) { if (bus) bus.gain.value = m ? 0 : VOLUME; },
-    get state() { return { playing, paused, world: cur && cur.world, boss: !!(cur && cur.boss), bossName: (pending || cur || {}).bossName || null, song: cur && cur.comp.name, pending: !!pending }; },
+    get state() { return { playing, paused, world: want && want.world, boss: !!(want && want.boss), bossName: want ? want.bossName || null : null, song: cur && cur.comp.name, pending: !!pending, source: this.source }; },
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = { compose, SONGS, bossSong, bossThemeSong, SCALES };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -725,16 +725,21 @@
     of = of || outfit;
     return sprite(`kid:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${step}:${of.key}:${noArms ? 1 : 0}`, 36, 66, (g) => { g.translate(0, -1); drawKid(g, Object.assign(outfitOpts(emo, of), noArms ? { noArms: true } : {}), step); });
   }
-  const TEACHER = (g) => {
-    rrect(g, -7, 2, 14, 15, 5); fillStroke(g, '#3fae8a', 1.8);                         // 가디건
-    g.beginPath(); g.moveTo(0, 2); g.lineTo(0, 16); g.lineWidth = 1.2; g.strokeStyle = '#2b7d62'; g.stroke();
-    rrect(g, -6, 8, 9, 7, 1.5); fillStroke(g, '#f2d06b', 1.5);                       // 책
-    g.beginPath(); g.moveTo(-1.5, 8); g.lineTo(-1.5, 15); g.lineWidth = 1; g.strokeStyle = OL; g.stroke();
-    circle(g, 0, -6, 8); fillStroke(g, '#ffd9b8', 1.8);
-    circle(g, 0, -15.5, 3.8); fillStroke(g, '#4a3030', 1.6);                         // 올림머리
-    g.beginPath(); g.arc(0, -6.8, 8.1, Math.PI * 1.0, Math.PI * 2.0); g.quadraticCurveTo(2, -9, -8.1, -6.2); g.closePath(); fillStroke(g, '#4a3030', 1.6);
-    g.lineWidth = 1.2; g.strokeStyle = OL; circle(g, -2.9, -4.5, 2.4); g.stroke(); circle(g, 2.9, -4.5, 2.4); g.stroke();   // 안경 (눈·입은 실시간)
+  const TEACHER = (g) => {   // 담임 선생님 (2등신: 머리 크게 · 몸 짧게, 사람 그림과 같은 비율)
+    rrect(g, -6.6, 4, 13.2, 11.2, 4.5); fillStroke(g, '#3fae8a', 1.8);                           // 가디건
+    g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-5.4, 5.4, 2.6, 7.5);
+    g.beginPath(); g.moveTo(0, 4); g.lineTo(0, 15); g.lineWidth = 1.1; g.strokeStyle = '#2b7d62'; g.stroke();
+    rrect(g, -5.6, 9, 8.4, 5.6, 1.4); fillStroke(g, '#f2d06b', 1.4);                             // 책
+    g.save(); g.translate(0, -8); g.scale(1.3, 1.3); g.translate(0, 6);
+    for (const sx of [-1, 1]) { circle(g, sx * 7.9, -5.2, 1.5); fillStroke(g, '#ffd9b8', 1.1); }
+    circle(g, 0, -6, 8); fillStroke(g, '#ffd9b8', 1.6);
+    circle(g, 0, -15.5, 3.8); fillStroke(g, '#4a3030', 1.5);                                      // 올림머리
+    g.beginPath(); g.arc(0, -6.8, 8.1, Math.PI * 1.0, Math.PI * 2.0); g.quadraticCurveTo(2, -9, -8.1, -6.2); g.closePath(); fillStroke(g, '#4a3030', 1.5);
+    g.strokeStyle = 'rgba(255,240,220,.35)'; g.lineWidth = 1.2; g.beginPath(); g.arc(-1, -8.5, 5.4, Math.PI * 1.15, Math.PI * 1.5); g.stroke();
+    g.lineWidth = 1.1; g.strokeStyle = OL; circle(g, -2.9, -4.5, 2.4); g.stroke(); circle(g, 2.9, -4.5, 2.4); g.stroke();   // 안경 (눈·입은 실시간)
+    g.restore();
   };
+
 
   /* ---------- 배경 (월드별) ---------- */
   const BG = {};        // worldId -> (g, W, H) 그리기 함수 (art-worlds.js가 채움)
@@ -757,12 +762,12 @@
     const P = { L: [-8.6, 13 + sw], R: [8.6, 13 - sw], lf: [-3.6, 20.5], rf: [3.6, 20.5], prop: null };
     switch (name) {
       case 'wave':        // 손을 흔들어 부른다 (이리 와 줘!)
-        P.R = at(SR, -1.2 + 0.5 * Math.sin(t * 10), 11); break;
+        P.R = at(SR, -0.85 + 0.35 * Math.sin(t * 10), 12.5); break;   // 큰 머리를 가리지 않게 바깥쪽으로
       case 'beckon':      // 손짓으로 부른다 (이리 오렴) – 팔을 앞으로 뻗었다 당겼다
         P.R = at(SR, -0.35, 7.5 + 3.5 * Math.abs(Math.sin(t * 5))); break;
       case 'cower': {     // 무서워서 두 손으로 얼굴을 가리고 무릎을 모은다. 가끔 한 손을 내려 살짝 내다본다
         const peek = Math.sin(t * 1.7) > 0.55;
-        P.L = [-3.6, -3.2]; P.R = peek ? [7.5, 8] : [3.6, -3.2];
+        P.L = [-3.8, -5.6]; P.R = peek ? [7.5, 8] : [3.8, -5.6];
         P.lf = [-1.8, 20.5]; P.rf = [1.8, 20.5]; break;
       }
       case 'carry': {     // 무거운 짐을 양손에 들고 힘겨워한다 (팔이 아래로 축 처짐)
@@ -771,7 +776,7 @@
         P.lf = [-4.6, 20.5]; P.rf = [4.6, 20.5]; break;
       }
       case 'lost':        // 길을 잃음: 한 손으로 머리를 긁적이고 한 손엔 지도
-        P.R = [6.8 + Math.sin(t * 14) * 1.2, -12.5]; P.L = [-9, 8]; P.prop = 'map'; break;
+        P.R = [9.6 + Math.sin(t * 14) * 1.2, -14]; P.L = [-9, 8]; P.prop = 'map'; break;
       case 'reach':       // 손을 뻗는다 (ang 방향: 도움을 청하거나 도와준다)
         P.R = at(SR, ang || 0, 11.5); break;
       case 'teach': {     // 가르치기: 한 손엔 펼친 책, 다른 손으로 책을 짚었다가 위로 들어 설명
@@ -782,7 +787,7 @@
         P.R = at(SR, (ang || 0) - 0.25 + Math.sin(t * 9) * 0.22, 12); break;
       case 'cheer': {     // 만세! (도움을 받아 기뻐함)
         const k = Math.sin(t * 9) * 1.5;
-        P.L = [-9.5, -9 + k]; P.R = [9.5, -9 - k]; break;
+        P.L = [-11.5, -13 + k]; P.R = [11.5, -13 - k]; break;
       }
       case 'walk': {      // 걷기: 팔다리를 번갈아
         const k = Math.sin(t * 10);
@@ -795,12 +800,12 @@
         P.lf = [-3.6 + k * 2.2, 20.5 - Math.max(0, k) * 1.2]; P.rf = [3.6 - k * 2.2, 20.5 - Math.max(0, -k) * 1.2]; break;
       }
       case 'hurt':        // 맞아서 머리를 감싼다
-        P.L = [-8.2, -5]; P.R = [8.2, -5]; P.lf = [-2.5, 20.5]; P.rf = [2.5, 20.5]; break;
+        P.L = [-10.4, -8]; P.R = [10.4, -8]; P.lf = [-2.5, 20.5]; P.rf = [2.5, 20.5]; break;
       case 'give':        // 두 손으로 선물을 내민다
         P.L = [6, 10]; P.R = [11, 9]; P.prop = 'gift'; break;
       case 'throw': {     // 하트를 던지며 응원
         const k = (t * 1.6) % 1;
-        P.R = at(SR, -2.4 + k * 2.6, 11); P.L = [-9, -8 + Math.sin(t * 9)]; break;
+        P.R = at(SR, -2.4 + k * 2.6, 11); P.L = [-11.5, -12 + Math.sin(t * 9)]; break;
       }
       default: break;     // idle
     }
@@ -877,7 +882,7 @@
     oval(ctx, P.lf[0] - 0.6, P.lf[1], 2.6, 1.6); fillStroke(ctx, '#2a2440', 1.2); oval(ctx, P.rf[0] + 0.6, P.rf[1], 2.6, 1.6); fillStroke(ctx, '#2a2440', 1.2);
     ctx.restore();
     blit(ctx, c, x, y, K_KID, K_KID, dir < 0);
-    enter(); personFace(ctx, personExpr(pose, look.sad || pose.sad), t, look.face, look.seed || 0); ctx.restore();   // 실시간 표정 (팔보다 먼저: 무서워 얼굴을 가리면 손이 위에)
+    enter(); ctx.translate(0, -8); ctx.scale(1.3, 1.3); ctx.translate(0, 6); personFace(ctx, personExpr(pose, look.sad || pose.sad), t, look.face, look.seed || 0); ctx.restore();   // 실시간 표정 (팔보다 먼저: 무서워 얼굴을 가리면 손이 위에)
     enter();
     limb(ctx, -6.3, 4.5, P.L[0], P.L[1], look.sleeve, 3); limb(ctx, 6.3, 4.5, P.R[0], P.R[1], look.sleeve, 3);
     if (P.prop === 'bags' || P.prop === 'gift') drawPersonProp(ctx, P, t);
@@ -1022,8 +1027,9 @@
 
     /** 발밑 표시: 적은 붉은 고리 (에코는 머리 위 회색 고리) */
     groundMark(ctx, x, y, r, color, alpha) {
-      ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.38, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+      const a0 = ctx.globalAlpha;   // 사라지는 중이면 그 흐림을 그대로 이어받음
+      ctx.globalAlpha = a0 * alpha; ctx.strokeStyle = color; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.38, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = a0;
     },
     shadow(ctx, x, y, r) { ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.34, 0, 0, Math.PI * 2); ctx.fill(); },
 
@@ -1039,8 +1045,10 @@
       if (e.warn) { sx *= 1 + Math.sin(now / 30) * 0.06; }          // 돌진 직전 부르르
       const k = boss ? 1.1 : K_EN, fy = e.y + r * 0.95 * k;
       this.shadow(ctx, e.x, fy, r * 0.85 * k);
-      this.groundMark(ctx, e.x, fy, r * 1.05 * k, '#ff4d6d', boss ? 0.8 : 0.6);
       const flip = !spec.noFlip && e.x > px;   // 주인공 쪽을 바라봄 (글자가 있는 그림은 뒤집지 않음)
+      // 빨간 테두리: 모양을 따라 빨간 윤곽을 둘러 회색·반투명한 에코와 한눈에 구분 (밝은 배경·어두운 배경 모두)
+      const rim = tinted(`enR:${boss ? e.def.name : e.type}:${r}`, base, '#ff2f55'), d = boss ? 2.2 : 1.6;
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; blit(ctx, rim, e.x + Math.cos(a) * d, e.y - hop + Math.sin(a) * d, sx * k, sy * k, flip); }
       blit(ctx, base, e.x, e.y - hop, sx * k, sy * k, flip);
       if (e.flash > 0) { ctx.globalAlpha = 0.7; blit(ctx, tinted(`enW:${boss ? e.def.name : e.type}:${r}`, base, '#ffffff'), e.x, e.y - hop, sx * k, sy * k, flip); ctx.globalAlpha = 1; }
       if (boss && base.face) {   // 왕의 실시간 표정
@@ -1154,18 +1162,18 @@
      *  pose = {name:'idle|wave|beckon|cower|carry|lost|reach|pat|cheer|walk|walkHold|hurt|give|throw', dir:±1, ang} */
     drawPerson(ctx, id, x, y, pose, now) {
       const key = HELPER[id] ? id : 'school', fn = HELPER[id] || TEACHER;
-      const c = sprite('helper:' + key, 24, 42, (g) => { g.translate(0, 2); fn(g); });
+      const c = sprite('helper:' + key, 34, 60, (g) => { g.translate(0, 2); fn(g); });
       const look0 = LOOK[key] || LOOK.school, look = look0.seed === undefined ? Object.assign(look0, { seed: seedOf(key) }) : look0, s = look.s || 1;
       this.shadow(ctx, x, y + K_KID * (2 + 17 * (1 - s) + s * 21), 9 * K_KID * s);
       return drawPersonPosed(ctx, c, look, x, y, pose || { name: 'idle' }, (now || performance.now()) / 1000);
     },
     drawHelper(ctx, worldId, x, y) {
       const fn = HELPER[worldId] || TEACHER;
-      const c = sprite('helper:' + (HELPER[worldId] ? worldId : 'school'), 24, 42, (g) => { g.translate(0, 2); fn(g); });
+      const c = sprite('helper:' + (HELPER[worldId] ? worldId : 'school'), 34, 60, (g) => { g.translate(0, 2); fn(g); });
       this.shadow(ctx, x, y + 19 * K_KID, 9 * K_KID);
       blit(ctx, c, x, y, K_KID, K_KID);
       const look = LOOK[HELPER[worldId] ? worldId : 'school'] || LOOK.school, s = look.s || 1;   // 멈춘 그림: 웃는 얼굴 (도움이 필요하면 걱정 얼굴)
-      ctx.save(); ctx.translate(x, y); ctx.scale(K_KID, K_KID); ctx.translate(0, 2 + 17 * (1 - s)); ctx.scale(s, s); personFace(ctx, look.sad ? 'worried' : 'smile', 0.5, look.face, 0); ctx.restore();
+      ctx.save(); ctx.translate(x, y); ctx.scale(K_KID, K_KID); ctx.translate(0, 2 + 17 * (1 - s)); ctx.scale(s, s); ctx.translate(0, -8); ctx.scale(1.3, 1.3); ctx.translate(0, 6); personFace(ctx, look.sad ? 'worried' : 'smile', 0.5, look.face, 0); ctx.restore();
     },
 
     drawBullet(ctx, b) {

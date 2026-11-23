@@ -85,7 +85,8 @@
     return { dx, dy };
   }
 
-  ['pointerdown', 'keydown'].forEach((t) => addEventListener(t, () => Sfx.unlock()));
+  ['pointerdown', 'keydown'].forEach((t) => addEventListener(t, () => { Sfx.unlock(); if (state === 'menu' && !menuMusicOn) { menuMusicOn = true; Music.play('menu'); } }));   // 첫 터치에 메인 화면 음악 (브라우저는 터치 전 소리를 막음)
+  let menuMusicOn = false;
 
   /* ---------- 연출 상태 ---------- */
   let shake = 0;
@@ -467,7 +468,7 @@
     if (!quitArmed) { quitArmed = true; $('quit').textContent = '⚠ 한 번 더 누르면 이번 판은 기록되지 않아요'; return; }
     quitArmed = false;
     if (tutorial) GameUI.finishTutorial();
-    tutorial = false; sim = null; state = 'menu'; Music.stop();
+    tutorial = false; sim = null; state = 'menu'; Music.stop(); Music.play('menu');
     $('pause').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh();
   }
   $('pauseBtn').onclick = () => { Sfx.play('click'); pauseGame(); };
@@ -645,7 +646,7 @@
   $('tSkip').onclick = () => { Sfx.unlock(); Sfx.play('click'); GameUI.finishTutorial(); $('tutorial').classList.add('hidden'); $('start').classList.remove('hidden'); };
   // 처음 실행이면 튜토리얼 안내부터
   if (!GameUI.tutorialDone()) { $('start').classList.add('hidden'); $('tutorial').classList.remove('hidden'); }
-  $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; };
+  $('toMenu').onclick = () => { $('end').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh(); state = 'menu'; Music.play('menu'); };
   let resetArmed = false;   // 실수로 누르지 않게 두 번 눌러야 초기화
   const resetBtn = $('reset');   // 백업 화면 안으로 옮겨 다니므로 처음에 잡아 둔다
   resetBtn.onclick = () => {
@@ -720,6 +721,11 @@
     ctx.setTransform(sc, 0, 0, cv.height / H, sx * sc, sy * sc);
     const th = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).theme;
     const useArt = artOn();
+    // 게임 밖 화면(첫 화면·상점·내 캐릭터·선행·과제·결과): 해 질 녘 길 위의 주인공과 에코, 지평선을 흐르는 12개 월드
+    if ((state === 'menu' || state === 'end') && useArt && Art.drawMenuScene) {
+      Art.drawMenuScene(ctx, W, H, performance.now(), { emo: GameUI.emoji(), cycle: GameUI.outfitCycle(), win: state === 'end' ? !!(sim && sim.result === 'clear') : undefined });
+      return;
+    }
     if (useArt) Art.drawBackground(ctx, W, H, (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).id); else {
     ctx.fillStyle = th.bg; ctx.fillRect(-20, -20, W + 40, H + 40);
     ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
@@ -854,10 +860,9 @@
     drawDeeds(useArt);
 
     // 적
-    const lifeT = EchoSim.TUNING.enemyLifeSec * TICK, fadeT = EchoSim.TUNING.enemyFadeTicks, darkWorld = !!sim.world.rules.sight;
+    const lifeT = EchoSim.TUNING.enemyLifeSec * TICK, fadeT = EchoSim.TUNING.enemyFadeTicks;
     for (const e of sim.enemies) {
-      ctx.globalAlpha = e.age > lifeT - fadeT ? Math.max(0.1, (lifeT - e.age) / fadeT) : 1;   // 곧 사라질 방해 요소는 흐려진다
-      if (darkWorld && e.type !== 'boss') { ctx.strokeStyle = 'rgba(255,120,140,.95)'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 4, 0, 7); ctx.stroke(); }   // 어두운 월드: 밝은 테두리로 잘 보이게
+      ctx.globalAlpha = e.age > lifeT - fadeT ? Math.max(0.35, (lifeT - e.age) / fadeT) : 1;   // 곧 사라질 방해 요소는 흐려진다 (너무 흐려 에코처럼 보이지 않게 최소 0.35)
       if (useArt && Art.hasEnemy(e)) Art.drawEnemy(ctx, e, now, sim.player.x);
       else {
       if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
