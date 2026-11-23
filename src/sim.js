@@ -213,6 +213,10 @@
       this.events = [];
       this.tick = 0;
       this.world = WORLDS[opts.world] || WORLDS.school;
+      // 튜토리얼 등: 판을 extraSec초 더 길게 (왕·위험 요소 일정도 그만큼 뒤로 미뤄 천천히 배우게)
+      const extra = Math.max(0, opts.extraSec | 0);
+      this.runTicks = RUN_TICKS + extra * TICK;
+      if (extra) this.world = Object.assign({}, this.world, { boss: Object.assign({}, this.world.boss, { times: this.world.boss.times.map((x) => x + extra) }) });
       this.cycle = Math.max(0, opts.cycle | 0);
       this.mul = Worlds.stageMul(this.world.id, this.cycle);   // {stage, hp, dmg, speed, spawn}
       this.helper = null;      // 도우미(선생님 등): {x,y,r,state,prog,need,t,stay,fade}
@@ -398,7 +402,7 @@
     _bossAt(idx) { return this.bossLineup[Math.max(0, Math.min(this.bossLineup.length - 1, idx | 0))]; }
 
     _hpScale() {
-      const progress = this.tick / RUN_TICKS;
+      const progress = this.tick / this.runTicks;
       return (1 + progress * TUNING.hpGrowth) * (1 + TUNING.echoHpScale * this.echoes.length) * (this.world.rules.hpMul || 1) * this.mul.hp;
     }
 
@@ -434,7 +438,7 @@
 
     _make(type, x, y, idx) {
       const b = type === 'boss' ? this._bossAt(idx) : this._def(type);
-      const progress = this.tick / RUN_TICKS;
+      const progress = this.tick / this.runTicks;
       const hp = type === 'boss' ? this._bossHp(b, idx || 0) : b.hp * this._hpScale();
       const cdBase = b.fireCd || b.dashCd || 150;
       this.enemies.push({
@@ -1144,7 +1148,7 @@
 
       if (p.hp <= 0) { this.over = true; this.result = 'dead'; }
       else if (this.bossDead) { this.over = true; this.result = 'clear'; }
-      else if (this.tick >= RUN_TICKS && (!(this.bossIdx < this.bossCount || this.bossAlive) || this.tick >= RUN_TICKS + OVERTIME_TICKS + (this.bossCount - 1) * 20 * TICK)) { this.over = true; this.result = 'survive'; }
+      else if (this.tick >= this.runTicks && (!(this.bossIdx < this.bossCount || this.bossAlive) || this.tick >= this.runTicks + OVERTIME_TICKS + (this.bossCount - 1) * 20 * TICK)) { this.over = true; this.result = 'survive'; }
     }
 
     /** 이번 판을 다음 판의 에코로 내보낸다. */

@@ -124,7 +124,7 @@
 
   function handleEvents() {
     for (const ev of sim.drainEvents()) {
-      if (tutorial) tutTip(ev.k === 'deed' ? ev.what : ev.k === 'dropWarn' ? 'drop' : ev.k);   // 처음 생긴 일이면 튜토리얼 안내
+      if (tutorial) tipEvent(ev.k === 'deed' ? ev.what : ev.k === 'dropWarn' ? 'drop' : ev.k);   // 처음 생긴 일이면 튜토리얼 안내
       switch (ev.k) {
         case 'shoot': Sfx.play('shoot'); break;
         case 'dmg':
@@ -144,7 +144,7 @@
         case 'nova': shake = Math.max(shake, 3); Sfx.play('nova'); break;
         case 'echoDown': Sfx.play('echoDown'); break;
         case 'heal': Sfx.play('heal'); break;
-        case 'banner': if (!ev.hint || tutorial) banner = { text: ev.text, t: 150 }; break;   // 설명성 문구는 튜토리얼에서만
+        case 'banner': if (!ev.hint) banner = { text: ev.text, t: 150 }; break;   // 설명성 안내는 튜토리얼 안내(tipEvent)가 실제 순간에 맞춰 대신 보여 줌   // 설명성 문구는 튜토리얼에서만
         case 'swarm': edgeFlash = 40; Sfx.play('boss'); break;
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 90 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
@@ -167,9 +167,9 @@
         case 'dropHit': Sfx.play('dropHit'); shake = Math.max(shake, 4); if (artOn()) Art.burst(ev.x, ev.y, '#d7c7a5', 8, false); break;
         case 'train': Sfx.warn((sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'); if (tutorial) banner = { text: ev.text || '🚆 열차 접근! 빨간 줄을 피하세요', t: 110 }; break;
         case 'phase': if (tutorial) banner = { text: `${ev.name || '보스'} ${ev.phase}페이즈`, t: 120 }; shake = 10; Sfx.play('boss'); break;
-        case 'gotItem': headFlash.push({ icon: ev.icon, t: 50 }); if (headFlash.length > 3) headFlash.shift(); break;
+        case 'gotItem': tipEvent('item'); tipEvent('up:' + ev.id); headFlash.push({ icon: ev.icon, t: 50 }); if (headFlash.length > 3) headFlash.shift(); break;
         case 'autoPick': autoFlash.push({ id: ev.id, icon: ev.icon, t: 48 }); break;   // 자동 선택: 아이콘만 짧게 반짝 (글자·소리 없음)
-        case 'synergy': toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
+        case 'synergy': if (tutorial) tipEvent('synergy'); else toast = { text: `✨ 시너지: ${ev.name}`, t: 150 }; Sfx.play('levelup'); break;
         default: break;
       }
     }
@@ -377,9 +377,6 @@
   let sim = null, state = 'menu';   // menu | play | paused | levelup | end
   let tutorial = false;             // 지금 판이 튜토리얼(에코 10명과 함께하는 체험)인지
   let tipIdx = 0;
-  let tipQueue = [], tipSeen = {};   // 튜토리얼: 기다리는 안내 · 이미 보여 준 상황
-  /** 그 상황이 처음 생겼을 때 안내를 한 번 줄 세운다 */
-  function tutTip(key) { if (!tutorial || tipSeen[key] || !EchoTutorial.EVENT_TIPS || !EchoTutorial.EVENT_TIPS[key]) return; tipSeen[key] = true; tipQueue.push(EchoTutorial.EVENT_TIPS[key]); }
   let acc = 0, last = 0;
 
   function resize() {
@@ -394,11 +391,11 @@
   function startRun(opts) {
     Sfx.unlock(); Sfx.play('click');
     tutorial = !!(opts && opts.tutorial === true);
-    tipIdx = 0; tipQueue = []; tipSeen = {};
+    tipIdx = 0;
     let clearedEchoes = 0;
     if (tutorial) {
       const seed = (Date.now() ^ 0x9e3779b9) >>> 0;
-      sim = new Sim({ seed, echoes: EchoTutorial.makeTutorialEchoes(seed), bonus: GameUI.bonus(), world: EchoTutorial.TUTORIAL_WORLD });
+      sim = new Sim({ seed, echoes: EchoTutorial.makeTutorialEchoes(seed), bonus: GameUI.bonus(), world: EchoTutorial.TUTORIAL_WORLD, extraSec: EchoTutorial.EXTRA_SEC });   // 튜토리얼은 조금 더 길게
     } else {
       runCount += 1;
       clearedEchoes = syncEchoes(GameUI.worldId());
@@ -407,7 +404,7 @@
     playerEmoji = GameUI.emoji();
     if (window.Art) { if (Art.setLook) Art.setLook(GameUI.look()); if (Art.setColor) Art.setColor(GameUI.kidColor()); if (Art.setSkin) Art.setSkin(GameUI.kidSkin()); if (Art.setHair) Art.setHair(GameUI.kidHair()); if (Art.setEchoForm) Art.setEchoForm(GameUI.echoForm()); Art.setOutfit(GameUI.outfitCycle()); }   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null; playerCheer = 0; tipFreeze = 0; cheerFx = null;
+    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null; playerCheer = 0; resetTips(); cheerFx = null;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -417,18 +414,38 @@
     if (tutorial) banner = { text: '📘 튜토리얼 · 과거의 나 10명과 함께!', t: 150 };
   }
 
-  /** 튜토리얼 안내 문구를 시간에 맞춰 띄운다 */
-  const TIP_FREEZE = 60;   // 튜토리얼 설명이 뜰 때 게임을 멈추는 시간(프레임, 약 1초). 느려지지 않고 딱 멈췄다가 그대로 이어감
-  let tipFreeze = 0;
+  /** 튜토리얼 안내: 시간 안내 + '실제로 일어날 때' 안내를 줄 세워 하나씩 보여 준다.
+   *  안내마다 글 길이에 맞춰 게임을 잠깐 멈추고(최대 2.5초), 멈춘 뒤에도 조금 더 보여 준다(긴 글은 3초 넘게). 모두 실제 시간(ms) 기준 */
+  let tipQueue = [], evQueue = [], tipCur = null, tipFreezeUntil = 0, tipShown = new Set(), bossTipDone = false, endTipDone = false;
+  function resetTips() { tipQueue = []; evQueue = []; tipCur = null; tipFreezeUntil = 0; tipShown = new Set(); bossTipDone = false; endTipDone = false; }
+  function tipPush(text) { if (text) tipQueue.push(text); }
+  /** 게임에서 무언가 처음 일어났을 때 (튜토리얼에서만, 같은 안내는 한 번만) */
+  function tipEvent(key) {
+    if (!tutorial || tipShown.has(key)) return;
+    const text = EchoTutorial.EVENT_TIPS[key]; if (!text) return;
+    tipShown.add(key); evQueue.push(text);   // 지금 화면에서 일어나는 일이라 일반 안내보다 먼저
+  }
   function tutorialTips() {
     const tips = EchoTutorial.TIPS;
-    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { tipQueue.push(tips[tipIdx].text); tipIdx++; }
+    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { tipPush(tips[tipIdx].text); tipIdx++; }
+    const bt = sim.world.boss.times[0];
+    if (!bossTipDone && sim.tick >= (bt - EchoTutorial.BOSS_SOON) * TICK) { bossTipDone = true; tipPush(EchoTutorial.BOSS_TIP); }
+    if (!endTipDone && sim.tick >= (bt + EchoTutorial.END_AFTER) * TICK) { endTipDone = true; EchoTutorial.END_TIPS.forEach(tipPush); }
+    if (sim.choices) tipEvent('cards');
     // 상태로 알 수 있는 '처음': 탄이 날아옴 · 선생님 원 안에 들어감 · 바닥에 선행 거리가 생김
-    if (sim.ebullets.length) tutTip('shot');
-    if (sim.helperShield && sim.helperShield()) tutTip('shield');
-    if (sim.deeds && sim.deeds.spots.length) tutTip('spotSeen');
-    // 앞 안내를 충분히 읽은 뒤(약 2.7초) 다음 안내. 새 설명이 뜨면 잠깐 멈춤
-    if (tipQueue.length && toast.t <= 110) { toast = { text: tipQueue.shift(), t: 300 }; tipFreeze = TIP_FREEZE; }
+    if (sim.ebullets.length) tipEvent('shot');
+    if (sim.helperShield && sim.helperShield()) tipEvent('shield');
+    if (sim.deeds && sim.deeds.spots.length) tipEvent('spotSeen');
+  }
+  /** 줄 선 안내를 하나씩 꺼내 보여 준다 (매 프레임) */
+  function pumpTips(now) {
+    if (!tutorial) return;
+    if (tipCur && now >= tipCur.end) tipCur = null;
+    if (!tipCur && (evQueue.length || tipQueue.length)) {
+      const text = evQueue.length ? evQueue.shift() : tipQueue.shift(), tm = EchoTutorial.tipTiming(text);
+      tipCur = { end: now + tm.show }; tipFreezeUntil = now + tm.freeze;
+      toast = { text, t: tm.show / (1000 / 60) };
+    }
   }
 
   /* ---------- 일시정지 ---------- */
@@ -1005,9 +1022,9 @@
     ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif';
     ctx.fillText(`Lv ${p.level}`, 116, 14);
     ctx.textAlign = 'center';
-    const left = Math.max(0, Math.ceil((RUN_TICKS - sim.tick) / TICK));
+    const left = Math.max(0, Math.ceil((sim.runTicks - sim.tick) / TICK));
     ctx.font = 'bold 16px sans-serif';
-    if (sim.tick >= RUN_TICKS) { ctx.fillStyle = '#ff9aa8'; ctx.fillText('연장전', W / 2, 16); ctx.fillStyle = '#fff'; }
+    if (sim.tick >= sim.runTicks) { ctx.fillStyle = '#ff9aa8'; ctx.fillText('연장전', W / 2, 16); ctx.fillStyle = '#fff'; }
     else ctx.fillText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`, W / 2, 16);
     if (sim.bossCount > 1 && (sim.bossIdx > 0 || sim.tick > 60 * 30)) {     // 큰 도전이 여러 번인 월드: 극복한 수 표시
       ctx.textAlign = 'center'; ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#ffe58a';
@@ -1124,9 +1141,11 @@
   function frame(now) {
     if (state === 'play') {
       acc += Math.min(100, now - last) * (slowmo > 0 ? 0.3 : 1); last = now;   // 보스 극복 순간은 슬로모션
-      if (tipFreeze > 0) { tipFreeze -= 1; acc = 0; }   // 튜토리얼 설명: 짧게 멈춤 (밀린 시간을 몰아서 돌리지 않음)
+      pumpTips(now);
+      const frozen = tutorial && now < tipFreezeUntil;
+      if (frozen) acc = 0;   // 튜토리얼 설명: 글 길이만큼 짧게 멈춤 (밀린 시간을 몰아서 돌리지 않음)
       const dt = 1000 / TICK;
-      while (acc >= dt && state === 'play' && tipFreeze <= 0) {
+      while (acc >= dt && state === 'play' && !frozen) {
         acc -= dt; sim.step(currentInput());
         handleEvents();
         if (tutorial) tutorialTips();
@@ -1155,8 +1174,10 @@
     for (const h of headFlash) h.t -= 1;
     headFlash = headFlash.filter((h) => h.t > 0);
     autoFlash = autoFlash.filter((a) => a.t > 0);
-    if (banner.t > 0) banner.t -= 1;
-    if (toast.t > 0) toast.t -= 1;
+    // 글자 표시 시간은 실제 시간 기준 (화면 주사율 120Hz 기기에서도 빨리 사라지지 않게)
+    const fstep = Math.min(6, Math.max(0, (now - (frame.lastNow || now)) / (1000 / 60))); frame.lastNow = now;
+    if (banner.t > 0) banner.t -= fstep;
+    if (toast.t > 0) toast.t -= fstep;
     render();
     requestAnimationFrame(frame);
   }
@@ -1164,5 +1185,5 @@
   GameUI.refresh();   // 에코 수 표시 등 (에코 정보는 이 파일에서 준비됨)
 
   // 테스트/디버그용 훅
-  window.__echo = { get bossFx() { return bossFx; }, get sim() { return sim; }, get state() { return state; }, get echoes() { return echoes; }, get tutorial() { return tutorial; } };
+  window.__echo = { get bossFx() { return bossFx; }, get sim() { return sim; }, get state() { return state; }, get echoes() { return echoes; }, get tutorial() { return tutorial; }, get toast() { return toast; } };
 })();
