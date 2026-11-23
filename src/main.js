@@ -143,7 +143,7 @@
         case 'swarm': edgeFlash = 40; Sfx.play('boss'); break;
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 90 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
-        case 'helped': playerCheer = 100; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 34 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
+        case 'helped': playerCheer = 40; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 34 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
         case 'warm': warmFx.push({ x: ev.x, y: ev.y, r: ev.r, t: 0 }); break;
         case 'deed':   // 선행: 소리·반짝임만 (설명은 튜토리얼 안내에서)
           if (ev.what === 'spot') { pickAnim = { t: 0, max: 26, item: ev.kind === 'pot' ? 'pot' : ev.kind === 'toy' ? 'teddy' : 'cup' }; Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
