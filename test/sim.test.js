@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const E = require('../src/sim.js');
-const { Sim, UPGRADES, MAX_LEVEL, RUN_TICKS, BOSS_TICK, MAX_ECHOES } = E;
+const { Sim, UPGRADES, MAX_LEVEL, RUN_TICKS, MAX_ECHOES } = E;
 
 /** 가장 가까운 적에게서 도망가는 단순 봇 + 레벨업 시 첫 번째 선택지 */
 function runBot(sim, maxTicks, { godMode = false } = {}) {
@@ -62,7 +62,7 @@ test('보스가 90초에 등장하고 3페이즈를 모두 거친다', () => {
     for (const ev of s.drainEvents()) if (ev.k === 'phase') phases.add(ev.phase);
   }
   assert.ok(bossSeen, '보스 미등장');
-  assert.ok(s.tick >= BOSS_TICK);
+  assert.ok(s.tick >= E.WORLDS.school.boss.times[0] * 60);
   assert.ok(phases.has(2) && phases.has(3), `페이즈 전환: ${[...phases]}`);
   assert.strictEqual(s.result, 'clear');
 });

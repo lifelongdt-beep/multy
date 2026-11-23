@@ -15,7 +15,6 @@
   const TICK = 60;
   const PLAY_BOTTOM = H - 140;   // UI 전용: 이 아래를 '추천 조작 영역'으로 표시 (캐릭터 이동은 제한하지 않음)
   const RUN_TICKS = 120 * TICK;
-  const BOSS_TICK = 90 * TICK;
   const MAX_ECHOES = 10;  // 정원. 넘치면 가장 일찍 쓰러진 에코부터 퇴장
   const MAX_ENEMIES = 260;
   const OVERTIME_TICKS = 60 * TICK;   // 120초가 지나도 보스가 살아 있으면 최대 60초 연장 (보스를 잡을 시간)
@@ -94,12 +93,6 @@
     exam:     { name: '만점 러시',   desc: '시험 만점 2+ & 샤프 속도 2+ → 치명타 +10%' },
     bellring: { name: '타종식',      desc: '형광펜 2+ & 종소리 1+ → 충격파 범위 +30%' },
   };
-
-  // 월드 데이터는 worlds.js. 아래 상수들은 호환용(학교 월드 기준 / 모든 월드의 적 합집합)
-  const SCHOOL = WORLDS.school;
-  const ENEMY_TYPES = Object.assign({}, ...Object.keys(WORLDS).map((k) => WORLDS[k].enemies), { boss: SCHOOL.boss });
-  const WAVES = SCHOOL.waves;
-  const SWARMS = SCHOOL.swarms;
 
   /** 영구 강화·캐릭터 보너스(meta.js가 계산해서 전달). 기본값은 보너스 없음 */
   const NO_BONUS = { maxhp: 0, dmgMul: 1, speedMul: 1, cooldownMul: 1, magnet: 0, xpMul: 1, regen: 0, echoPower: 0, startStats: {} };
@@ -262,7 +255,9 @@
     /** 이 월드에서의 적 정의 (보스='boss'는 월드마다 다른 정의) */
     _def(type) {
       const w = this.world;
-      return type === 'boss' ? w.boss : (w.enemies[type] || ENEMY_TYPES[type]);
+      const def = type === 'boss' ? w.boss : w.enemies[type];
+      if (!def) throw new Error(`월드 ${w.id}에 정의되지 않은 적: ${type}`);
+      return def;
     }
 
     _hpScale() {
@@ -279,7 +274,7 @@
       return (shots + nova + orb) * pm;
     }
 
-    /** 지금 플레이어 + 살아 있는 에코들의 화력 합 */
+    /** 지금 플레이어 + 살아 있는 에코들의 화력 합 (진단·테스트용. 보스 체력 계산에는 쓰이지 않음 — 보스 체력은 _bossHp 참고) */
     _firepower() {
       const p = this.player;
       let sum = this._fp(p.stats, this.bonus, 1);
@@ -810,7 +805,7 @@
     exportEcho() { return { path: this.rec.path.slice(), ups: this.rec.ups.slice(), kills: this.kills, ticks: this.tick }; }
   }
 
-  const api = { Sim, addEcho, mulberry32, derive, NO_BONUS, WORLDS, WORLD_ORDER: Worlds.ORDER, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, MAX_ECHOES, MAX_LEVEL };
+  const api = { Sim, addEcho, mulberry32, derive, NO_BONUS, WORLDS, WORLD_ORDER: Worlds.ORDER, UPGRADES, SYNERGIES, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, MAX_ECHOES, MAX_LEVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoSim = api;
 })(typeof window !== 'undefined' ? window : globalThis);

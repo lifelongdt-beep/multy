@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const E = require('../src/sim.js');
 const { WORLDS, ORDER } = require('../src/worlds.js');
-const { Sim, RUN_TICKS, BOSS_TICK, W, H } = E;
+const { Sim, RUN_TICKS, W, H } = E;
 
 /** 위협을 피하며 구슬을 줍는 단순 봇 (월드 공통) */
 function runBot(sim, maxTicks, { god = true } = {}) {
