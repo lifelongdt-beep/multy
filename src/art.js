@@ -10,7 +10,8 @@
   const S = 3;                    // 스프라이트 해상도 배율
   const cache = new Map();
   const K_EN = 1.3;               // 적 그림 크기 배율 (충돌 판정은 그대로)
-  const K_KID = 1.4;              // 주인공·에코·선생님 그림 크기 배율
+  const K_KID = 1.4;
+  const ECHO_GRAY = '#b9bfcc', ECHO_RING = '#c9ced8';   // 에코(과거의 나)는 회색 스타일로 통일              // 주인공·에코·선생님 그림 크기 배율
 
   /* ---------- 스프라이트 캐시 ---------- */
   function sprite(key, w, h, draw) {
@@ -624,6 +625,10 @@
         P.R = [6.8 + Math.sin(t * 14) * 1.2, -12.5]; P.L = [-9, 8]; P.prop = 'map'; break;
       case 'reach':       // 손을 뻗는다 (ang 방향: 도움을 청하거나 도와준다)
         P.R = at(SR, ang || 0, 11.5); break;
+      case 'teach': {     // 가르치기: 한 손엔 펼친 책, 다른 손으로 책을 짚었다가 위로 들어 설명
+        const k = (Math.sin(t * 3.2) + 1) / 2;
+        P.L = [-7.5, 12]; P.R = [1 + 9 * k, 9 - 17 * k]; P.prop = 'openbook'; break;
+      }
       case 'pat':         // 머리를 쓰다듬듯 손을 뻗어 토닥토닥 (선생님이 도와준다)
         P.R = at(SR, (ang || 0) - 0.25 + Math.sin(t * 9) * 0.22, 12); break;
       case 'cheer': {     // 만세! (도움을 받아 기뻐함)
@@ -658,6 +663,9 @@
     } else if (P.prop === 'map') {    // 펼친 지도 (물음표)
       const h = P.L; rrect(g, h[0] - 4, h[1] - 3.5, 7, 6, 0.8); fillStroke(g, '#fff3c4', 1.1);
       g.fillStyle = '#e57373'; g.font = 'bold 5px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', h[0] - 0.5, h[1] - 0.4);
+    } else if (P.prop === 'openbook') {   // 펼친 책 (몸에 그려진 책을 가리며 앞으로 펼쳐 듦)
+      rrect(g, -7.6, 6.2, 12.4, 8.4, 1.2); fillStroke(g, '#fffdf2', 1.2); line(g, [-1.4, 6.4, -1.4, 14.4], 0.9);
+      g.fillStyle = '#9fb4d8'; for (const y of [8.4, 10.4, 12.4]) { g.fillRect(-6.4, y, 4, 0.7); g.fillRect(-0.2, y, 4, 0.7); }
     } else if (P.prop === 'teach') {  // 다른 손엔 펼친 책 (가르쳐 줌)
       const h = P.L; rrect(g, h[0] - 4.5, h[1] - 4, 9, 6, 1); fillStroke(g, '#fffde7', 1.1); line(g, [h[0], h[1] - 4, h[0], h[1] + 2], 0.8);
     }
@@ -676,6 +684,7 @@
     limb(ctx, -6.3, 4.5, P.L[0], P.L[1], look.sleeve, 3); limb(ctx, 6.3, 4.5, P.R[0], P.R[1], look.sleeve, 3);
     if (P.prop === 'bags' || P.prop === 'gift') drawPersonProp(ctx, P, t);
     palm(ctx, P.L[0], P.L[1]); palm(ctx, P.R[0], P.R[1]);
+    if (P.prop === 'openbook') { drawPersonProp(ctx, P, t); palm(ctx, P.L[0], P.L[1]); }   // 책을 든 손은 책 위에
     if (P.prop === 'map' || P.prop === 'teach') drawPersonProp(ctx, P, t);
     ctx.restore();
     const toScreen = (q) => [x + dir * K_KID * s * q[0], y + K_KID * (2 + 17 * (1 - s) + s * q[1])];
@@ -813,7 +822,7 @@
       blit(ctx, c, g.x, g.y + bob);
     },
 
-    /** 발밑 표시: 적은 붉은 고리, 에코는 파란 고리 (한눈에 편 구분) */
+    /** 발밑 표시: 적은 붉은 고리 (에코는 머리 위 회색 고리) */
     groundMark(ctx, x, y, r, color, alpha) {
       ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = 1.6;
       ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.38, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
@@ -849,7 +858,9 @@
       if (blink) ctx.globalAlpha = 0.4;
       // 줍기: 무릎을 굽혀 몸을 낮췄다가 일어선다 (발 위치는 그대로)
       const crouch = pose === 'pick' ? Math.sin(Math.min(1, act.k) * Math.PI) : 0;
-      const sy = K_KID * (1 - 0.2 * crouch), feet = p.y - 4 - bob + 13 * K_KID, cy = feet - 13 * sy;
+      const sy = K_KID * (1 - 0.2 * crouch), feet = p.y - 4 - bob + 13 * K_KID;
+      const cheerHop = pose === 'cheer' ? Math.abs(Math.sin(now / 150)) * 4 : 0, nod = pose === 'learn' ? Math.abs(Math.sin(now / 260)) * 1.2 : 0;
+      const cy = feet - 13 * sy - cheerHop + nod;
       blit(ctx, kidSprite(emo, step), p.x, cy, K_KID, sy, dir < 0);
       // 팔 (몸 앞)
       const f = dir < 0 ? -1 : 1, sleeve = outfitOpts(emo, outfit).body, t = now / 1000;
@@ -863,26 +874,38 @@
         const a = Math.atan2(act.ty - p.y, Math.abs(act.tx - p.x) || 1);
         const ca = Math.max(-1.1, Math.min(1.1, a));
         R = [5.4 + Math.cos(ca) * 10, 2.6 + Math.sin(ca) * 10];          // 그 사람 쪽으로 손을 내민다
-      } else if (pose === 'learn') {
-        R = [6.5 + Math.sin(t * 6) * 0.8, -9.5];                           // 손 들고 "네!" (배우는 중)
+      } else if (pose === 'learn') {                                       // 배우는 중: 공책을 들고 고개를 끄덕이며 받아 적기
+        L = [-3.8, 8.6]; R = [1.2 + Math.sin(t * 14) * 1.3, 7.4 + Math.abs(Math.sin(t * 7)) * 1.2];
+      } else if (pose === 'cheer') {                                       // 만세!
+        const k = Math.sin(t * 10) * 1.4; L = [-8, -9.5 + k]; R = [8, -9.5 - k];
       }
       ctx.save(); ctx.translate(p.x, cy); ctx.scale(K_KID * f, sy); ctx.translate(0, -1);
       limb(ctx, -5.4, 2.6, L[0], L[1], sleeve, 2.8); limb(ctx, 5.4, 2.6, R[0], R[1], sleeve, 2.8);
+      if (pose === 'learn') {   // 작은 공책 + 연필
+        rrect(ctx, -5.6, 5.2, 7.4, 6.4, 1); fillStroke(ctx, '#fffdf2', 1.1);
+        ctx.fillStyle = '#9fb4d8'; for (const y of [7.2, 9.2]) ctx.fillRect(-4.6, y, 5.4, 0.6);
+        line(ctx, [R[0], R[1], R[0] + 2.2, R[1] - 4.2], 1.6, '#f4b400');
+      }
       palm(ctx, L[0], L[1], 1.8, kidSkin); palm(ctx, R[0], R[1], 1.8, kidSkin);
       ctx.restore();
       ctx.globalAlpha = 1;
       return [p.x + f * K_KID * R[0], cy + sy * (R[1] - 1)];
     },
 
-    /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 파란 유령 */
+    /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 회색 유령 (옷·머리·얼굴 색과 상관없이 모두 같은 회색 톤) */
     drawEcho(ctx, ec, emo, now, alpha) {
       const base = kidSprite(emo, 0);
-      const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${outfit.key}`, base, '#6fd3ff', 0.55);
+      const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${outfit.key}`, base, ECHO_GRAY, 0.82);
       const bob = Math.sin(now / 400 + ec.id) * 1.5;
-      this.groundMark(ctx, ec.x, ec.y + 13 * K_KID, 9 * K_KID, '#6fd6ff', alpha * 1.4);
       ctx.globalAlpha = alpha * 1.25;
       const dir = ec._lx !== undefined && ec.x < ec._lx ? -1 : 1; ec._lx = ec.x;
       blit(ctx, ghost, ec.x, ec.y - 4 + bob, K_KID, K_KID, dir < 0);
+      // 영혼의 고리: 발밑 대신 머리 위에 떠 있는 회색 고리 (살짝 빛나며 머리보다 조금 더 출렁임)
+      const hy = ec.y - 4 + bob - 17.5 * K_KID + Math.sin(now / 300 + ec.id) * 0.8, hr = 6.2 * K_KID;
+      ctx.globalAlpha = Math.min(1, alpha * 0.9); ctx.strokeStyle = ECHO_RING; ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.ellipse(ec.x, hy, hr, hr * 0.34, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = Math.min(1, alpha * 2.6); ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.ellipse(ec.x, hy, hr, hr * 0.34, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
     },
 
@@ -935,9 +958,9 @@
       const a = Math.atan2(b.vy, b.vx);
       ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(a);
       ctx.globalAlpha = echo ? 0.35 : 1;
-      ctx.fillStyle = echo ? 'rgba(127,220,255,.35)' : 'rgba(255,226,122,.35)';
+      ctx.fillStyle = echo ? 'rgba(200,205,216,.35)' : 'rgba(255,226,122,.35)';
       ctx.fillRect(-12, -1.6, 10, 3.2);                                     // 꼬리
-      ctx.fillStyle = b.crit ? '#ff9f43' : (echo ? '#9fe8ff' : '#ffe27a');
+      ctx.fillStyle = b.crit ? '#ff9f43' : (echo ? '#d4d8e2' : '#ffe27a');
       ctx.beginPath(); ctx.ellipse(0, 0, b.crit ? 5.5 : 4.5, b.crit ? 2.8 : 2.2, 0, 0, Math.PI * 2); ctx.fill();
       ctx.lineWidth = 1; ctx.strokeStyle = OL; ctx.stroke();
       ctx.restore(); ctx.globalAlpha = 1;

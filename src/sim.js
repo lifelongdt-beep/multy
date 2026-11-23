@@ -93,9 +93,11 @@
     deedSpotMax: 3,
     deedSpotLife: 10,        //   사라지기까지(초)
     deedGaugeNeed: 5,        //   이만큼 모으면 아이템 카드
-    allySec: 5,              // 도와준 사람이 곁에서 응원하며 함께하는 시간(초)
-    allyEvery: 34,           //   하트를 던지는 간격(틱)
-    allyDmg: 0.8,            //   하트 위력 (내 총알 위력 대비)
+    allySec: 5,              // 도와준 사람이 손을 흔들고 안전한 곳(화면 밖)으로 떠나는 데 걸리는 최대 시간(초)
+    allyWave: 95,            //   떠나기 전 제자리에서: 먼저 만세(앞 45틱) → 손 흔들어 인사(뒤 50틱)
+    allySpeed: 1.5,          //   걸어서 떠나는 속도
+    cheerSec: 6,             // 도와준 사람의 응원: 이 시간(초) 동안 나와 에코의 공격력이 오른다 (사람은 싸우지 않는다)
+    cheerDmg: 0.2,           //   응원 공격력 +20%
     warmR: 150,              // 선행 순간 퍼지는 따뜻한 빛 반경
     warmSec: 3,              //   빛을 받은 방해 요소가 순해지는(느려지고 닿아도 아프지 않은) 시간(초)
     visitorSec: 3,           // 지난 판에 도와준 사람이 찾아오는 시각(초)
@@ -237,7 +239,8 @@
       this.bossLineup = this._makeLineup(opts.seed >>> 0);
       // 선행: 어려움에 처한 사람(rescue) · 친구 지켜주기(escort) · 작은 선행 거리(spots) + 게이지
       this.deeds = { rescue: null, escort: null, spots: [], gauge: 0, done: 0, people: [], spotCount: 0, escorts: 0, visitor: null, visitorKind: (opts.visitor && opts.visitor.kind) || null };
-      this.allies = [];      // 도와준 사람들: 잠시 곁에서 하트를 던지며 응원 (사람이므로 적 목록과 별개, 다치지 않음)
+      this.cheer = 0;        // 응원 남은 시간(틱): 도와준 사람이 떠나며 남긴 응원으로 공격력 +
+      this.allies = [];      // 도와준 사람들: 고맙다고 손을 흔들고 안전한 곳으로 떠난다 (싸우지 않음, 적 목록과 별개, 다치지 않음)
       this.drng = mulberry32(((opts.seed >>> 0) ^ 0xDEED5) >>> 0);   // 위치 정하기 전용 난수 (본 흐름과 분리)   // 이번 판에 나올 보스 정의들 (순서대로)
       this.lastBossDeath = 0;
       this.bossRage = 1;            // 보스전이 길어질수록 커지는 피해 배율
@@ -539,7 +542,7 @@
         const crit = d.crit > 0 && this.rng() < d.crit;
         this.bullets.push({
           x, y, vx: Math.cos(a) * 6, vy: Math.sin(a) * 6,
-          dmg: d.dmg * pm * (crit ? d.critMul : 1), crit, pierce: d.pierce, life: 46, owner, hit: [],
+          dmg: d.dmg * pm * (this.cheer > 0 ? 1 + TUNING.cheerDmg : 1) * (crit ? d.critMul : 1), crit, pierce: d.pierce, life: 46, owner, hit: [],
           tier: owner === 'player' ? bulletTier(d.dmg) : 0,   // 총알 단계: 강해질수록 모양이 바뀐다 (30가지, 30단계마다 처음부터)
         });
       }
@@ -733,9 +736,11 @@
     /** 선행 보상: 아이템 카드 3장 (게임은 멈추지 않음, 안 고르면 자동) */
     _deedReward(extraAuto, who) {
       this.deeds.done += 1;
-      if (who) {   // 도와준 사람은 고마워하며 잠시 함께한다
+      if (who) {   // 도와준 사람은 고맙다고 손을 흔들고 가까운 화면 밖(안전한 곳)으로 떠나며, 응원을 남긴다
         this.deeds.people.push(who.kind);
-        this.allies.push({ x: who.x, y: who.y, kind: who.kind, t: TUNING.allySec * TICK, cd: 20, ang: this.allies.length * 2.1 });
+        this.allies.push({ x: who.x, y: who.y, kind: who.kind, t: TUNING.allySec * TICK, wave: TUNING.allyWave, dir: who.x < W / 2 ? -1 : 1 });
+        this.cheer = Math.max(this.cheer, TUNING.cheerSec * TICK);
+        this._ev({ k: 'deed', what: 'cheer', x: who.x, y: who.y });
       }
       this._warm(who ? who.x : this.player.x, who ? who.y : this.player.y);
       if (extraAuto) {   // 친구를 끝까지 지켜 주면 아이템 하나는 바로 얻음
@@ -751,21 +756,13 @@
       this._ev({ k: 'warm', x, y, r: R });
     }
     _updateAllies() {
-      const p = this.player, d = derive(p.stats);
+      if (this.cheer > 0) this.cheer -= 1;
       for (let i = this.allies.length - 1; i >= 0; i--) {
         const a = this.allies[i];
-        a.ang += 0.012;
-        const gx = p.x + Math.cos(a.ang) * 38, gy = p.y + Math.sin(a.ang) * 30 + 6, dx = gx - a.x, dy = gy - a.y, dd = Math.hypot(dx, dy) || 1;
-        const sp = Math.min(dd, 2.6); a.x += dx / dd * sp; a.y += dy / dd * sp;
-        if (--a.cd <= 0) {
-          const tg = this._nearest(a.x, a.y, 220);
-          if (tg) {
-            const ang = Math.atan2(tg.y - a.y, tg.x - a.x);
-            this.bullets.push({ x: a.x, y: a.y - 6, vx: Math.cos(ang) * 4.5, vy: Math.sin(ang) * 4.5, dmg: d.dmg * TUNING.allyDmg, crit: false, pierce: 0, life: 60, owner: 'ally', hit: [] });
-          }
-          a.cd = TUNING.allyEvery;
-        }
-        if (--a.t <= 0) { this.allies.splice(i, 1); this._ev({ k: 'deed', what: 'allyBye', x: a.x, y: a.y }); }
+        if (a.wave > 0) a.wave -= 1;                       // 먼저 제자리에서 손을 흔들며 인사
+        else a.x += a.dir * TUNING.allySpeed;              // 그다음 가까운 화면 밖으로 걸어서 떠남
+        const out = a.x < -24 || a.x > W + 24;
+        if (--a.t <= 0 || out) { this.allies.splice(i, 1); if (!out) this._ev({ k: 'deed', what: 'allyBye', x: a.x, y: a.y }); }
       }
     }
     _updateDeeds(t) {
@@ -844,6 +841,12 @@
       }
     }
 
+    /** 지금 선생님(도우미)의 보호를 받는 중인가: 기다리는 도우미의 상담 구역 안에 내가 있으면 적 탄을 막아 준다 */
+    helperShield() {
+      const hz = this.helper, p = this.player;
+      return !!hz && hz.state === 'wait' && Math.hypot(p.x - hz.x, p.y - hz.y) < hz.r + p.r;
+    }
+
     /** 도우미 곁(상담 구역)에 머무르면 게이지가 차고, 가득 차면 조언 카드를 받는다. 적은 도우미를 건드리지 못한다. */
     _updateHelper() {
       const hp = this.helper;
@@ -854,7 +857,7 @@
         const inside = Math.hypot(p.x - hp.x, p.y - hp.y) < hp.r + p.r;
         hp.prog = inside ? Math.min(hp.need, hp.prog + 1) : Math.max(0, hp.prog - TUNING.helperDecay);
         if (hp.prog >= hp.need) {
-          hp.state = 'done'; hp.fade = 45; this.helped += 1;
+          hp.state = 'done'; hp.fade = 45; this.helped += 1;   // 약 0.75초 동안 웃으며 손을 흔들어 인사하고 금방 사라짐
           const w = this.world.helper;
           const ids = ['heal', 'power', this.echoes.length > 0 ? 'team' : 'focus'];
           this._offer(ids.map((id) => ({ id: 'boon_' + id, icon: Worlds.BOONS[id].icon, name: w.boons[id], desc: Worlds.BOONS[id].desc, instant: true, boon: true })), 'helper');
@@ -1001,10 +1004,15 @@
       }
 
       // 적 탄환
+      // 선생님(도우미) 곁의 상담 구역 안에 있으면 날아오는 탄을 구역 테두리에서 막아 준다 (몸으로 부딪히는 건 그대로 아픔)
+      const hz = this.helper, shield = this.helperShield();
       for (let i = this.ebullets.length - 1; i >= 0; i--) {
         const b = this.ebullets[i];
         b.x += b.vx; b.y += b.vy; b.life -= 1;
         let dead = b.life <= 0 || b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20;
+        if (!dead && shield && (b.x - hz.x) * (b.x - hz.x) + (b.y - hz.y) * (b.y - hz.y) < hz.r * hz.r) {
+          dead = true; this.fx.push({ x: b.x, y: b.y, t: 14, kind: 'block' }); this.blocked = (this.blocked || 0) + 1;
+        }
         if (!dead && p.inv === 0) {
           const rr = p.r + b.r;
           if ((p.x - b.x) * (p.x - b.x) + (p.y - b.y) * (p.y - b.y) < rr * rr) { this._hurtPlayer(b.dmg); dead = true; }

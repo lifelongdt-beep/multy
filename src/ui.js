@@ -130,8 +130,9 @@
     box.insertBefore(el('small', '', '💇 머리 색 · ' + M.KID_HAIRS[curHair].name), ln);
     body.appendChild(box);
     paintOutfit(big, show, 1.3, false);
-    tabs(body, [{ id: 'outfit', html: Icons.svg('shirt', 16) + '<span>복장</span>' }, { id: 'char', html: Icons.svg('person', 16) + '<span>캐릭터</span>' }], lookTab, (id) => { lookTab = id; rerender(); });
+    tabs(body, [{ id: 'outfit', html: Icons.svg('shirt', 16) + '<span>복장</span>' }, { id: 'char', html: Icons.svg('person', 16) + '<span>캐릭터</span>' }, { id: 'echo', html: '<span>✨ 에코</span>' }], lookTab, (id) => { lookTab = id; rerender(); });
     if (lookTab === 'char') { renderChars(body); return; }
+    if (lookTab === 'echo') { renderEchoForms(body); return; }
     // 2) 나의 업적: 지금까지 얻은 복장만 보여 준다 (앞으로 나올 복장은 비밀)
     const owned = [];
     for (let c = Math.min(top, 999); c >= 0; c--) {   // 복장(스타일·색)별로 가장 많이 꾸민 단계 하나씩
@@ -360,6 +361,40 @@
     }
   }
 
+  /* ---------- 에코 모습 ---------- */
+  /** 에코(과거의 나) 모습 고르기: 학점으로 순서대로 하나씩 열고, 뒤에 열수록 에코가 조금씩 강해진다 */
+  function renderEchoForms(body) {
+    const own = save.echo.owned, cur = M.echoForm(save), nx = M.nextEchoForm(save);
+    body.appendChild(el('div', 'msg', `✨ 에코 모습 ${own.length} / ${M.ECHO_FORMS.length} · 학점으로 순서대로 하나씩 열려요 · 뒤에 열수록 에코 공격력이 강해져요`));
+    const curF = M.ECHO_FORMS[M.echoFormIndex(cur)];
+    body.appendChild(el('div', 'msg', `지금 함께하는 에코: ${curF.name} · 에코 공격 +${Math.round(M.echoFormPower(M.echoFormIndex(cur)) * 100)}%`));
+    const map = el('div', 'omap');
+    M.ECHO_FORMS.forEach((f, i) => {
+      const has = own.indexOf(f.id) >= 0, isNext = nx && nx.form.id === f.id;
+      const card = el('div', 'oc' + (f.id === cur ? ' cur' : '') + (!has && !isNext ? ' lock' : ''));
+      const cv = el('canvas'); cv.width = 96; cv.height = 120; card.appendChild(cv);
+      card.appendChild(el('div', '', has || isNext ? f.name : '???'));
+      card.appendChild(el('small', '', `공격 +${Math.round(M.echoFormPower(i) * 100)}%`));
+      if (window.Art && Art.drawEchoForm) {
+        const c = cv.getContext('2d'); c.setTransform(2, 0, 0, 2, 0, 0);
+        Art.drawEchoForm(c, f.id, 24, 32, 1.45, 0.4 + i * 0.37);
+        if (!has) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = isNext ? 'rgba(20,22,40,.55)' : 'rgba(10,12,24,.92)'; c.fillRect(0, 0, cv.width, cv.height); c.globalCompositeOperation = 'source-over'; }
+      }
+      if (has) {
+        card.title = f.desc;
+        card.onclick = () => { if (f.id === cur) return; M.pickEchoForm(save, f.id); Sfx.play('click'); commit(); rerender(); };
+      } else if (isNext) {
+        const b = el('button', '', `🎓 ${M.fmtNum(nx.cost)}`); b.style.minWidth = '0'; b.style.padding = '3px 6px'; b.style.fontSize = '11px'; b.style.marginTop = '2px';
+        b.disabled = save.coins < nx.cost;
+        b.onclick = (e) => { e.stopPropagation(); if (M.buyEchoForm(save).ok) { Sfx.play('levelup'); commit(); rerender(); } };
+        card.appendChild(b);
+      } else card.appendChild(el('small', '', '🔒'));
+      map.appendChild(card);
+    });
+    body.appendChild(map);
+    if (curF) body.appendChild(el('div', 'msg', `💬 ${curF.name}: ${curF.desc}`));
+  }
+
   /* ---------- 캐릭터 ---------- */
   /** 캐릭터 고르기 (내 캐릭터 화면 아래쪽에 붙는다): 등급별로 묶고, 조건(업적)·학점·레벨을 보여 준다 */
   function renderChars(body) {
@@ -497,6 +532,7 @@
     kidColor() { return M.kidColor(save); },
     kidSkin() { return M.kidSkin(save); },
     kidHair() { return M.kidHair(save); },
+    echoForm() { return M.echoForm(save); },
     /** 회차 고르기 (결과 화면의 "다음 회차로" 버튼 등) */
     selectCycle(c) { const ok = M.selectCycle(save, c); if (ok) { if (window.GameEchoes && GameEchoes.world() !== save.worlds.selected) GameEchoes.reset(save.worlds.selected); commit(); } return ok; },
     /** 시작하려는 월드에 장비가 모자라면 {atk, def} 부족분, 충분하면 null */

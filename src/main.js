@@ -98,7 +98,7 @@
   let warmFx = [];      // 선행 순간 퍼지는 따뜻한 빛 {x, y, r, t}
   const THANKS = ['고마워!', '덕분이야 💛', '정말 고마워요', '너 최고야!', '살았다~', '고마워, 친구야', '복 받을 거야', '힘이 났어!'];
   const VISIT = ['지난번엔 고마웠어!', '은혜 갚으러 왔어 💛', '이거 받아!', '또 만났네!'];
-  function thanks(x, y, list) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: 0, max: 80 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
+  function thanks(x, y, list, delay) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: -(delay || 0), max: 80 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
   let headFlash = [];   // 새로 얻은 아이템: 주인공 머리 위에서 잠깐 반짝 {icon, t}
   // 보스 극복 연출: 슬로모션 → 부풀며 빛남 → 폭발·충격파·색종이 → 화면 번쩍
   let bossFx = null, slowmo = 0, whiteFlash = 0;
@@ -143,14 +143,16 @@
         case 'swarm': edgeFlash = 40; Sfx.play('boss'); break;
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 90 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
-        case 'helped': Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y + (Math.random() - 0.5) * 24, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
+        case 'helped': playerCheer = 100; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 34 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
         case 'warm': warmFx.push({ x: ev.x, y: ev.y, r: ev.r, t: 0 }); break;
         case 'deed':   // 선행: 소리·반짝임만 (설명은 튜토리얼 안내에서)
           if (ev.what === 'spot') { pickAnim = { t: 0, max: 26, item: ev.kind === 'pot' ? 'pot' : ev.kind === 'toy' ? 'teddy' : 'cup' }; Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
           else if (ev.what === 'rescued' || ev.what === 'escortDone' || ev.what === 'gaugeFull') {
             Sfx.play('levelup'); if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, '#ff8cc0', 12, false);
-            if (ev.x !== undefined) thanks(ev.x, ev.y, THANKS);
+            if (ev.x !== undefined && ev.what !== 'gaugeFull') { bubbles.push({ text: '만세!', x: ev.x, y: ev.y - 40, t: 0, max: 45 }); thanks(ev.x, ev.y, THANKS, 45); }   // 도와주면: 만세! → 고맙다는 말
+            else if (ev.x !== undefined) thanks(ev.x, ev.y, THANKS);
           }
+          else if (ev.what === 'cheer') bubbles.push({ text: '💗 응원 받는 중! 공격 +' + Math.round(EchoSim.TUNING.cheerDmg * 100) + '%', x: sim.player.x, y: sim.player.y - 44, t: -110, max: 100 });
           else if (ev.what === 'visitGift') { Sfx.play('levelup'); thanks(ev.x, ev.y, VISIT); }
           else if (ev.what === 'allyBye') { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 34, y: ev.y + (Math.random() - 0.5) * 20, t: -i * 3, max: 50 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); }   // 하트가 반짝이며 사라짐
           else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') { Sfx.play('heal'); if (ev.what === 'escortStart') escortTalk = { text: '같이 가 줄래?', t: 150 }; }
@@ -175,6 +177,7 @@
   const NEED_POSE = { child: 'cower', elder: 'carry', friend: 'lost' };
   let escortTalk = null;   // 지켜 줄 친구의 짧은 말풍선 {text, t}
   let pickAnim = null;     // 주인공이 선행 거리를 줍는 동작 {t, max, item}
+  let playerCheer = 0;     // 선생님께 배우고 난 뒤 주인공 만세 (프레임)
   /** 뻗는 팔의 각도(바라보는 쪽 기준, 위아래로 너무 꺾이지 않게) */
   function reachAng(fx, fy, tx, ty) { return Math.max(-1.1, Math.min(1.1, Math.atan2(ty - fy, Math.abs(tx - fx) || 1))); }
   /** 작은 말풍선: (x, y)는 꼬리 끝(말하는 사람 머리 위). 화면 밖으로 나가지 않게 좌우 보정 */
@@ -203,7 +206,7 @@
   const NPC_EMO = { child: '🧒', elder: '👵', friend: '🧑' };
   function drawNPC(useArt, kind, x, y, pose) {
     ctx.fillStyle = 'rgba(255,216,77,.22)'; ctx.beginPath(); ctx.ellipse(x, y + 29, 14, 5.5, 0, 0, 7); ctx.fill();
-    ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y + 29, 14, 5.5, 0, 0, 7); ctx.stroke();   // 노란 바닥 링 = 내 편인 사람 (적=빨강, 에코=파랑, 나=초록)
+    ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y + 29, 14, 5.5, 0, 0, 7); ctx.stroke();   // 노란 바닥 링 = 내 편인 사람 (적=빨강, 에코=회색, 나=초록)
     if (useArt && Art.drawPerson) return Art.drawPerson(ctx, 'npc:' + kind + (pose && pose.sad ? ':sad' : ''), x, y, pose, performance.now());
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(NPC_EMO[kind] || '🧑', x, y, 28);
     return { L: [x - 10, y + 6], R: [x + 10, y + 6] };
@@ -224,6 +227,7 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     if (escortTalk && --escortTalk.t <= 0) escortTalk = null;
     if (pickAnim && ++pickAnim.t >= pickAnim.max) pickAnim = null;
+    if (playerCheer > 0) playerCheer -= 1;
     for (let i = bubbles.length - 1; i >= 0; i--) {
       const b = bubbles[i]; b.t += 1;
       if (b.t < 0) continue;
@@ -270,12 +274,13 @@
     // 순해진 방해 요소: 머리 위 작은 하트
     for (const e of sim.enemies) if (e.calm > 0) { ctx.globalAlpha = Math.min(1, e.calm / 30) * 0.9; deedArt('heartPink', e.x, e.y - e.r - 6 + Math.sin(now / 200 + e.x) * 2, 10); }
     ctx.globalAlpha = 1;
-    // 함께 싸우는 도와준 사람들
+    // 도와준 사람들: 고맙다고 손을 흔든 뒤 안전한 곳(화면 밖)으로 걸어서 떠난다 (싸우지 않음)
     for (const a of sim.allies) {
       // 떠나기 1초 전부터 반짝반짝 깜빡이며 흐려지고 머리 위로 하트가 피어오른다
       ctx.globalAlpha = a.t < 60 ? (a.t / 60) * (0.55 + 0.45 * Math.abs(Math.sin(now / 70))) : 1;
       if (a.t < 60 && a.t % 8 === 0) bubbles.push({ heart: true, x: a.x + (Math.random() - 0.5) * 20, y: a.y - 14, t: 0, max: 40 });
-      drawNPC(useArt, a.kind, a.x, a.y - Math.abs(Math.sin(now / 180 + a.ang)) * 3, { name: 'throw', dir: sim.player.x < a.x ? -1 : 1 });
+      const cheering = a.wave > 50, face = sim.player.x < a.x ? -1 : 1;
+      drawNPC(useArt, a.kind, a.x, a.y - (cheering ? Math.abs(Math.sin(now / 110)) * 6 : a.wave > 0 ? Math.abs(Math.sin(now / 160)) * 2 : 0), cheering ? { name: 'cheer', dir: face } : a.wave > 0 ? { name: 'wave', dir: face } : { name: 'walk', dir: a.dir });
     }
     ctx.globalAlpha = 1;
     // 지난 판에 도와준 사람이 찾아옴
@@ -312,8 +317,8 @@
         // 몸짓만으로 모자란 사정만 짧게: 처음 2초 + 5초마다 1.3초
         if (!near && (rs.t < 120 || rs.t % 300 < 80)) talkBubble(NEED_SHORT[rs.kind] || '도와주세요', rs.x, by + 4, 1, true);
       } else {
-        drawNPC(useArt, rs.kind, rs.x, rs.y + bob, rs.state === 'done' ? { name: 'cheer' } : { name: 'walk', dir: rs.x < W / 2 ? -1 : 1 });
-        if (rs.state === 'done') deedArt('heart', rs.x, by - 6, 18);
+        if (rs.state !== 'done') drawNPC(useArt, rs.kind, rs.x, rs.y + bob, { name: 'walk', dir: rs.x < W / 2 ? -1 : 1 });   // 구했으면 '도와준 사람'이 이어서 만세·인사
+        else deedArt('heart', rs.x, by - 14, 18);
       }
       ctx.globalAlpha = 1;
     }
@@ -335,7 +340,7 @@
         else if (d2 < 75 && ahead) fpose = { name: 'walkHold', dir: es.dir, ang: reachAng(es.x, es.y, p.x, p.y) };   // 손잡고 함께 걷기
         else fpose = { name: 'walk', dir: es.dir };
       } else fpose = es.state === 'done' ? { name: 'cheer' } : { name: 'cower' };
-      drawNPC(useArt, 'friend', es.x + (es.inv > 20 ? Math.sin(now / 25) * 1.6 : 0), es.y - step, fpose);   // 맞으면 움찔움찔
+      if (es.state !== 'done') drawNPC(useArt, 'friend', es.x + (es.inv > 20 ? Math.sin(now / 25) * 1.6 : 0), es.y - step, fpose);   // 무사히 도착하면 '도와준 사람'이 이어서 만세·인사   // 맞으면 움찔움찔
       ctx.globalAlpha = es.state === 'walk' ? 1 : Math.max(0, es.fade / 90);
       if (es.state === 'walk') {
         const w = 26, f = Math.max(0, es.hp / es.maxhp);
@@ -378,9 +383,9 @@
       sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId(), cycle: GameUI.cycle(), visitor: GameUI.takeVisitor() });
     }
     playerEmoji = GameUI.emoji();
-    if (window.Art) { if (Art.setLook) Art.setLook(GameUI.look()); if (Art.setColor) Art.setColor(GameUI.kidColor()); if (Art.setSkin) Art.setSkin(GameUI.kidSkin()); if (Art.setHair) Art.setHair(GameUI.kidHair()); Art.setOutfit(GameUI.outfitCycle()); }   // 회차별 복장 (에코도 같은 옷)
+    if (window.Art) { if (Art.setLook) Art.setLook(GameUI.look()); if (Art.setColor) Art.setColor(GameUI.kidColor()); if (Art.setSkin) Art.setSkin(GameUI.kidSkin()); if (Art.setHair) Art.setHair(GameUI.kidHair()); if (Art.setEchoForm) Art.setEchoForm(GameUI.echoForm()); Art.setOutfit(GameUI.outfitCycle()); }   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null;
+    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null; playerCheer = 0;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -754,16 +759,16 @@
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-    // 에코 = 내 편: 파란 원 + 파란 테두리 유령 (적은 빨간 테두리라 한눈에 구분)
+    // 에코 = 내 편: 회색 원 + 회색 테두리 유령 (적은 빨간 테두리라 한눈에 구분)
     for (const ec of sim.echoes) {
       if (!ec.alive || ec.down > 0) continue;   // 에너지가 떨어져 사라진 동안은 그리지 않음
-      // 흐리게: 내 캐릭터·적보다 눈에 덜 띄도록 (파란 테두리는 남겨 적과 구분). 맞으면 잠깐 깜빡임
+      // 흐리게: 내 캐릭터·적보다 눈에 덜 띄도록 (회색 테두리는 남겨 적과 구분). 맞으면 잠깐 깜빡임
       const hit = ec.inv > 0 && Math.floor(ec.inv / 4) % 2 === 0 ? 0.5 : 1;
       if (useArt) { Art.drawEcho(ctx, ec, playerEmoji, now, 0.3 * hit); continue; }   // 새 그림체: 과거의 나 모습의 유령
       ctx.globalAlpha = 0.07 * hit;
-      ctx.fillStyle = '#3fb8ff'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.fill();
+      ctx.fillStyle = '#aab0bd'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.fill();
       ctx.globalAlpha = 0.32 * hit;
-      ctx.strokeStyle = '#6fd6ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.stroke();
+      ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.stroke();
       ctx.globalAlpha = 0.24 * hit; emoji('👻', ec.x, ec.y + 1, 16);
       ctx.globalAlpha = 1;
     }
@@ -771,21 +776,25 @@
     // 도우미(선생님 등): 빛나는 상담 구역 + 게이지. 가까이 가서 잠시 머물면 조언 카드를 받는다
     if (sim.helper) {
       const hp = sim.helper, bob = Math.sin(performance.now() / 300) * 2;
-      const fadeA = hp.state === 'wait' ? 1 : Math.max(0, hp.fade / 45) * (hp.state === 'done' ? 0.55 + 0.45 * Math.abs(Math.sin(performance.now() / 60)) : 1);   // 도움을 받으면 반짝이며 금방 사라짐
+      const fadeA = hp.state === 'wait' ? 1 : Math.min(1, Math.max(0, hp.fade / 25));   // 배운 뒤엔 손을 흔들며 인사하고 천천히 사라짐
       ctx.globalAlpha = fadeA;
       const glow = ctx.createRadialGradient(hp.x, hp.y, 4, hp.x, hp.y, hp.r + 8);
       glow.addColorStop(0, 'rgba(255,225,120,.35)'); glow.addColorStop(1, 'rgba(255,225,120,.05)');
       ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r + 8, 0, 7); ctx.fill();
       ctx.strokeStyle = 'rgba(255,225,120,.9)'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 6]);
       ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      if (sim.helperShield && sim.helperShield()) {   // 보호 중: 구역 테두리가 또렷한 금빛 막으로 (적 탄을 막아 줌)
+        ctx.globalAlpha = fadeA * (0.55 + 0.25 * Math.sin(performance.now() / 180)); ctx.strokeStyle = '#ffe58a'; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r, 0, 7); ctx.stroke(); ctx.globalAlpha = fadeA;
+      }
       if (hp.prog > 0 && hp.state === 'wait') {
         ctx.strokeStyle = '#7dffb2'; ctx.lineWidth = 5;
         ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r - 5, -Math.PI / 2, -Math.PI / 2 + (hp.prog / hp.need) * Math.PI * 2); ctx.stroke();
       }
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const pl = sim.player, inZone = Math.hypot(pl.x - hp.x, pl.y - hp.y) < hp.r + pl.r, tface = pl.x < hp.x ? -1 : 1;
-      const tpose = hp.state === 'wait' ? (inZone ? { name: 'pat', dir: tface, ang: reachAng(hp.x, hp.y, pl.x, pl.y) } : { name: 'beckon', dir: tface })
-        : hp.state === 'done' ? { name: 'cheer' } : { name: 'wave', dir: tface };
+      const tpose = hp.state === 'wait' ? (inZone ? { name: 'teach', dir: tface } : { name: 'beckon', dir: tface })
+        : { name: 'wave', dir: tface };   // 배운 뒤(또는 떠날 때): 웃으며 손을 흔들어 "안녕"
       if (useArt && Art.drawPerson) Art.drawPerson(ctx, sim.world.id, hp.x, hp.y + bob, tpose, performance.now()); else emoji(hp.emoji, hp.x, hp.y + bob, 34);
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
       ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
@@ -805,7 +814,7 @@
       else {
       if (e.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 7); ctx.fill(); }
       if (e.warn) { ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, 7); ctx.stroke(); }
-      // 적 = 방해 요소: 빨간 테두리 원 (에코의 파란 원과 구분)
+      // 적 = 방해 요소: 빨간 테두리 원 (에코의 회색 원과 구분)
       ctx.strokeStyle = 'rgba(255,85,105,.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 7); ctx.stroke();
       emoji(e.emoji, e.x, e.y + 1, e.r * 2);
       }
@@ -862,9 +871,18 @@
     if (lastPX !== null && Math.abs(p.x - lastPX) > 0.3) faceDir = p.x < lastPX ? -1 : 1;
     lastPX = p.x; lastPY = p.y;
     const blink = p.inv > 0 && Math.floor(p.inv / 4) % 2;
+    if (sim.cheer > 0) {   // 응원 받는 중: 분홍 고리 + 맴도는 작은 하트 (끝나기 1초 전부터 깜빡이며 흐려짐)
+      const ca = Math.min(1, sim.cheer / 60) * (sim.cheer < 60 ? 0.5 + 0.5 * Math.abs(Math.sin(now / 90)) : 1);
+      ctx.globalAlpha = 0.55 * ca; ctx.strokeStyle = '#ff8cc0'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(p.x, p.y + 14, 20 + Math.sin(now / 200) * 2, 7, 0, 0, 7); ctx.stroke();
+      ctx.globalAlpha = ca;
+      for (let i = 0; i < 3; i++) { const an = now / 500 + i * 2.09; deedArt('heartPink', p.x + Math.cos(an) * 22, p.y - 4 + Math.sin(an) * 9, 9); }
+      ctx.globalAlpha = 1;
+    }
     let act = null;
     const dd = sim.deeds, prs = dd && dd.rescue, pes = dd && dd.escort, php = sim.helper;
     if (pickAnim) act = { pose: 'pick', k: pickAnim.t / pickAnim.max };
+    else if (playerCheer > 0) act = { pose: 'cheer' };
     else if (prs && prs.state === 'wait' && Math.hypot(p.x - prs.x, p.y - prs.y) < 110) act = { pose: 'reach', tx: prs.x, ty: prs.y };
     else if (pes && pes.state === 'walk' && !pes.waiting && Math.hypot(p.x - pes.x, p.y - pes.y) < 75) act = { pose: 'reach', tx: pes.x, ty: pes.y };
     else if (php && php.state === 'wait' && Math.hypot(p.x - php.x, p.y - php.y) < php.r + p.r) act = { pose: 'learn', tx: php.x, ty: php.y };
@@ -880,8 +898,9 @@
     for (const f of sim.fx) {
       ctx.globalAlpha = Math.min(1, f.t / 12);
       if (f.kind === 'pop') { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(f.x, f.y, 14 - f.t, 0, 7); ctx.stroke(); }
+      else if (f.kind === 'block') { const k = 1 - f.t / 14; ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffe58a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(f.x, f.y, 3 + k * 9, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }   // 선생님 구역이 막아 낸 탄
       else if (f.kind === 'hurt') { ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.arc(f.x, f.y, 16 - f.t, 0, 7); ctx.fill(); }
-      else if (f.kind === 'echoUp') { ctx.globalAlpha = f.t / 40; ctx.strokeStyle = '#6fd6ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, 4 + f.t * 0.6, 0, 7); ctx.stroke(); }
+      else if (f.kind === 'echoUp') { ctx.globalAlpha = f.t / 40; ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, 4 + f.t * 0.6, 0, 7); ctx.stroke(); }
       else if (f.kind === 'vanish') { ctx.globalAlpha *= 0.35; ctx.fillStyle = '#6fe8ff'; ctx.beginPath(); ctx.arc(f.x, f.y, 24 - f.t, 0, 7); ctx.fill(); }
       else if (f.kind === 'nova') { ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 - f.t / 24), 0, 7); ctx.stroke(); }
       ctx.globalAlpha = 1;

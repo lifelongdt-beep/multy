@@ -67,6 +67,51 @@
     { id: 'brown',  name: '갈색',     hex: '#b5774c' },
     { id: 'deep',   name: '진한 갈색', hex: '#7c4d30' },
   ];
+  /** 에코(과거의 나) 모습: 사람 유령 대신 귀여운 동료 하나로. 학점을 써서 순서대로 하나씩 연다 (첫 번째는 기본) */
+  const ECHO_FORMS = [
+    { id: 'star',     name: '기억 별',   desc: '지난 도전이 작은 별이 되어 함께해요' },
+    { id: 'bird',     name: '메아리 새', desc: '내 움직임을 메아리처럼 따라 하는 새' },
+    { id: 'robot',    name: '기록 로봇', desc: '지난 판을 기록했다가 다시 재생해요' },
+    { id: 'firefly',  name: '반딧불',   desc: '지난 노력이 작은 빛이 되어 날아요' },
+    { id: 'chick',    name: '병아리',   desc: '삐약삐약, 처음 마음을 잊지 않는 병아리' },
+    { id: 'cat',      name: '아기 고양이', desc: '살금살금 곁을 지켜 주는 고양이' },
+    { id: 'puppy',    name: '강아지',   desc: '꼬리를 흔들며 끝까지 따라와요' },
+    { id: 'bunny',    name: '토끼',     desc: '깡총깡총, 긴 귀로 위험을 먼저 들어요' },
+    { id: 'hamster',  name: '햄스터',   desc: '볼 가득 용기를 모아 와요' },
+    { id: 'penguin',  name: '아기 펭귄', desc: '뒤뚱뒤뚱해도 포기하지 않아요' },
+    { id: 'bear',     name: '아기 곰',   desc: '든든하고 포근한 곰' },
+    { id: 'owl',      name: '부엉이',   desc: '지난 판에서 배운 지혜를 알려 줘요' },
+    { id: 'squirrel', name: '다람쥐',   desc: '큰 꼬리에 지난 기억을 모아 둬요' },
+    { id: 'fox',      name: '아기 여우', desc: '재치 있게 길을 찾아 줘요' },
+    { id: 'panda',    name: '판다',     desc: '느긋하지만 힘이 센 판다' },
+    { id: 'koala',    name: '코알라',   desc: '꼭 붙어서 응원해 줘요' },
+    { id: 'whale',    name: '아기 고래', desc: '물을 뿜으며 둥실둥실 헤엄쳐요' },
+    { id: 'dino',     name: '아기 공룡', desc: '작아도 씩씩한 공룡' },
+    { id: 'dragon',   name: '꼬마 용',   desc: '작은 날개로 힘껏 날아요' },
+    { id: 'ufo',      name: '꼬마 UFO', desc: '먼 미래에서 온 듯한 비행접시' },
+  ];
+  /** i번째(0부터) 에코 모습을 여는 데 드는 학점: 뒤로 갈수록 조금씩 비싸짐 (첫 번째는 무료) */
+  function echoFormCost(i) { return i <= 0 ? 0 : Math.round((150 * i + 40 * i * i) / 10) * 10; }
+  /** i번째 에코 모습의 힘: 뒤에 열수록 에코 공격력이 조금씩 강해진다 (한 단계 +2%, 마지막 +38%). 월드·회차가 어려워지는 만큼 천천히 */
+  const ECHO_FORM_STEP = 0.02;
+  function echoFormPower(i) { return Math.max(0, i) * ECHO_FORM_STEP; }
+  function echoFormIndex(id) { return Math.max(0, ECHO_FORMS.findIndex((f) => f.id === id)); }
+  function echoOwned(save) { return (save.echo && Array.isArray(save.echo.owned)) ? save.echo.owned : ['star']; }
+  /** 다음에 열 수 있는 에코 모습 (순서대로 하나씩). 다 열었으면 null */
+  function nextEchoForm(save) {
+    const own = echoOwned(save);
+    for (let i = 0; i < ECHO_FORMS.length; i++) if (own.indexOf(ECHO_FORMS[i].id) < 0) return { form: ECHO_FORMS[i], index: i, cost: echoFormCost(i) };
+    return null;
+  }
+  function buyEchoForm(save) {
+    const nx = nextEchoForm(save);
+    if (!nx) return { ok: false, reason: 'all' };
+    if (save.coins < nx.cost) return { ok: false, reason: 'coins', cost: nx.cost };
+    save.coins -= nx.cost; save.echo.owned.push(nx.form.id); save.echo.pick = nx.form.id;   // 열자마자 입혀 보기
+    return { ok: true, id: nx.form.id, cost: nx.cost };
+  }
+  function pickEchoForm(save, id) { if (echoOwned(save).indexOf(id) < 0) return false; save.echo.pick = id; return true; }
+  function echoForm(save) { const p = save && save.echo && save.echo.pick; return echoOwned(save).indexOf(p) >= 0 ? p : 'star'; }
   /** 주인공 머리 색 (분홍·초록·하늘처럼 게임 신호색은 뺐다) */
   const KID_HAIRS = [
     { id: 'dark',   name: '흑갈색', hex: '#3b2b25' },
@@ -271,6 +316,7 @@
       color: null,                                // 옷 색: KID_COLORS 번호. null = 복장 원래 색
       skin: 0,                                    // 얼굴(피부) 색: KID_SKINS 번호
       hair: 0,                                    // 머리 색: KID_HAIRS 번호
+      echo: { owned: ['star'], pick: 'star' },     // 에코 모습: 연 것들 · 고른 것
       outfitPick: null,                           // 골라 입은 복장(그 복장을 얻은 회차 번호). null = 지금 회차 복장 자동
       deeds: { people: 0, escorts: 0, spots: 0, book: {}, visitor: null },   // 선행 기록: 도운 사람 · 지켜 준 친구 · 작은 선행 · 도감('world:kind' -> 횟수) · 다음 판에 찾아올 사람
     };
@@ -336,6 +382,11 @@
     if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(9999, Math.floor(raw.cycle));
     d.maxCycle = Math.max(d.cycle, isNum(raw.maxCycle) && raw.maxCycle >= 0 ? Math.min(9999, Math.floor(raw.maxCycle)) : 0);
     if (raw.look === 'girl') d.look = 'girl';
+    if (raw.echo && typeof raw.echo === 'object') {
+      const own = Array.isArray(raw.echo.owned) ? raw.echo.owned : [];
+      d.echo.owned = ECHO_FORMS.map((f) => f.id).filter((id) => id === 'star' || own.indexOf(id) >= 0);
+      if (d.echo.owned.indexOf(raw.echo.pick) >= 0) d.echo.pick = raw.echo.pick;
+    }
     if (isNum(raw.hair) && raw.hair >= 0 && raw.hair < KID_HAIRS.length) d.hair = Math.floor(raw.hair);
     if (isNum(raw.skin) && raw.skin >= 0 && raw.skin < KID_SKINS.length) d.skin = Math.floor(raw.skin);
     if (isNum(raw.color) && raw.color >= 0 && raw.color < KID_COLORS.length) d.color = Math.floor(raw.color);
@@ -415,7 +466,7 @@
       magnet: lv('magnet') + (mods.magnet || 0),
       xpMul: (1 + lv('xp')) * (mods.xpMul || 1),
       regen: lv('regen') + (mods.regen || 0),
-      echoPower: lv('echo') + (mods.echoPower || 0),
+      echoPower: lv('echo') + (mods.echoPower || 0) + echoFormPower(echoFormIndex(echoForm(save))),   // 고른 에코 모습의 힘 포함
       startStats: Object.assign({}, mods.startStats || {}),
     };
   }
@@ -674,7 +725,7 @@
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopMax, shopEffect, shopLevel, dailyMissions, refillMissions, missionText, defaultSave, sanitize, load, persist,
-    RARITY, CHAR_MAX_LV, KID_COLORS, kidColor, KID_SKINS, kidSkin, KID_HAIRS, kidHair, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,
+    RARITY, CHAR_MAX_LV, KID_COLORS, kidColor, KID_SKINS, kidSkin, KID_HAIRS, kidHair, ECHO_FORMS, echoFormCost, echoFormPower, echoFormIndex, nextEchoForm, buyEchoForm, pickEchoForm, echoForm, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,
     OUTFITS: Worlds.OUTFITS, outfitCycle, pickOutfit, topCycle, selectCycle, deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,
   };

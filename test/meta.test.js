@@ -477,3 +477,40 @@ test('주인공 머리 색: 기본 흑갈색(0), 저장 후 유지, 범위 밖�
   assert.strictEqual(M.kidHair(back), M.KID_HAIRS[3].hex);
   assert.strictEqual(M.sanitize({ hair: -1 }).hair, 0);
 });
+
+test('에코 모습: 기본은 기억 별, 학점으로 순서대로 하나씩 열고 고를 수 있다', () => {
+  assert.strictEqual(M.ECHO_FORMS.length, 20);
+  assert.ok(!M.ECHO_FORMS.some((f) => f.id === 'crane'), '종이학은 뺐다');
+  const s = M.defaultSave();
+  assert.deepStrictEqual(s.echo.owned, ['star']);
+  assert.strictEqual(M.echoForm(s), 'star');
+  const nx = M.nextEchoForm(s);
+  assert.strictEqual(nx.form.id, 'bird'); assert.ok(nx.cost > 0);
+  assert.strictEqual(M.buyEchoForm(s).ok, false, '학점이 모자라면 못 연다');
+  s.coins = 100000;
+  const r = M.buyEchoForm(s);
+  assert.ok(r.ok); assert.strictEqual(r.id, 'bird'); assert.strictEqual(s.coins, 100000 - nx.cost);
+  assert.strictEqual(M.echoForm(s), 'bird', '열자마자 입힘');
+  assert.strictEqual(M.nextEchoForm(s).form.id, 'robot', '다음 것은 순서대로');
+  assert.ok(M.echoFormCost(2) > M.echoFormCost(1), '뒤로 갈수록 비쌈');
+  assert.strictEqual(M.pickEchoForm(s, 'ufo'), false, '안 연 것은 못 고름');
+  assert.strictEqual(M.pickEchoForm(s, 'star'), true); assert.strictEqual(M.echoForm(s), 'star');
+  const back = M.sanitize(JSON.parse(JSON.stringify(s)));
+  assert.deepStrictEqual(back.echo.owned, ['star', 'bird']); assert.strictEqual(back.echo.pick, 'star');
+  assert.deepStrictEqual(M.sanitize({ echo: { owned: ['zzz', 'robot'], pick: 'zzz' } }).echo, { owned: ['star', 'robot'], pick: 'star' });
+  assert.deepStrictEqual(M.sanitize({}).echo, { owned: ['star'], pick: 'star' }, '예전 저장은 기본');
+  let total = 0; for (let i = 0; i < 20; i++) total += M.echoFormCost(i);
+  assert.ok(total > 50000 && total < 300000, '전부 여는 데 드는 학점: ' + total);
+});
+
+test('에코 모습: 뒤에 연 모습일수록 에코 공격력이 조금씩 강해진다 (고른 모습 기준)', () => {
+  assert.strictEqual(M.echoFormPower(0), 0);
+  for (let i = 1; i < M.ECHO_FORMS.length; i++) assert.ok(M.echoFormPower(i) > M.echoFormPower(i - 1));
+  assert.ok(M.echoFormPower(M.ECHO_FORMS.length - 1) <= 0.4, '마지막도 +40% 이하 (난이도 균형)');
+  const s = M.defaultSave();
+  const base = M.bonusFor(s).echoPower;
+  s.echo.owned = M.ECHO_FORMS.map((f) => f.id); s.echo.pick = 'ufo';
+  assert.ok(Math.abs(M.bonusFor(s).echoPower - base - M.echoFormPower(19)) < 1e-9);
+  s.echo.pick = 'star';
+  assert.strictEqual(M.bonusFor(s).echoPower, base, '첫 모습은 추가 힘 없음');
+});
