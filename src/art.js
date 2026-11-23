@@ -57,6 +57,81 @@
       g.fillStyle = hi; oval(g, -4.6, -4.2, 2.6, 1.7); g.fill(); circle(g, -1.4, -5.6, 0.9); g.fill();
     };
   }
+  /* 월드 엠블럼 (24x24, 가운데 0,0) */
+  function rect(g, x, y, w, h, col, lw) { g.beginPath(); g.rect(x, y, w, h); fillStroke(g, col, lw || 1.6); }
+  function wins(g, xs, ys, w, h, col) { g.fillStyle = col; for (const x of xs) for (const y of ys) g.fillRect(x, y, w, h); }
+  const WORLD_ART = {
+    school(g) {
+      rect(g, -10, -2, 20, 12, '#f2d9a8'); g.beginPath(); g.moveTo(-11.5, -2); g.lineTo(0, -9); g.lineTo(11.5, -2); g.closePath(); fillStroke(g, '#e8604c', 1.6);
+      rect(g, -2.5, 3, 5, 7, '#9b6a43', 1.3); wins(g, [-8, 4.5], [1], 3.5, 3.5, '#7fc8ff');
+      circle(g, 0, -4, 1.8); fillStroke(g, '#fff', 1.2);
+      g.strokeStyle = OL; g.lineWidth = 1.4; g.beginPath(); g.moveTo(0, -9); g.lineTo(0, -12.5); g.stroke(); g.fillStyle = '#ff4d6d'; g.fillRect(0, -12.5, 3.5, 2);
+    },
+    academy(g) {   // 펼친 책
+      g.beginPath(); g.moveTo(0, -5); g.quadraticCurveTo(-5, -8, -11, -6); g.lineTo(-11, 8); g.quadraticCurveTo(-5, 6, 0, 9); g.closePath(); fillStroke(g, '#fdfaf0', 1.6);
+      g.beginPath(); g.moveTo(0, -5); g.quadraticCurveTo(5, -8, 11, -6); g.lineTo(11, 8); g.quadraticCurveTo(5, 6, 0, 9); g.closePath(); fillStroke(g, '#f1ead6', 1.6);
+      g.strokeStyle = '#9aa6c8'; g.lineWidth = 1; for (const y of [-2, 1, 4]) { g.beginPath(); g.moveTo(-8.5, y - 1); g.lineTo(-2.5, y); g.moveTo(2.5, y); g.lineTo(8.5, y - 1); g.stroke(); }
+      g.fillStyle = '#ff6f91'; g.beginPath(); g.moveTo(5, -6.3); g.lineTo(5, -1); g.lineTo(6.5, -2.4); g.lineTo(8, -1); g.lineTo(8, -6.6); g.fill();
+    },
+    office(g) {
+      rect(g, -7, -11, 14, 21, '#8fb3d9'); rect(g, 5, -3, 6, 13, '#6f93bd');
+      wins(g, [-5, -1, 3], [-9, -5.5, -2, 1.5], 2.2, 2.2, '#e8f6ff'); rect(g, -2, 5, 4, 5, '#3b4e78', 1.2);
+    },
+    subway(g) {
+      g.beginPath(); g.roundRect(-8, -10, 16, 17, 4); fillStroke(g, '#5ca8ff', 1.7);
+      rect(g, -6, -7, 12, 6, '#dff3ff', 1.3); g.fillStyle = '#ffe14d'; circle(g, -4, 3, 1.5); g.fill(); circle(g, 4, 3, 1.5); g.fill();
+      g.strokeStyle = OL; g.lineWidth = 1.7; g.beginPath(); g.moveTo(-5, 7); g.lineTo(-8, 11); g.moveTo(5, 7); g.lineTo(8, 11); g.moveTo(-9, 11); g.lineTo(9, 11); g.stroke();
+    },
+    home(g) {
+      rect(g, -8, -2, 16, 12, '#fff1d6'); g.beginPath(); g.moveTo(-11, -1); g.lineTo(0, -10); g.lineTo(11, -1); g.closePath(); fillStroke(g, '#ff7a59', 1.7);
+      rect(g, -2.5, 3, 5, 7, '#c0814f', 1.3); rect(g, 3.5, 1, 3.5, 3.5, '#9fd8ff', 1.1); rect(g, 5, -9, 3, 5, '#a86b4b', 1.3);
+      g.fillStyle = '#ff6fa8'; heartPathAt(g, -5, 2.5, 2.2); g.fill();
+    },
+    gym(g) {   // 아령
+      rect(g, -7, -1.2, 14, 2.4, '#c3cbe8', 1.3);
+      for (const sx of [-1, 1]) { g.beginPath(); g.roundRect(sx * 7 - 2.5, -6.5, 5, 13, 1.6); fillStroke(g, '#4a5580', 1.6); g.beginPath(); g.roundRect(sx * 10.5 - 1.5, -4, 3, 8, 1.2); fillStroke(g, '#6b78a8', 1.4); }
+      g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-8.5, -5.5, 1, 6); g.fillRect(5.5, -5.5, 1, 6);
+    },
+    library(g) {   // 책 더미
+      g.beginPath(); g.roundRect(-10, 5, 20, 5, 1); fillStroke(g, '#4da3ff', 1.5);
+      g.beginPath(); g.roundRect(-8, 0, 17, 5, 1); fillStroke(g, '#ff6f61', 1.5);
+      g.beginPath(); g.roundRect(-9, -5, 16, 5, 1); fillStroke(g, '#5ccf62', 1.5);
+      g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(6, 6.3, 2.5, 2.4); g.fillRect(5.6, 1.3, 2.4, 2.4); g.fillRect(4.6, -3.7, 1.6, 2.4);
+      g.save(); g.translate(1, -9); g.rotate(-0.25); g.beginPath(); g.roundRect(-6, -2, 12, 4, 1); fillStroke(g, '#ffd84d', 1.4); g.restore();
+    },
+    beach(g) {   // 파라솔 + 모래 + 물결
+      g.beginPath(); g.moveTo(-12, 8); g.quadraticCurveTo(0, 3, 12, 8); g.lineTo(12, 11); g.lineTo(-12, 11); g.closePath(); fillStroke(g, '#f4d38a', 1.4);
+      g.strokeStyle = OL; g.lineWidth = 2.6; g.beginPath(); g.moveTo(-1, 7); g.lineTo(2, -6); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 1.2; g.stroke();
+      g.save(); g.translate(2, -6); g.rotate(0.2);
+      g.beginPath(); g.moveTo(-10, 2); g.quadraticCurveTo(0, -12, 10, 2); g.closePath(); fillStroke(g, '#ff5a6e', 1.6);
+      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-3.5, 2); g.quadraticCurveTo(0, -9, 3.5, 2); g.closePath(); g.fill(); g.restore();
+    },
+    airport(g) {   // 비행기
+      g.save(); g.rotate(-0.6);
+      g.beginPath(); g.moveTo(0, -12); g.quadraticCurveTo(2.4, -10, 2.4, -6); g.lineTo(2.4, 6); g.quadraticCurveTo(0, 10, -2.4, 6); g.lineTo(-2.4, -6); g.quadraticCurveTo(-2.4, -10, 0, -12); fillStroke(g, '#f2f5ff', 1.6);
+      g.beginPath(); g.moveTo(2, -2); g.lineTo(11, 3); g.lineTo(11, 5); g.lineTo(2, 3); g.moveTo(-2, -2); g.lineTo(-11, 3); g.lineTo(-11, 5); g.lineTo(-2, 3); fillStroke(g, '#5ca8ff', 1.5);
+      g.beginPath(); g.moveTo(1.6, 6); g.lineTo(5.5, 9.5); g.lineTo(5.5, 11); g.lineTo(0, 9); g.lineTo(-5.5, 11); g.lineTo(-5.5, 9.5); g.lineTo(-1.6, 6); fillStroke(g, '#5ca8ff', 1.4);
+      g.fillStyle = '#5ca8ff'; oval(g, 0, -8.5, 1.2, 1.6); g.fill();
+      g.restore();
+    },
+    hospital(g) {
+      rect(g, -9, -8, 18, 18, '#f2f5ff'); g.fillStyle = '#ff4d6d'; g.fillRect(-2, -6, 4, 10); g.fillRect(-5, -3, 10, 4);
+      rect(g, -2.5, 5, 5, 5, '#9fd8ff', 1.2); wins(g, [-7.5, 5], [-6, 0], 2.5, 2.5, '#9fd8ff');
+    },
+    mountain(g) {
+      g.beginPath(); g.moveTo(-12, 10); g.lineTo(-3, -9); g.lineTo(6, 10); g.closePath(); fillStroke(g, '#7d8fb3', 1.6);
+      g.beginPath(); g.moveTo(-1, 10); g.lineTo(6, -3); g.lineTo(12, 10); g.closePath(); fillStroke(g, '#5c6f96', 1.6);
+      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-3, -9); g.lineTo(-6.2, -2.4); g.lineTo(-4.4, -3.6); g.lineTo(-3, -2); g.lineTo(-1.4, -3.6); g.lineTo(0.2, -2.4); g.closePath(); g.fill();
+      g.fillStyle = '#5ccf62'; g.fillRect(-11, 8.5, 22, 1.6);
+    },
+    stage(g) {   // 무대 커튼 + 별 조명
+      g.beginPath(); g.roundRect(-11, -10, 22, 20, 2); fillStroke(g, '#3a2a55', 1.6);
+      for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 10, -9); g.lineTo(sx * 3, -9); g.quadraticCurveTo(sx * 5, 0, sx * 10, 4); g.closePath(); fillStroke(g, '#d63a5a', 1.3); }
+      g.fillStyle = '#ffd84d'; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 1.6 : 3.8; g.lineTo(Math.cos(a) * rr, 1 + Math.sin(a) * rr); } g.closePath(); g.fill();
+      rect(g, -11, 6, 22, 4, '#b07a4a', 1.4);
+    },
+  };
+  function heartPathAt(g, x, y, r) { g.save(); g.translate(x, y); heartPath(g, r); g.restore(); }
   const DEED_ART = {
     sprout(g) {
       oval(g, 0, 9, 8, 2.4); g.fillStyle = '#8a5a3a'; g.fill();
@@ -678,6 +753,12 @@
       const fn = DEED_ART[kind]; if (!fn) return;
       const c = sprite('deed:' + kind, 28, 28, fn);
       const k = (size || 18) / 24; blit(ctx, c, x, y, k, k);
+    },
+    /** 월드 엠블럼 그림 (메뉴용) */
+    drawWorld(ctx, id, x, y, size) {
+      const fn = WORLD_ART[id]; if (!fn) return false;
+      const c = sprite('world:' + id, 28, 28, fn);
+      const k = (size || 18) / 24; blit(ctx, c, x, y, k, k); return true;
     },
     drawTeacher(ctx, x, y) { this.drawHelper(ctx, 'school', x, y); },
     drawHelper(ctx, worldId, x, y) {

@@ -153,7 +153,10 @@
     for (const w of M.WORLD_ORDER) {
       const wd = M.WORLDS[w];
       const open = M.worldUnlocked(save, w);
-      grid.appendChild(el('div', 'wn', open ? `${wd.emoji} ${wd.name}` : '🔒 ???'));
+      const wn = el('div', 'wn');
+      if (open) wn.appendChild(pic((g) => window.Art.drawWorld(g, w, 14, 14, 24), 28, 28, 22)); else { const lk = el('span', 'lk'); lk.innerHTML = window.Icons ? window.Icons.svg('lock', 18) : ''; wn.appendChild(lk); }
+      wn.appendChild(document.createTextNode(open ? ` ${wd.name}` : ' ???'));
+      grid.appendChild(wn);
       for (const k of M.DEED_KINDS) {
         const n = (book.find((b) => b.world === w && b.kind === k) || {}).count || 0;
         const c = el('div', 'cell' + (n ? ' got' : ''));
