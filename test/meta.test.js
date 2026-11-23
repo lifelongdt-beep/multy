@@ -428,3 +428,13 @@ test('캐릭터: 등급별 조건(업적)을 갖춰야 살 수 있고, 레벨을
   const b = M.bonusFor(M.defaultSave()); assert.strictEqual(b.maxhp, 0); assert.strictEqual(b.dmgMul, 1);
   assert.strictEqual(M.unlockCharacter(s, 'star').reason, 'req', '전설은 3회차부터');
 });
+
+test('끝난 채 남아 있던 미션은 완료 기록으로 옮기고 새 미션(진행 0)으로 바뀐다', () => {
+  const s = M.defaultSave(); s.daily = { date: '2026-11-23', missions: M.dailyMissions('2026-11-23') };
+  s.daily.missions[0].done = true; s.daily.missions[0].progress = s.daily.missions[0].target;
+  assert.strictEqual(M.refillMissions(s), true);
+  assert.strictEqual(s.daily.missions[0].done, false);
+  assert.strictEqual(s.daily.missions[0].progress, 0);
+  assert.strictEqual(s.daily.history.length, 1);
+  assert.strictEqual(M.refillMissions(s), false);
+});

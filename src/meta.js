@@ -213,6 +213,14 @@
     const target = t.kind === 'max' || t.id === 'clear' || t.id === 'help' ? target0 : Math.round(target0 * grow);
     return { id: t.id, target, reward: Math.round(reward0 * grow), progress: 0, done: false };
   }
+  /** 이미 끝난 미션이 목록에 남아 있으면(예전 저장) 완료 기록으로 옮기고 새 미션으로 바꾼다. 바뀌었으면 true */
+  function refillMissions(save) {
+    const done = save.daily.missions.filter((m) => m.done);
+    if (!done.length) return false;
+    save.daily.history = (save.daily.history || []).concat(done.map((m) => ({ id: m.id, target: m.target, reward: m.reward }))).slice(-8);
+    save.daily.missions = save.daily.missions.map((m) => (m.done ? nextMission(save) : m));
+    return true;
+  }
   function missionText(m) { return MISSION_TEMPLATES.find((t) => t.id === m.id).text(m.target); }
 
   /* ---------- 저장 데이터 ---------- */
@@ -432,6 +440,7 @@
   function recordRun(save, run, today) {
     // 날짜가 바뀌면 오늘의 미션 갱신
     if (save.daily.date !== today) save.daily = { date: today, missions: dailyMissions(today) };
+    refillMissions(save);
 
     const worldId = WORLDS[run.world] ? run.world : 'school';
     const unlockedBefore = WORLD_ORDER.filter((w) => worldUnlocked(save, w));
@@ -627,7 +636,7 @@
     SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld, echoesForWorld,
     GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
-    shopCost, shopMax, shopEffect, shopLevel, dailyMissions, missionText, defaultSave, sanitize, load, persist,
+    shopCost, shopMax, shopEffect, shopLevel, dailyMissions, refillMissions, missionText, defaultSave, sanitize, load, persist,
     RARITY, CHAR_MAX_LV, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,
     OUTFITS: Worlds.OUTFITS, outfitCycle, pickOutfit, topCycle, selectCycle, deedScore, titleOf, deedBook, takeVisitor, TITLES, DEED_KINDS, DEED_KIND_INFO,
     bonusFor, coinMul, buyUpgrade, unlockCharacter, selectCharacter, recordRun, exportCode, importCode, importBackup, packEcho, unpackEcho,

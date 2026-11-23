@@ -12,6 +12,7 @@
   function ensureDaily() {
     const t = today();
     if (save.daily.date !== t) save.daily = { date: t, missions: M.dailyMissions(t) };
+    if (M.refillMissions(save)) M.persist(window.localStorage, save);   // 예전에 끝난 미션이 남아 있으면 새 미션으로
   }
   function commit() { M.persist(window.localStorage, save); refresh(); }
   function refresh() {
