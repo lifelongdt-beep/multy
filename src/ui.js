@@ -123,32 +123,52 @@
   }
 
   /* ---------- 선행: 칭호 · 도감 ---------- */
+  const TITLE_ART = { '🌱': 'sprout', '🙂': 'smile', '🤝': 'hands', '💛': 'heart', '☀️': 'sun', '🦸': 'hero', '🌈': 'rainbow', '👼': 'angel' };
+  /** 캔버스 그림 → 작은 이미지 (선행 소품·사람·칭호) */
+  function pic(draw, w, h, dispH, cls) {
+    const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2;
+    const g = c.getContext('2d'); g.scale(2, 2); if (window.Art) draw(g);
+    const im = document.createElement('img'); im.src = c.toDataURL(); im.alt = ''; im.className = 'pic' + (cls ? ' ' + cls : ''); im.style.height = dispH + 'px';
+    return im;
+  }
+  const deedPic = (kind, px) => pic((g) => window.Art.drawDeed(g, kind, 14, 14, 24), 28, 28, px);
+  const personPic = (kind, px) => pic((g) => window.Art.drawHelper(g, 'npc:' + kind, 18, 30), 36, 60, px);
+  const titlePic = (icon, px) => deedPic(TITLE_ART[icon] || 'heart', px);
+  /** 글 사이에 그림을 섞어 한 줄로: ['글', node, '글'] */
+  function mix(cls, parts) { const d = el('div', cls); for (const p of parts) d.appendChild(typeof p === 'string' ? document.createTextNode(p) : p); return d; }
   function renderDeeds() {
     const body = $('pbody'); body.innerHTML = '';
     const sc = M.deedScore(save), tt = M.titleOf(sc), d = save.deeds;
-    body.appendChild(item(tt.title.icon, tt.title.name,
-      tt.next ? `다음 칭호 ${tt.next.icon} ${tt.next.name}까지 💛 ${tt.next.at - sc}` : '최고 칭호에 도달했어요!',
-      { progress: tt.next ? (sc - tt.title.at) / (tt.next.at - tt.title.at) : 1, done: !tt.next }));
-    body.appendChild(el('div', 'msg', `🙋 도운 사람 ${d.people}명 · 🤝 지켜 준 친구 ${d.escorts}명 · 💛 작은 선행 ${d.spots}개`));
+    const top = item(titlePic(tt.title.icon, 30), tt.title.name, '',
+      { progress: tt.next ? (sc - tt.title.at) / (tt.next.at - tt.title.at) : 1, done: !tt.next });
+    const sm = top.querySelector('.grow');
+    sm.insertBefore(tt.next ? mix('sm', ['다음 ', titlePic(tt.next.icon, 16), ` ${tt.next.name}까지 `, deedPic('heart', 13), ` ${tt.next.at - sc}`]) : el('small', '', '최고 칭호에 도달했어요!'), sm.querySelector('.bar'));
+    body.appendChild(top);
+    body.appendChild(mix('msg deedline', [personPic('child', 26), ` ${d.people}명 `, personPic('friend', 26), ` ${d.escorts}명 `, deedPic('teddy', 18), ` ${d.spots}개`]));
     const book = M.deedBook(save), got = book.filter((b) => b.count > 0).length;
-    body.appendChild(el('div', 'msg', `📖 선행 도감 ${got} / ${book.length}`));
+    body.appendChild(el('div', 'msg', `선행 도감 ${got} / ${book.length}`));
     const grid = el('div', 'book');
     grid.appendChild(el('div', 'wn', ''));
-    for (const k of M.DEED_KINDS) grid.appendChild(el('div', 'cell', M.DEED_KIND_INFO[k].emoji));
+    for (const k of M.DEED_KINDS) { const c = el('div', 'cell head'); c.appendChild(personPic(k, 40)); c.title = M.DEED_KIND_INFO[k].name; grid.appendChild(c); }
     for (const w of M.WORLD_ORDER) {
       const wd = M.WORLDS[w];
       const open = M.worldUnlocked(save, w);
       grid.appendChild(el('div', 'wn', open ? `${wd.emoji} ${wd.name}` : '🔒 ???'));
       for (const k of M.DEED_KINDS) {
         const n = (book.find((b) => b.world === w && b.kind === k) || {}).count || 0;
-        const c = el('div', 'cell' + (n ? ' got' : ''), n ? M.DEED_KIND_INFO[k].emoji : '❔');
-        if (n) c.appendChild(el('small', '', `×${n}`));
+        const c = el('div', 'cell' + (n ? ' got' : ''));
+        if (n) { c.appendChild(personPic(k, 30)); c.appendChild(el('small', '', `×${n}`)); } else c.textContent = '?';
         grid.appendChild(c);
       }
     }
     body.appendChild(grid);
     body.appendChild(el('div', 'msg', '칭호'));
-    for (const t of M.TITLES) body.appendChild(item(sc >= t.at ? t.icon : '🔒', t.name, `💛 ${t.at}`, { done: sc >= t.at }));
+    for (const t of M.TITLES) {
+      const on = sc >= t.at, ic = on ? titlePic(t.icon, 32) : el('span', 'lk'); if (!on) ic.innerHTML = window.Icons ? window.Icons.svg('lock', 22) : '';
+      const row = item(ic, t.name, '', { done: on });
+      row.querySelector('.grow').appendChild(mix('sm', [deedPic('heart', 13), ` ${t.at}`]));
+      body.appendChild(row);
+    }
   }
   /** 탭 줄: [{id, label}] 중 cur 를 강조, 누르면 onPick(id) */
   function tabs(body, list, cur, onPick) {

@@ -58,6 +58,61 @@
     };
   }
   const DEED_ART = {
+    sprout(g) {
+      oval(g, 0, 9, 8, 2.4); g.fillStyle = '#8a5a3a'; g.fill();
+      g.strokeStyle = OL; g.lineWidth = 3.4; g.beginPath(); g.moveTo(0, 9); g.quadraticCurveTo(-1, 2, 0, -3); g.stroke();
+      g.strokeStyle = '#5ccf62'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(0, 9); g.quadraticCurveTo(-1, 2, 0, -3); g.stroke();
+      for (const sx of [-1, 1]) { g.save(); g.translate(0, -3); g.rotate(sx * 0.9); oval(g, 0, -5, 3.4, 5.4); fillStroke(g, sx < 0 ? '#7ee07f' : '#5ccf62', 1.6); g.restore(); }
+      g.fillStyle = 'rgba(255,255,255,.5)'; oval(g, -5, -7, 1, 2); g.fill();
+    },
+    smile(g) {
+      circle(g, 0, 0, 10); fillStroke(g, '#ffd84d', 1.8);
+      g.save(); circle(g, 0, 0, 10); g.clip(); const gr = g.createRadialGradient(-4, -5, 1, 0, 0, 12); gr.addColorStop(0, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(200,110,0,.25)'); g.fillStyle = gr; g.fillRect(-12, -12, 24, 24); g.restore();
+      g.fillStyle = OL; oval(g, -3.4, -2.6, 1.3, 1.9); g.fill(); oval(g, 3.4, -2.6, 1.3, 1.9); g.fill();
+      g.strokeStyle = OL; g.lineWidth = 1.7; g.beginPath(); g.arc(0, 1, 5, 0.25, Math.PI - 0.25); g.stroke();
+      g.fillStyle = 'rgba(255,110,130,.45)'; oval(g, -6, 2.4, 2, 1.2); g.fill(); oval(g, 6, 2.4, 2, 1.2); g.fill();
+    },
+    hands(g) {   // 두 손을 맞잡음
+      for (const [sx, col] of [[-1, '#f2c094'], [1, '#d99a6c']]) {
+        g.save(); g.scale(sx, 1);
+        g.beginPath(); g.moveTo(-11, 2); g.lineTo(-5, -3); g.quadraticCurveTo(0, -6, 4, -2); g.lineTo(7, 2); g.quadraticCurveTo(4, 6, -1, 6); g.lineTo(-11, 7); g.closePath(); fillStroke(g, col, 1.6);
+        g.strokeStyle = 'rgba(80,40,20,.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-2, 0); g.lineTo(2, 3); g.stroke();
+        g.beginPath(); g.rect(-12.5, 0.5, 3, 8); fillStroke(g, sx < 0 ? '#5c8dff' : '#ff8a5c', 1.4);
+        g.restore();
+      }
+    },
+    sun(g) {
+      g.fillStyle = '#ffb21f'; g.strokeStyle = OL; g.lineWidth = 1.4;
+      for (let i = 0; i < 10; i++) { g.save(); g.rotate(i * Math.PI / 5); g.beginPath(); g.moveTo(-2.4, -8); g.lineTo(0, -12.2); g.lineTo(2.4, -8); g.closePath(); g.fill(); g.stroke(); g.restore(); }
+      circle(g, 0, 0, 7.6); fillStroke(g, '#ffd84d', 1.7);
+      g.fillStyle = 'rgba(255,255,255,.55)'; oval(g, -2.8, -3, 2.2, 1.4); g.fill();
+      g.fillStyle = OL; circle(g, -2.4, 0, 0.9); g.fill(); circle(g, 2.4, 0, 0.9); g.fill();
+      g.strokeStyle = OL; g.lineWidth = 1.2; g.beginPath(); g.arc(0, 1.6, 2.4, 0.3, Math.PI - 0.3); g.stroke();
+    },
+    hero(g) {   // 망토 + 별 배지
+      g.beginPath(); g.moveTo(-5, -6); g.lineTo(5, -6); g.lineTo(11, 11); g.quadraticCurveTo(0, 7, -11, 11); g.closePath(); fillStroke(g, '#ff4d6d', 1.7);
+      g.fillStyle = 'rgba(0,0,0,.15)'; g.beginPath(); g.moveTo(0, -6); g.lineTo(5, -6); g.lineTo(11, 11); g.quadraticCurveTo(5, 8.5, 0, 8.5); g.closePath(); g.fill();
+      circle(g, 0, -4, 6); fillStroke(g, '#ffd84d', 1.7);
+      g.fillStyle = '#ff9f1c'; g.beginPath();
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 1.8 : 4.2; g.lineTo(Math.cos(a) * rr, -4 + Math.sin(a) * rr); }
+      g.closePath(); g.fill();
+    },
+    rainbow(g) {
+      const cols = ['#ff5a5a', '#ffa53d', '#ffe14d', '#5ccf62', '#4da3ff', '#9b6bff'];
+      g.lineCap = 'butt';
+      g.strokeStyle = OL; g.lineWidth = 15; g.beginPath(); g.arc(0, 7, 8.5, Math.PI, 0); g.stroke();
+      cols.forEach((c, i) => { g.strokeStyle = c; g.lineWidth = 2.2; g.beginPath(); g.arc(0, 7, 13.5 - i * 2 - 1.1 - 1.5, Math.PI, 0); g.stroke(); });
+      g.lineCap = 'round';
+      for (const sx of [-1, 1]) { g.fillStyle = '#fff'; oval(g, sx * 8.5, 8, 4.6, 3); fillStroke(g, '#fff', 1.5); oval(g, sx * 6, 9, 3.4, 2.4); g.fillStyle = '#fff'; g.fill(); }
+    },
+    angel(g) {
+      g.strokeStyle = OL; g.lineWidth = 3.6; oval(g, 0, -10, 6, 2); g.stroke(); g.strokeStyle = '#ffe14d'; g.lineWidth = 2; oval(g, 0, -10, 6, 2); g.stroke();
+      for (const sx of [-1, 1]) { g.save(); g.scale(sx, 1); g.beginPath(); g.moveTo(4, 2); g.quadraticCurveTo(13, -6, 12, 3); g.quadraticCurveTo(10, 9, 4, 6); g.closePath(); fillStroke(g, '#f2f5ff', 1.5); g.strokeStyle = 'rgba(60,70,120,.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(6, 3); g.lineTo(10, 1); g.moveTo(6, 5); g.lineTo(10, 4.5); g.stroke(); g.restore(); }
+      g.beginPath(); g.moveTo(-4.5, 10); g.lineTo(-3, 1); g.lineTo(3, 1); g.lineTo(4.5, 10); g.closePath(); fillStroke(g, '#bfe3ff', 1.6);
+      circle(g, 0, -3, 4.6); fillStroke(g, '#f6d2b0', 1.6);
+      g.fillStyle = OL; circle(g, -1.6, -3.2, 0.7); g.fill(); circle(g, 1.6, -3.2, 0.7); g.fill();
+      g.strokeStyle = OL; g.lineWidth = 1; g.beginPath(); g.arc(0, -2.2, 1.6, 0.4, Math.PI - 0.4); g.stroke();
+    },
     heart: heartArt('#ffcf3f', 'rgba(255,255,240,.9)'),
     heartPink: heartArt('#ff6fa8', 'rgba(255,240,248,.9)'),
     cup(g) {   // 버려진 컵 → 줍기
