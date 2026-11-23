@@ -45,8 +45,8 @@
     bossAdaptMin: 0.7, bossAdaptMax: 4,     // 상점·아이템으로 강해져도 보스가 거의 따라온다 → 큰 도전은 에코가 있어야 넘는다
     bossDmgExp: 0.8,         // 보스전 피해 배율 = (최대체력/기본체력)^0.8 (체력이 높을수록 한 방이 더 아프다)
     baseHp: 110,             // 기본 최대 체력
-    trainMinDmg: 40,         // 열차에 치이면 최소 이만큼, 또는 최대 체력의 trainHpFrac 중 큰 쪽 (치명적!)
-    trainHpFrac: 0.4,
+    trainMinDmg: 60,         // 열차에 치이면 최소 이만큼, 또는 최대 체력의 trainHpFrac 중 큰 쪽 (치명적!)
+    trainHpFrac: 0.6,
     dropMinDmg: 22,          // 떨어지는 물건(낙하물)에 맞으면 최소 이만큼, 또는 최대 체력의 dropHpFrac 중 큰 쪽
     dropHpFrac: 0.2,
     dropR: 34,               //   낙하 범위 반지름

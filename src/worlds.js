@@ -149,7 +149,7 @@
     subway: {
       id: 'subway', name: '지하철', emoji: '🚇', coinMul: 2.0,
       desc: '퇴근길 만원 지하철. 달려오는 열차를 피하세요! 친절한 역무원이 길을 안내해 줍니다.',
-      ruleText: '열차 습격: 경고 줄이 뜬 뒤 열차가 가로질러 지나감 (치이면 최대 체력의 40%가 깎임! 방해 요소는 즉사)',
+      ruleText: '열차 습격: 경고 줄이 뜬 뒤 열차가 가로질러 지나감 (치이면 최대 체력의 60%가 깎임! 방해 요소는 즉사)',
       unlock: { world: 'office' },
       theme: { bg: '#10201f', grid: 'rgba(255,255,255,.03)', deco: 'rails' },
       rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, trains: { first: 24, every: 36}, atkMul: 0.75 },
@@ -341,7 +341,7 @@
     airport: {
       id: 'airport', name: '공항', emoji: '✈️', coinMul: 4.0,
       desc: '첫 해외 출장! 넓은 공항에서 수하물 카트가 쌩쌩 달립니다. 친절한 안내원이 길을 알려 줍니다.',
-      ruleText: '수하물 카트: 경고 줄이 뜬 뒤 카트가 가로질러 지나감 (치이면 최대 체력의 40%가 깎임! 방해 요소는 즉사)',
+      ruleText: '수하물 카트: 경고 줄이 뜬 뒤 카트가 가로질러 지나감 (치이면 최대 체력의 60%가 깎임! 방해 요소는 즉사)',
       unlock: { world: 'beach' },
       theme: { bg: '#18202c', grid: 'rgba(200,220,255,.06)', deco: 'tiles' },
       rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.05, trains: { first: 22, every: 32, emoji: '🛒', text: '🛒 수하물 카트 질주! 빨간 줄을 피하세요'}, atkMul: 0.84 },
@@ -456,7 +456,7 @@
     stage: {
       id: 'stage', name: '꿈의 무대', emoji: '🎤', coinMul: 6.0,
       desc: '드디어 꿈꾸던 첫 무대! 긴장 그림자가 무대를 스치고 떨림이 한꺼번에 몰려와요. 함께하는 동료가 곁을 지켜 줍니다. 지금까지 만난 큰 도전들이 다시 찾아오고, 마지막에 무대 공포증이 기다려요.',
-      ruleText: '긴장 그림자: 경고 줄 뒤 긴장 그림자가 지나감(최대 체력의 40%) · 방해 요소가 10% 더 자주 나옴 · 큰 도전 4번',
+      ruleText: '긴장 그림자: 경고 줄 뒤 긴장 그림자가 지나감(최대 체력의 60%) · 방해 요소가 10% 더 자주 나옴 · 큰 도전 4번',
       unlock: { world: 'mountain' },
       theme: { bg: '#1e0f24', grid: 'rgba(255,170,255,.06)', deco: 'stars' },
       rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, trains: { first: 26, every: 34, emoji: '😨', text: '😨 긴장 그림자가 스쳐 가요! 빨간 줄을 피하세요'}, atkMul: 0.96 },
