@@ -56,7 +56,8 @@
     }
     oval(g, x, y, s * 0.78, s); g.fillStyle = '#fff'; g.fill(); g.lineWidth = s * 0.32; g.strokeStyle = OL; g.stroke();
     circle(g, x + s * 0.12 * dir, y + s * 0.18, s * 0.45); g.fillStyle = OL; g.fill();
-    circle(g, x + s * 0.28 * dir, y - s * 0.05, s * 0.15); g.fillStyle = '#fff'; g.fill();
+    circle(g, x + s * 0.28 * dir, y - s * 0.05, s * 0.17); g.fillStyle = '#fff'; g.fill();
+    circle(g, x - s * 0.02 * dir, y + s * 0.38, s * 0.08); g.fill();   // 작은 반짝임 하나 더
     if (mood === 'droopy') { g.beginPath(); g.ellipse(x, y - s * 0.35, s * 0.85, s * 0.6, 0, Math.PI, 0); g.fillStyle = g.__lid || '#8b7155'; g.fill(); g.lineWidth = s * 0.3; g.strokeStyle = OL; g.stroke(); }
     if (mood === 'worried' || mood === 'angry') {
       const up = mood === 'worried' ? -1 : 1;

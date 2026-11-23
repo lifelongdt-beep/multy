@@ -265,12 +265,30 @@
       star(g, 14, r * 1.32, r * 1.08); g.fillStyle = shade(c.col, -0.55); g.fill();
     }
     const [fx, fy, fs] = (SHAPE[c.shape] || SHAPE.blob)(g, r, c);
+    // 입체감: 몸 전체에 빛(왼쪽 위)과 그림자(오른쪽 아래) — 이미 그린 부분에만 입힘
+    g.save(); g.globalCompositeOperation = 'source-atop';
+    const lg = g.createRadialGradient(-r * 0.45, -r * 0.55, r * 0.05, -r * 0.2, -r * 0.2, r * 1.5);
+    lg.addColorStop(0, 'rgba(255,255,255,.38)'); lg.addColorStop(0.45, 'rgba(255,255,255,.06)'); lg.addColorStop(1, 'rgba(20,10,40,.32)');
+    g.fillStyle = lg; g.fillRect(-r * 3, -r * 3, r * 6, r * 6);
+    g.restore();
+    // 작은 팔과 발 (몸 뒤에): 이모지 같은 '얼굴'이 아니라 움직이는 캐릭터처럼
+    if (!c.noLimbs) {
+      g.save(); g.globalCompositeOperation = 'destination-over';
+      const lc = shade(c.col, -0.3);
+      for (const sx of [-1, 1]) {
+        oval(g, sx * r * 0.42, r * 0.92, r * 0.3, r * 0.17); fillStroke(g, lc, 1.5);                   // 발
+        g.save(); g.translate(sx * r * 0.88, r * 0.15); g.rotate(sx * 0.5); oval(g, 0, 0, r * 0.2, r * 0.3); fillStroke(g, lc, 1.5); g.restore();   // 팔
+      }
+      g.restore();
+    }
     g.__lid = shade(c.col, -0.1);
-    const es = r * 0.22 * fs, gap = r * 0.34 * fs;
+    const es = r * 0.25 * fs, gap = r * 0.36 * fs;   // 눈을 조금 크게, 반짝임은 eye()에서
     if (c.eyes !== 'none' && c.acc !== 'hands') {
       const mood = boss && (c.eyes === 'normal' || !c.eyes) ? 'angry' : (c.eyes || 'normal');
       eye(g, fx - gap, fy - es * 0.3, es, mood); eye(g, fx + gap, fy - es * 0.3, es, mood, -1);
     }
+    // 볼 터치
+    g.fillStyle = 'rgba(255,120,140,.35)'; oval(g, fx - gap * 1.55, fy + es * 0.9, es * 0.55, es * 0.32); g.fill(); oval(g, fx + gap * 1.55, fy + es * 0.9, es * 0.55, es * 0.32); g.fill();
     mouth(g, fx, fy + es * 1.6, es * 2.6, c.mouth || 'smile');
     if (c.acc) acc(g, r, c.acc, c);
     if (c.acc2) acc(g, r, c.acc2, c);
