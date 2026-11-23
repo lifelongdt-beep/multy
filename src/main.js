@@ -398,7 +398,7 @@
     playerEmoji = GameUI.emoji();
     if (window.Art) { if (Art.setLook) Art.setLook(GameUI.look()); if (Art.setColor) Art.setColor(GameUI.kidColor()); if (Art.setSkin) Art.setSkin(GameUI.kidSkin()); if (Art.setHair) Art.setHair(GameUI.kidHair()); if (Art.setEchoForm) Art.setEchoForm(GameUI.echoForm()); Art.setOutfit(GameUI.outfitCycle()); }   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null; playerCheer = 0;
+    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null; playerCheer = 0; tipFreeze = 0;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -409,9 +409,11 @@
   }
 
   /** 튜토리얼 안내 문구를 시간에 맞춰 띄운다 */
+  const TIP_FREEZE = 60;   // 튜토리얼 설명이 뜰 때 게임을 멈추는 시간(프레임, 약 1초). 느려지지 않고 딱 멈췄다가 그대로 이어감
+  let tipFreeze = 0;
   function tutorialTips() {
     const tips = EchoTutorial.TIPS;
-    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { toast = { text: tips[tipIdx].text, t: 270 }; tipIdx++; }
+    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { toast = { text: tips[tipIdx].text, t: 270 }; tipIdx++; tipFreeze = TIP_FREEZE; }   // 새 설명이 뜨면 잠깐 멈춤
   }
 
   /* ---------- 일시정지 ---------- */
@@ -1093,8 +1095,9 @@
   function frame(now) {
     if (state === 'play') {
       acc += Math.min(100, now - last) * (slowmo > 0 ? 0.3 : 1); last = now;   // 보스 극복 순간은 슬로모션
+      if (tipFreeze > 0) { tipFreeze -= 1; acc = 0; }   // 튜토리얼 설명: 짧게 멈춤 (밀린 시간을 몰아서 돌리지 않음)
       const dt = 1000 / TICK;
-      while (acc >= dt && state === 'play') {
+      while (acc >= dt && state === 'play' && tipFreeze <= 0) {
         acc -= dt; sim.step(currentInput());
         handleEvents();
         if (tutorial) tutorialTips();
