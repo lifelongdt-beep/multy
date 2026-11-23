@@ -143,7 +143,7 @@
         case 'swarm': edgeFlash = 40; Sfx.play('boss'); break;
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 90 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
-        case 'helped': Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y + (Math.random() - 0.5) * 24, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
+        case 'helped': playerCheer = 100; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 34 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
         case 'warm': warmFx.push({ x: ev.x, y: ev.y, r: ev.r, t: 0 }); break;
         case 'deed':   // 선행: 소리·반짝임만 (설명은 튜토리얼 안내에서)
           if (ev.what === 'spot') { pickAnim = { t: 0, max: 26, item: ev.kind === 'pot' ? 'pot' : ev.kind === 'toy' ? 'teddy' : 'cup' }; Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
@@ -175,6 +175,7 @@
   const NEED_POSE = { child: 'cower', elder: 'carry', friend: 'lost' };
   let escortTalk = null;   // 지켜 줄 친구의 짧은 말풍선 {text, t}
   let pickAnim = null;     // 주인공이 선행 거리를 줍는 동작 {t, max, item}
+  let playerCheer = 0;     // 선생님께 배우고 난 뒤 주인공 만세 (프레임)
   /** 뻗는 팔의 각도(바라보는 쪽 기준, 위아래로 너무 꺾이지 않게) */
   function reachAng(fx, fy, tx, ty) { return Math.max(-1.1, Math.min(1.1, Math.atan2(ty - fy, Math.abs(tx - fx) || 1))); }
   /** 작은 말풍선: (x, y)는 꼬리 끝(말하는 사람 머리 위). 화면 밖으로 나가지 않게 좌우 보정 */
@@ -224,6 +225,7 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     if (escortTalk && --escortTalk.t <= 0) escortTalk = null;
     if (pickAnim && ++pickAnim.t >= pickAnim.max) pickAnim = null;
+    if (playerCheer > 0) playerCheer -= 1;
     for (let i = bubbles.length - 1; i >= 0; i--) {
       const b = bubbles[i]; b.t += 1;
       if (b.t < 0) continue;
@@ -380,7 +382,7 @@
     playerEmoji = GameUI.emoji();
     if (window.Art) { if (Art.setLook) Art.setLook(GameUI.look()); if (Art.setColor) Art.setColor(GameUI.kidColor()); if (Art.setSkin) Art.setSkin(GameUI.kidSkin()); if (Art.setHair) Art.setHair(GameUI.kidHair()); Art.setOutfit(GameUI.outfitCycle()); }   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null;
+    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null; playerCheer = 0;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -771,7 +773,7 @@
     // 도우미(선생님 등): 빛나는 상담 구역 + 게이지. 가까이 가서 잠시 머물면 조언 카드를 받는다
     if (sim.helper) {
       const hp = sim.helper, bob = Math.sin(performance.now() / 300) * 2;
-      const fadeA = hp.state === 'wait' ? 1 : Math.max(0, hp.fade / 45) * (hp.state === 'done' ? 0.55 + 0.45 * Math.abs(Math.sin(performance.now() / 60)) : 1);   // 도움을 받으면 반짝이며 금방 사라짐
+      const fadeA = hp.state === 'wait' ? 1 : Math.min(1, Math.max(0, hp.fade / 35));   // 배운 뒤엔 손을 흔들며 인사하고 천천히 사라짐
       ctx.globalAlpha = fadeA;
       const glow = ctx.createRadialGradient(hp.x, hp.y, 4, hp.x, hp.y, hp.r + 8);
       glow.addColorStop(0, 'rgba(255,225,120,.35)'); glow.addColorStop(1, 'rgba(255,225,120,.05)');
@@ -784,8 +786,8 @@
       }
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const pl = sim.player, inZone = Math.hypot(pl.x - hp.x, pl.y - hp.y) < hp.r + pl.r, tface = pl.x < hp.x ? -1 : 1;
-      const tpose = hp.state === 'wait' ? (inZone ? { name: 'pat', dir: tface, ang: reachAng(hp.x, hp.y, pl.x, pl.y) } : { name: 'beckon', dir: tface })
-        : hp.state === 'done' ? { name: 'cheer' } : { name: 'wave', dir: tface };
+      const tpose = hp.state === 'wait' ? (inZone ? { name: 'teach', dir: tface } : { name: 'beckon', dir: tface })
+        : { name: 'wave', dir: tface };   // 배운 뒤(또는 떠날 때): 웃으며 손을 흔들어 "안녕"
       if (useArt && Art.drawPerson) Art.drawPerson(ctx, sim.world.id, hp.x, hp.y + bob, tpose, performance.now()); else emoji(hp.emoji, hp.x, hp.y + bob, 34);
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
       ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
@@ -865,6 +867,7 @@
     let act = null;
     const dd = sim.deeds, prs = dd && dd.rescue, pes = dd && dd.escort, php = sim.helper;
     if (pickAnim) act = { pose: 'pick', k: pickAnim.t / pickAnim.max };
+    else if (playerCheer > 0) act = { pose: 'cheer' };
     else if (prs && prs.state === 'wait' && Math.hypot(p.x - prs.x, p.y - prs.y) < 110) act = { pose: 'reach', tx: prs.x, ty: prs.y };
     else if (pes && pes.state === 'walk' && !pes.waiting && Math.hypot(p.x - pes.x, p.y - pes.y) < 75) act = { pose: 'reach', tx: pes.x, ty: pes.y };
     else if (php && php.state === 'wait' && Math.hypot(p.x - php.x, p.y - php.y) < php.r + p.r) act = { pose: 'learn', tx: php.x, ty: php.y };

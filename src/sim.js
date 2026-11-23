@@ -854,7 +854,7 @@
         const inside = Math.hypot(p.x - hp.x, p.y - hp.y) < hp.r + p.r;
         hp.prog = inside ? Math.min(hp.need, hp.prog + 1) : Math.max(0, hp.prog - TUNING.helperDecay);
         if (hp.prog >= hp.need) {
-          hp.state = 'done'; hp.fade = 45; this.helped += 1;
+          hp.state = 'done'; hp.fade = 90; this.helped += 1;   // 1.5초 동안 웃으며 손을 흔들어 인사하고 떠남
           const w = this.world.helper;
           const ids = ['heal', 'power', this.echoes.length > 0 ? 'team' : 'focus'];
           this._offer(ids.map((id) => ({ id: 'boon_' + id, icon: Worlds.BOONS[id].icon, name: w.boons[id], desc: Worlds.BOONS[id].desc, instant: true, boon: true })), 'helper');
