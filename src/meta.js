@@ -200,6 +200,19 @@
     }
     return out;
   }
+  /** 미션 하나를 끝내면 바로 새 미션이 생긴다 (끝없이). 끝낼수록 목표·보상이 조금씩 커진다 */
+  function nextMission(save) {
+    const made = save.daily.made = (save.daily.made || 0) + 1;
+    const r = prng(hashStr('more:' + save.daily.date + ':' + made));
+    const active = save.daily.missions.filter((m) => !m.done).map((m) => m.id);
+    const pool = MISSION_TEMPLATES.filter((t) => active.indexOf(t.id) < 0);
+    const t = pool[Math.floor(r() * pool.length)] || MISSION_TEMPLATES[0];
+    const tier = Math.min(t.targets.length - 1, Math.floor(made / 4) + (r() < 0.4 ? 1 : 0));
+    const grow = 1 + Math.min(2, made * 0.08);   // 끝낼수록 목표·보상이 커짐 (최대 3배)
+    const [target0, reward0] = t.targets[tier];
+    const target = t.kind === 'max' || t.id === 'clear' || t.id === 'help' ? target0 : Math.round(target0 * grow);
+    return { id: t.id, target, reward: Math.round(reward0 * grow), progress: 0, done: false };
+  }
   function missionText(m) { return MISSION_TEMPLATES.find((t) => t.id === m.id).text(m.target); }
 
   /* ---------- 저장 데이터 ---------- */
@@ -276,6 +289,8 @@
         .filter((m) => m && MISSION_TEMPLATES.some((t) => t.id === m.id) && isNum(m.target) && isNum(m.reward))
         .slice(0, 3)
         .map((m) => ({ id: m.id, target: m.target, reward: m.reward, progress: isNum(m.progress) ? Math.max(0, m.progress) : 0, done: m.done === true }));
+      if (isNum(raw.daily.made) && raw.daily.made > 0) d.daily.made = Math.floor(raw.daily.made);
+      if (Array.isArray(raw.daily.history)) d.daily.history = raw.daily.history.filter((m) => m && MISSION_TEMPLATES.some((t) => t.id === m.id) && isNum(m.target) && isNum(m.reward)).slice(-8).map((m) => ({ id: m.id, target: m.target, reward: m.reward }));
     }
     if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(9999, Math.floor(raw.cycle));
     d.maxCycle = Math.max(d.cycle, isNum(raw.maxCycle) && raw.maxCycle >= 0 ? Math.min(9999, Math.floor(raw.maxCycle)) : 0);
@@ -463,6 +478,11 @@
       const v = t.field === 'clear' ? (run.result === 'clear' ? 1 : 0) : t.field === 'runs' ? 1 : (run[t.field] || 0);
       m.progress = t.kind === 'max' ? Math.max(m.progress, v) : m.progress + v;
       if (m.progress >= m.target) { m.done = true; m.progress = m.target; total += m.reward; missionsDone.push(m); }
+    }
+    // 끝낸 미션은 '완료 기록'으로 옮기고 그 자리에 새 미션 (끊임없이 새로 생김)
+    if (missionsDone.length) {
+      save.daily.history = (save.daily.history || []).concat(missionsDone.map((m) => ({ id: m.id, target: m.target, reward: m.reward }))).slice(-8);
+      save.daily.missions = save.daily.missions.map((m) => (m.done ? nextMission(save) : m));
     }
 
     save.coins += total; st.totalCoins += total;

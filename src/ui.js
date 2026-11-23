@@ -149,7 +149,7 @@
     if (!seen.title && M.deedScore(save) === 0) seen.title = titleNow;
     const deedNew = titleNow !== seen.title, questNew = achNow > seen.ach;
     const set = (id, on) => { const b = $(id); if (b) b.classList.toggle('badge', !!on); };
-    set('bShop', shopNew); set('bLook', charNew); set('bDeed', deedNew); set('bQuest', questNew); set('bMore', deedNew || questNew);
+    set('bShop', shopNew); set('bLook', charNew); set('bDeed', deedNew); set('bQuest', questNew);
   }
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
   function item(icon, title, desc, opts) {
@@ -313,17 +313,20 @@
   function renderQuests() {
     ensureDaily();
     const body = $('pbody'); body.innerHTML = '';
-    body.appendChild(el('div', 'msg', `📅 오늘의 미션 (${save.daily.date})`));
+    // 1) 진행 중인 미션 (끝내면 바로 새 미션이 생김)
+    body.appendChild(el('div', 'msg', '🎯 미션 · 하나를 끝내면 바로 새 미션이 생겨요'));
     for (const m of save.daily.missions) {
-      body.appendChild(item(m.done ? '✅' : '🎯', M.missionText(m),
-        `${Math.min(m.progress, m.target)} / ${m.target} · 보상 🎓 ${m.reward}`, { done: m.done, progress: Math.min(1, m.progress / m.target) }));
+      body.appendChild(item('🎯', M.missionText(m), `${Math.min(m.progress, m.target)} / ${m.target} · 보상 🎓 ${M.fmtNum(m.reward)}`, { progress: Math.min(1, m.progress / m.target) }));
     }
+    // 2) 아직 못 한 도전 과제
     const got = M.ACHIEVEMENTS.filter((a) => save.ach[a.id]).length;
     body.appendChild(el('div', 'msg', `🏆 도전 과제 ${got} / ${M.ACHIEVEMENTS.length}`));
-    for (const a of M.ACHIEVEMENTS) {
-      const done = !!save.ach[a.id];
-      body.appendChild(item(done ? '✅' : a.icon, a.name, `${a.desc} · 보상 🎓 ${a.reward}`, { done }));
-    }
+    for (const a of M.ACHIEVEMENTS) if (!save.ach[a.id]) body.appendChild(item(a.icon, a.name, `${a.desc} · 보상 🎓 ${a.reward}`));
+    // 3) 끝낸 것은 아래로: 오늘 끝낸 미션 · 달성한 도전 과제
+    const hist = (save.daily.history || []).slice().reverse();
+    if (hist.length || got) body.appendChild(el('div', 'msg', '✅ 완료'));
+    for (const m of hist) body.appendChild(item('✅', M.missionText(m), `미션 완료 · 🎓 ${M.fmtNum(m.reward)}`, { done: true }));
+    for (const a of M.ACHIEVEMENTS) if (save.ach[a.id]) body.appendChild(item('✅', a.name, `${a.desc} · 🎓 ${a.reward}`, { done: true }));
     const st = save.stats;
     body.appendChild(el('div', 'msg', `통계: ${st.runs}판 · 물리친 방해 ${st.kills} · 보스 극복 ${st.clears} · 도움 ${st.helped || 0}회 · 최장 ${Math.floor(st.bestTime)}초 · 최고 Lv ${st.bestLevel}`));
   }
@@ -366,8 +369,6 @@
   /* ---------- 연결 ---------- */
   $('bWorld').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🗺️ 월드 선택', renderWorlds); };
   $('bShop').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏪 상점', renderShop); };
-  $('bMore').onclick = () => { Sfx.unlock(); Sfx.play('click'); const m = $('more'), open = m.style.display === 'none'; m.style.display = open ? 'flex' : 'none'; $('bMore').innerHTML = Icons.svg('dots') + `<span>${open ? '접기' : '더보기'}</span>`; };
-  if (window.Icons) $('bMore').innerHTML = Icons.svg('dots') + '<span>더보기</span>';
   const openLook = () => { Sfx.unlock(); Sfx.play('click'); lookPreview = null; lookTab = $('bLook').classList.contains('badge') ? 'char' : 'outfit'; openPanel('👕 내 캐릭터', renderLook); };
   $('bLook').onclick = openLook; $('outfitPv').onclick = openLook; $('outfitPv').style.cursor = 'pointer';
   $('bDeed').onclick = () => { Sfx.unlock(); Sfx.play('click'); seen.title = M.titleOf(M.deedScore(save)).title.name; saveSeen(); openPanel('💛 선행', renderDeeds); };

@@ -117,14 +117,20 @@ test('일일 미션: 진행도가 쌓이고 완료 시 보상, 날짜가 바뀌�
   const r1 = M.recordRun(s, run({ kills: 60, seconds: 70 }), '2026-11-20');
   assert.deepStrictEqual(r1.missionsDone.map((m) => m.id), ['survive']);
   assert.strictEqual(s.daily.missions[0].progress, 60);
+  // 끝낸 미션은 기록으로 옮겨지고 그 자리에 새 미션이 생긴다 (끊임없이)
+  assert.strictEqual(s.daily.missions.length, 3);
+  assert.ok(s.daily.missions.every((m) => !m.done));
+  assert.strictEqual(s.daily.missions[1].progress, 0, '새 미션은 처음부터');
+  assert.deepStrictEqual(s.daily.history.map((m) => m.id), ['survive']);
   const coins1 = s.coins;
   const r2 = M.recordRun(s, run({ kills: 60, seconds: 10, level: 1 }), '2026-11-20');
-  assert.deepStrictEqual(r2.missionsDone.map((m) => m.id), ['kills']);
-  assert.strictEqual(s.daily.missions[0].progress, 100, '목표를 넘겨도 목표값으로 고정');
+  assert.ok(r2.missionsDone.some((m) => m.id === 'kills'));
   assert.ok(s.coins >= coins1 + r2.earned + 50);
-  // 완료된 미션은 다시 보상하지 않는다
-  const r3 = M.recordRun(s, run({ kills: 60, seconds: 70 }), '2026-11-20');
-  assert.strictEqual(r3.missionsDone.length, 0);
+  // 여러 판 해도 미션은 항상 3개가 남아 있다
+  for (let i = 0; i < 20; i++) M.recordRun(s, run({ kills: 200, seconds: 130, level: 16, result: 'clear', helped: 2 }), '2026-11-20');
+  assert.strictEqual(s.daily.missions.length, 3);
+  assert.ok(s.daily.made > 5 && s.daily.history.length <= 8);
+  assert.deepStrictEqual(M.sanitize(JSON.parse(JSON.stringify(s))).daily.history, s.daily.history);
   // 다음 날: 새 미션
   M.recordRun(s, run({}), '2026-11-21');
   assert.strictEqual(s.daily.date, '2026-11-21');
