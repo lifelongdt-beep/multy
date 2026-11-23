@@ -1,8 +1,8 @@
 {
-  "name": "multy",
+  "name": "echo-rush",
   "version": "0.1.0",
   "private": true,
-  "description": "퇴근 에코 — 자동공격 서바이벌 + 에코(과거의 나) 모바일 게임",
+  "description": "Echo Rush — 자동공격 서바이벌 + 에코(과거의 나) 모바일 게임",
   "scripts": {
     "test": "node --test test/*.test.js",
     "serve": "node -e \"require('http').createServer((q,r)=>{const f=require('fs'),p=require('path');let u=q.url.split('?')[0];if(u==='/')u='/index.html';const fp=p.join(process.cwd(),u);f.readFile(fp,(e,d)=>{if(e){r.statusCode=404;return r.end('404')}r.setHeader('Content-Type',{'.html':'text/html;charset=utf-8','.js':'text/javascript;charset=utf-8'}[p.extname(fp)]||'text/plain');r.end(d)})}).listen(8080,()=>console.log('http://localhost:8080'))\""
