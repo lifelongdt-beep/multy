@@ -62,7 +62,7 @@
     const t = M.titleOf(M.deedScore(save)).title;
     box.appendChild(el('small', '', `${ch.emoji} ${ch.name} Lv${M.charLevel(save, ch.id)}${of.variant ? ` · 🎨 색 ${of.variant + 1}` : ''}${M.deedScore(save) > 0 ? ` · ${t.icon} ${t.name}` : ''}`));
     if (show !== cur) {
-      box.appendChild(el('small', '', '👀 미리보기 중'));
+      box.appendChild(el('small', '', `👀 미리보기 중 · ${show + 1}회차 모습 (파란 테두리)`));
       const row = el('div', 'row');
       const wear = el('button', '', '👕 이 옷 입기'); wear.style.minWidth = '0'; wear.style.padding = '8px 14px'; wear.style.fontSize = '14px';
       wear.onclick = () => { M.pickOutfit(save, show); lookPreview = null; Sfx.play('levelup'); commit(); rerender(); };
@@ -91,7 +91,8 @@
     const map = el('div', 'omap');
     for (const it of owned) {
       const isCur = EchoWorlds.outfitOf(cur).style === it.o.style && EchoWorlds.outfitOf(cur).variant === it.o.variant;
-      const card = el('div', 'oc' + (isCur ? ' cur' : ''));
+      const sv = EchoWorlds.outfitOf(show), isPv = show !== cur && sv.style === it.o.style && sv.variant === it.o.variant;
+      const card = el('div', 'oc' + (isCur ? ' cur' : '') + (isPv ? ' pv' : ''));
       const cv = el('canvas'); cv.width = 96; cv.height = 120; card.appendChild(cv);
       card.appendChild(el('div', '', it.o.name + (it.o.variant ? ` 🎨${it.o.variant + 1}` : '')));
       card.appendChild(el('div', 'st', '★'.repeat(it.o.stars)));
@@ -110,7 +111,7 @@
       line.appendChild(el('div', 'dn', row.o.name + (row.o.variant ? ` 🎨${row.o.variant + 1}` : '')));
       const cells = el('div', 'dc');
       for (const c of row.cycles) {
-        const o = EchoWorlds.outfitOf(c), cell = el('div', 'dx' + (c === cur ? ' cur' : ''));
+        const o = EchoWorlds.outfitOf(c), cell = el('div', 'dx' + (c === cur ? ' cur' : '') + (c === show && show !== cur ? ' pv' : ''));   // 노랑 = 입는 중, 파랑 = 미리보는 중
         const cv = el('canvas'); cv.width = 64; cv.height = 80; cell.appendChild(cv);
         cell.appendChild(el('small', '', `${c + 1}회차`)); cell.appendChild(el('div', 'st', '★'.repeat(o.stars)));
         paintOutfit(cv, c, 1, false);
