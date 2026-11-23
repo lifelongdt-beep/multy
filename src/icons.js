@@ -19,6 +19,10 @@
     home:     '<path d="M4 11 12 4.5 20 11M6.5 9.2v10.3h11V9.2M10 19.5v-5h4v5" class="s"/>',
     retry:    '<path d="M18.5 8.5A7 7 0 1 0 19 13" class="s"/><path d="M19.5 4.5v4.5H15" class="s"/>',
     palette:  '<path d="M12 4a8 8 0 0 0 0 16c1.2 0 1.6-.8 1.3-1.7-.4-1 .3-2.1 1.4-2.1H17a3 3 0 0 0 3-3A8 8 0 0 0 12 4z" class="s"/><circle cx="8" cy="11" r="1.2"/><circle cx="11" cy="7.8" r="1.2"/><circle cx="15" cy="8.2" r="1.2"/>',
+    person:   '<circle cx="12" cy="8" r="3.6" class="s"/><path d="M5 20c.6-4 3.4-6.2 7-6.2s6.4 2.2 7 6.2" class="s"/>',
+    lock:     '<rect x="5.5" y="10.5" width="13" height="9.5" rx="2" class="s"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" class="s"/>',
+    cap:      '<path d="M12 5 2.5 9.5 12 14l9.5-4.5z"/><path d="M6.5 11.5v4c1.5 1.6 3.4 2.4 5.5 2.4s4-.8 5.5-2.4v-4M21.5 9.5v5" class="s"/>',
+    up:       '<path d="M12 19V6M6.5 11 12 5.5 17.5 11" class="s"/>',
     flag:     '<path d="M6 20.5V4.5M6 5h11l-2.2 3.5L17 12H6" class="s"/>',
   };
   function svg(name, size) {

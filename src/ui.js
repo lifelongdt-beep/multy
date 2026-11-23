@@ -35,17 +35,17 @@
     const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
     const emo = (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji;
     c.setTransform(2, 0, 0, 2, 0, 0); Art.drawKidPreview(c, 28, 38, emo, M.outfitCycle(save), 1.15);
-    $('outfitName').textContent = `👕 ${of.name} ${'★'.repeat(of.stars)}${of.variant ? ` · 색 ${of.variant + 1}` : ''}`;
+    $('outfitName').textContent = `${of.name} ${'★'.repeat(of.stars)}${of.variant ? ` · 색 ${of.variant + 1}` : ''}`;
     const t = M.titleOf(M.deedScore(save)).title;
     $('titleLine').textContent = M.deedScore(save) > 0 ? `${t.icon} ${t.name}` : '';
   }
 
   /* ---------- 내 모습: 지금 캐릭터 크게 + 복장 지도 ---------- */
   /** 캔버스에 회차 cycle의 복장을 그린다. locked면 검은 실루엣 */
-  function paintOutfit(cv, cycle, scale, locked) {
+  function paintOutfit(cv, cycle, scale, locked, charId) {
     const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
     if (!window.Art) return;
-    const emo = (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji;
+    const emo = (M.CHARACTERS[charId || save.chars.selected] || M.CHARACTERS.student).emoji;   // 캐릭터 종류(고유 표시)를 고르는 열쇠로만 씀, 화면엔 그림으로
     const k = cv.width / 56;   // 56 x 70 논리 크기 기준
     c.setTransform(k, 0, 0, k, 0, 0); Art.drawKidPreview(c, 28, 38, emo, cycle, scale);
     if (locked) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(10,12,24,.92)'; c.fillRect(0, 0, cv.width, cv.height); c.globalCompositeOperation = 'source-over'; }
@@ -58,18 +58,18 @@
     // 1) 지금 내 캐릭터 크게
     const box = el('div', 'look');
     const big = el('canvas'); big.width = 320; big.height = 400; box.appendChild(big);
-    box.appendChild(el('div', 'ln', `👕 ${of.name} ${'★'.repeat(of.stars)}`));
+    const ln = el('div', 'ln'); ln.innerHTML = Icons.svg('shirt', 17) + `<span> ${of.name} ${'★'.repeat(of.stars)}</span>`; box.appendChild(ln);
     const t = M.titleOf(M.deedScore(save)).title;
-    box.appendChild(el('small', '', `${ch.emoji} ${ch.name} Lv${M.charLevel(save, ch.id)}${of.variant ? ` · 🎨 색 ${of.variant + 1}` : ''}${M.deedScore(save) > 0 ? ` · ${t.icon} ${t.name}` : ''}`));
+    box.appendChild(el('small', '', `${ch.name} Lv${M.charLevel(save, ch.id)}${of.variant ? ` · 🎨 색 ${of.variant + 1}` : ''}${M.deedScore(save) > 0 ? ` · ${t.icon} ${t.name}` : ''}`));
     if (show !== cur) {
       box.appendChild(el('small', '', `👀 미리보기 중 · ${show + 1}회차 모습 (파란 테두리)`));
       const row = el('div', 'row');
-      const wear = el('button', '', '👕 이 옷 입기'); wear.style.minWidth = '0'; wear.style.padding = '8px 14px'; wear.style.fontSize = '14px';
+      const wear = el('button', ''); wear.innerHTML = Icons.svg('shirt', 16) + '<span>이 옷 입기</span>'; wear.style.minWidth = '0'; wear.style.padding = '8px 14px'; wear.style.fontSize = '14px';
       wear.onclick = () => { M.pickOutfit(save, show); lookPreview = null; Sfx.play('levelup'); commit(); rerender(); };
       const back = el('button', 'sub', '↩ 돌아가기'); back.onclick = () => { lookPreview = null; Sfx.play('click'); rerender(); };
       row.append(wear, back); box.appendChild(row);
     } else {
-      box.appendChild(el('small', '', save.outfitPick === null ? '✅ 입는 중 · 회차 복장 자동' : '✅ 입는 중 · 직접 고른 복장'));
+      box.appendChild(el('small', '', save.outfitPick === null ? '✓ 입는 중 · 회차 복장 자동' : '✓ 입는 중 · 직접 고른 복장'));
       if (save.outfitPick !== null) {
         const auto = el('button', 'sub', '🔁 회차 복장으로 (자동)');
         auto.onclick = () => { M.pickOutfit(save, null); Sfx.play('click'); commit(); rerender(); };
@@ -78,7 +78,7 @@
     }
     body.appendChild(box);
     paintOutfit(big, show, 1.3, false);
-    tabs(body, [{ id: 'outfit', label: '👕 복장' }, { id: 'char', label: '🧑 캐릭터' }], lookTab, (id) => { lookTab = id; rerender(); });
+    tabs(body, [{ id: 'outfit', html: Icons.svg('shirt', 16) + '<span>복장</span>' }, { id: 'char', html: Icons.svg('person', 16) + '<span>캐릭터</span>' }], lookTab, (id) => { lookTab = id; rerender(); });
     if (lookTab === 'char') { renderChars(body); return; }
     // 2) 나의 업적: 지금까지 얻은 복장만 보여 준다 (앞으로 나올 복장은 비밀)
     const owned = [];
@@ -153,7 +153,7 @@
   /** 탭 줄: [{id, label}] 중 cur 를 강조, 누르면 onPick(id) */
   function tabs(body, list, cur, onPick) {
     const row = el('div', 'tabs');
-    for (const t of list) { const b = el('button', cur === t.id ? 'on' : '', t.label); b.onclick = () => { if (cur !== t.id) { Sfx.play('click'); onPick(t.id); } }; row.appendChild(b); }
+    for (const t of list) { const b = el('button', cur === t.id ? 'on' : ''); b.innerHTML = t.html || ''; if (!t.html) b.textContent = t.label; b.onclick = () => { if (cur !== t.id) { Sfx.play('click'); onPick(t.id); } }; row.appendChild(b); }
     body.appendChild(row);
   }
   // 새 소식 빨간 점: 마지막으로 본 칭호·도전 과제 수 (기기에 저장)
@@ -175,7 +175,7 @@
   function item(icon, title, desc, opts) {
     opts = opts || {};
     const row = el('div', 'item' + (opts.done ? ' done' : '') + (opts.sel ? ' sel' : ''));
-    row.appendChild(el('div', 'icon', icon));
+    const ic = el('div', 'icon'); if (icon && icon.nodeType) ic.appendChild(icon); else ic.textContent = icon; row.appendChild(ic);
     const g = el('div', 'grow'); g.appendChild(document.createTextNode(title));
     if (desc) g.appendChild(el('small', '', desc));
     if (opts.progress !== undefined) { const b = el('div', 'bar'); const i = el('i'); i.style.width = Math.round(opts.progress * 100) + '%'; b.appendChild(i); g.appendChild(b); }
@@ -289,7 +289,7 @@
   /** 캐릭터 고르기 (내 캐릭터 화면 아래쪽에 붙는다): 등급별로 묶고, 조건(업적)·학점·레벨을 보여 준다 */
   function renderChars(body) {
     const owned = save.chars.unlocked.length, total = Object.keys(M.CHARACTERS).length;
-    body.appendChild(el('div', 'msg', `🧑 캐릭터 ${owned} / ${total} · 학점을 모아 사고, 레벨을 올려 더 강하게 (최대 Lv ${M.CHAR_MAX_LV})`));
+    { const h = el('div', 'msg'); h.innerHTML = Icons.svg('person', 15) + `<span> 캐릭터 ${owned} / ${total} · 학점을 모아 사고, 레벨을 올려 더 강하게 (최대 Lv ${M.CHAR_MAX_LV})</span>`; body.appendChild(h); }
     for (const rk of Object.keys(M.RARITY)) {
       const R = M.RARITY[rk];
       const head = el('div', 'msg', `◆ ${R.name}`); head.style.color = R.color; head.style.alignSelf = 'flex-start'; head.style.fontWeight = '700';
@@ -301,14 +301,18 @@
         // 보이는 정보: 가진 캐릭터는 레벨과 효과, 못 가진 캐릭터는 조건과 값
         const stars = has ? ' ' + '★'.repeat(lv) + '☆'.repeat(M.CHAR_MAX_LV - lv) : '';
         let sub = c.desc;
-        if (!has && c.req) sub += `\n${reqOk ? '✅' : '🔒'} 조건: ${c.req.text}`;
-        if (has && lv < M.CHAR_MAX_LV) sub += c.lvOnly ? '\n⬆ 다음 레벨: 체력 +6, 공격 +4%' : `\n⬆ 다음 레벨: 좋은 효과 +25%${lv + 1 === 3 || lv + 1 === 5 ? ' · 시작 아이템 +1' : ''}`;
-        const row = item(c.emoji, `${c.name}${stars}`, sub, { done: has && !selected, sel: selected });
+        if (!has && c.req) sub += `\n${reqOk ? '✓ 조건 충족' : '· 조건'}: ${c.req.text.replace(/^[^\s가-힣]+\s/, '').replace(/ · [^\s가-힣]+\s/g, ' · ')}`;
+        if (has && lv < M.CHAR_MAX_LV) sub += c.lvOnly ? '\n다음 레벨: 체력 +6, 공격 +4%' : `\n다음 레벨: 좋은 효과 +25%${lv + 1 === 3 || lv + 1 === 5 ? ' · 시작 아이템 +1' : ''}`;
+        // 이모지 대신 실제 게임 속 모습(지금 입은 복장 + 캐릭터 고유 표시)을 그려서 보여 준다
+        const pv = el('canvas'); pv.width = 112; pv.height = 140; pv.style.cssText = 'width:52px;height:65px;background:transparent;border-radius:0';
+        paintOutfit(pv, M.outfitCycle(save), 1.75, false, id);
+        if (!has && !reqOk) pv.style.opacity = '0.45';
+        const row = item(pv, `${c.name}${stars}`, sub, { done: has && !selected, sel: selected });
         row.style.borderColor = selected ? '' : (has ? '' : R.color + '88');
         row.querySelector('small').style.whiteSpace = 'pre-line';
         const btns = el('div', ''); btns.style.display = 'flex'; btns.style.flexDirection = 'column'; btns.style.gap = '4px';
         if (!has) {
-          const b = el('button', '', reqOk ? `🎓 ${M.fmtNum(c.cost)}` : '🔒 잠김');
+          const b = el('button', ''); b.innerHTML = reqOk ? Icons.svg('cap', 16) + `<span>${M.fmtNum(c.cost)}</span>` : Icons.svg('lock', 15) + '<span>잠김</span>';
           b.disabled = !reqOk || save.coins < c.cost;
           b.onclick = () => { if (M.unlockCharacter(save, id).ok) { M.selectCharacter(save, id); Sfx.play('levelup'); commit(); rerender(); } };
           btns.appendChild(b);
@@ -317,7 +321,7 @@
           sel.onclick = () => { M.selectCharacter(save, id); Sfx.play('click'); commit(); rerender(); };
           btns.appendChild(sel);
           if (lv < M.CHAR_MAX_LV) {
-            const cost = M.charLevelCost(save, id), up = el('button', 'sub', `⬆ 🎓${M.fmtNum(cost)}`);
+            const cost = M.charLevelCost(save, id), up = el('button', 'sub'); up.innerHTML = Icons.svg('up', 13) + Icons.svg('cap', 13) + `<span>${M.fmtNum(cost)}</span>`;
             up.disabled = save.coins < cost; up.style.fontSize = '11px'; up.style.padding = '5px 6px';
             up.onclick = () => { if (M.levelUpCharacter(save, id).ok) { Sfx.play('levelup'); commit(); rerender(); } };
             btns.appendChild(up);
@@ -389,12 +393,13 @@
   /* ---------- 연결 ---------- */
   $('bWorld').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🗺️ 월드 선택', renderWorlds); };
   $('bShop').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏪 상점', renderShop); };
-  const openLook = () => { Sfx.unlock(); Sfx.play('click'); lookPreview = null; lookTab = $('bLook').classList.contains('badge') ? 'char' : 'outfit'; openPanel('👕 내 캐릭터', renderLook); };
+  const openLook = () => { Sfx.unlock(); Sfx.play('click'); lookPreview = null; lookTab = $('bLook').classList.contains('badge') ? 'char' : 'outfit'; openPanel('내 캐릭터', renderLook); };
   $('bLook').onclick = openLook; $('outfitPv').onclick = openLook; $('outfitPv').style.cursor = 'pointer';
   $('bDeed').onclick = () => { Sfx.unlock(); Sfx.play('click'); seen.title = M.titleOf(M.deedScore(save)).title.name; saveSeen(); openPanel('💛 선행', renderDeeds); };
   $('bQuest').onclick = () => { Sfx.unlock(); Sfx.play('click'); seen.ach = M.ACHIEVEMENTS.filter((a) => save.ach[a.id]).length; saveSeen(); openPanel('🏆 과제 · 미션', renderQuests); };
   $('bBackup').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💾 백업', renderBackup); };
   $('pback').onclick = () => { Sfx.play('click'); closePanel(); };
+  for (const e of document.querySelectorAll('.capi')) e.innerHTML = Icons.svg('cap', 18);   // 학점 표시: 이모지 대신 그린 학사모
   refresh();
 
   window.GameUI = {
