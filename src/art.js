@@ -448,17 +448,47 @@
         // 번개
         g.beginPath(); g.moveTo(r * 0.1, r * 0.55); g.lineTo(-r * 0.12, r * 0.95); g.lineTo(r * 0.08, r * 0.92); g.lineTo(-r * 0.1, r * 1.3); g.lineTo(r * 0.3, r * 0.8); g.lineTo(r * 0.1, r * 0.82); g.lineTo(r * 0.28, r * 0.55); g.closePath();
         fillStroke(g, '#ffe14d', 2);
-        // 불안한 눈과 악문 이
-        oval(g, -r * 0.32, -r * 0.1, r * 0.2, r * 0.24); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = OL; g.stroke();
-        oval(g, r * 0.32, -r * 0.1, r * 0.2, r * 0.24); g.fillStyle = '#fff'; g.fill(); g.stroke();
-        circle(g, -r * 0.3, -r * 0.05, r * 0.1); g.fillStyle = '#ff3b6b'; g.fill(); circle(g, r * 0.3, -r * 0.05, r * 0.1); g.fill();
-        g.beginPath(); g.moveTo(-r * 0.6, -r * 0.45); g.lineTo(-r * 0.12, -r * 0.3); g.moveTo(r * 0.6, -r * 0.45); g.lineTo(r * 0.12, -r * 0.3); g.lineWidth = 3; g.strokeStyle = OL; g.stroke();
-        rrect(g, -r * 0.35, r * 0.2, r * 0.7, r * 0.22, r * 0.06); fillStroke(g, '#fff', 2);
-        g.beginPath(); for (let i = 1; i < 5; i++) { g.moveTo(-r * 0.35 + i * r * 0.14, r * 0.2); g.lineTo(-r * 0.35 + i * r * 0.14, r * 0.42); } g.lineWidth = 1.2; g.stroke();
+        g.canvas.face = { fx: 0, fy: -r * 0.04, es: r * 0.22, gap: r * 0.32, mood: 'angry', col: '#6a42a8' };   // 얼굴은 실시간 (Art.drawEnemy)
       },
       w: 2.4, h: 2.8,
     },
   };
+
+  /* ---------- 왕 표정 (실시간): 평소엔 주인공을 노려보며 씩 웃고, 맞으면 질끈·찡그림, 체력이 적으면 화나서 이를 악물고 땀, 돌진 직전엔 눈을 부릅뜸 ---------- */
+  function bossFace(ctx, f, mode, t, look, seed) {
+    const es = f.es, gap = f.gap, ey = f.fy - es * 0.3, my = f.fy + es * 1.6;
+    const blink = mode === 'menace' && ((t + seed) % 4.2) < 0.14;
+    const shake = mode === 'rage' ? Math.sin(t * 60) * es * 0.06 : 0;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const sx of [-1, 1]) {
+      const x = f.fx + sx * gap + shake, y = ey;
+      if (mode === 'hurt') { ctx.strokeStyle = OL; ctx.lineWidth = es * 0.32; ctx.beginPath(); ctx.moveTo(x - sx * es * 0.9, y - es * 0.7); ctx.lineTo(x + sx * es * 0.6, y); ctx.lineTo(x - sx * es * 0.9, y + es * 0.7); ctx.stroke(); continue; }   // >< 질끈
+      if (blink) { ctx.strokeStyle = OL; ctx.lineWidth = es * 0.28; ctx.beginPath(); ctx.moveTo(x - es * 0.9, y); ctx.lineTo(x + es * 0.9, y); ctx.stroke(); continue; }
+      const wide = mode === 'charge' ? 1.15 : 1, sleepy = f.mood === 'droopy' && mode === 'menace';
+      oval(ctx, x, y, es * 0.95 * wide, es * 1.1 * wide); fillStroke(ctx, '#ffffff', es * 0.2);
+      const pr = es * (mode === 'charge' ? 0.32 : mode === 'rage' ? 0.38 : 0.5);
+      const px = x + look * es * 0.35, py = y + es * 0.12;
+      if (f.mood === 'dizzy' && mode === 'menace') { ctx.strokeStyle = OL; ctx.lineWidth = es * 0.16; ctx.beginPath(); for (let k = 0; k < 18; k++) { const a = k * 0.6 + t * 4 * sx, rr = k * es * 0.045; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.stroke(); }   // 빙글빙글
+      else { circle(ctx, px, py, pr); ctx.fillStyle = mode === 'rage' ? '#ff3b4b' : '#2a1838'; ctx.fill(); circle(ctx, px - pr * 0.3, py - pr * 0.35, pr * 0.32); ctx.fillStyle = '#fff'; ctx.fill(); }
+      if (sleepy) { ctx.save(); oval(ctx, x, y, es * 0.95, es * 1.1); ctx.clip(); ctx.fillStyle = shade(f.col || '#888888', -0.1); ctx.fillRect(x - es, y - es * 1.2, es * 2, es * 1.05); ctx.restore(); oval(ctx, x, y, es * 0.95, es * 1.1); ctx.lineWidth = es * 0.2; ctx.strokeStyle = OL; ctx.stroke(); }
+    }
+    // 눈썹: 평소에도 찌푸림, 화나면 더 가파르게
+    if (mode !== 'hurt') {
+      const tilt = mode === 'rage' ? 0.75 : mode === 'charge' ? 0.6 : f.mood === 'droopy' ? -0.25 : 0.45;
+      ctx.strokeStyle = OL; ctx.lineWidth = es * 0.34;
+      for (const sx of [-1, 1]) { const x = f.fx + sx * gap + shake; ctx.beginPath(); ctx.moveTo(x + sx * es * 1.05, ey - es * 1.25 - tilt * es * 0.5); ctx.lineTo(x - sx * es * 0.9, ey - es * 1.25 + tilt * es * 0.5); ctx.stroke(); }
+    }
+    // 입
+    const w = es * 2.4;
+    if (mode === 'hurt') { ctx.beginPath(); ctx.moveTo(f.fx - w / 2, my); for (let i = 1; i <= 6; i++) ctx.lineTo(f.fx - w / 2 + i * w / 6, my + (i % 2 ? -es * 0.35 : es * 0.15)); ctx.strokeStyle = OL; ctx.lineWidth = es * 0.25; ctx.stroke(); }
+    else if (mode === 'charge') { oval(ctx, f.fx, my + es * 0.2, w * 0.32, es * 0.75); fillStroke(ctx, '#3a1020', es * 0.2); }   // 크아앙
+    else {
+      const h = mode === 'rage' ? es * 0.85 : es * 0.6, grin = mode === 'menace' ? Math.sin(t * 1.3 + seed) * es * 0.08 : 0;
+      ctx.beginPath(); ctx.moveTo(f.fx - w / 2, my - h * 0.2 + grin); ctx.quadraticCurveTo(f.fx, my + h * 1.1, f.fx + w / 2, my - h * 0.2 - grin); ctx.quadraticCurveTo(f.fx, my + h * 0.15, f.fx - w / 2, my - h * 0.2 + grin); ctx.closePath(); fillStroke(ctx, '#ffffff', es * 0.2);   // 씩 웃는 이빨
+      ctx.strokeStyle = OL; ctx.lineWidth = es * 0.12; for (let i = 1; i < 5; i++) { const x = f.fx - w / 2 + i * w / 5; ctx.beginPath(); ctx.moveTo(x, my); ctx.lineTo(x, my + h * 0.6); ctx.stroke(); }
+    }
+    if (mode === 'rage') { const k = (t * 1.4 + seed) % 1; ctx.save(); ctx.globalAlpha *= 1 - k; ctx.fillStyle = '#7fd3ff'; const x = f.fx + gap * 1.9, y = ey - es + k * es * 1.5; ctx.beginPath(); ctx.moveTo(x, y - es * 0.6); ctx.quadraticCurveTo(x + es * 0.45, y + es * 0.2, x, y + es * 0.35); ctx.quadraticCurveTo(x - es * 0.45, y + es * 0.2, x, y - es * 0.6); ctx.fill(); ctx.restore(); }   // 식은땀
+  }
 
   /* ---------- 주인공 / 에코 / 선생님 ---------- */
   /* ---------- 주인공 복장 (회차마다 바뀜: worlds.js outfitOf) ---------- */
@@ -609,7 +639,7 @@
       oval(g, sx * 3.6 - 0.9, 20.4 + k * 0.8, 1.2, 0.5); g.fillStyle = 'rgba(255,255,255,.55)'; g.fill();
     }
     // 팔 (소매 = 옷 색) + 손
-    for (const sx of [-1, 1]) { g.save(); g.translate(sx * 6.8, 1.5); g.rotate(sx * (0.3 - st * 0.12 * sx)); rrect(g, -2, -1, 4, 8.3, 2); fsN(o.body, 1.3); circle(g, 0, 8.4, 2); fsN(skin, 1.1); g.restore(); }
+    if (!o.noArms) for (const sx of [-1, 1]) { g.save(); g.translate(sx * 6.8, 1.5); g.rotate(sx * (0.3 - st * 0.12 * sx)); rrect(g, -2, -1, 4, 8.3, 2); fsN(o.body, 1.3); circle(g, 0, 8.4, 2); fsN(skin, 1.1); g.restore(); }
     // 몸통
     rrect(g, -6.4, 0, 12.8, 10.5, 4); fsN(o.body, 1.5);
     g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-5.2, 1.4, 2.6, 7.5);
@@ -690,9 +720,10 @@
     if (kidHair) o.hair = kidHair;
     return Object.assign(o, CHAR[emo] || {});
   }
-  function kidSprite(emo, step, of) {
+  /** noArms: 게임 속 주인공은 팔을 따로(줍기·손 내밀기·만세) 그리므로 그림에는 팔을 넣지 않는다 */
+  function kidSprite(emo, step, of, noArms) {
     of = of || outfit;
-    return sprite(`kid:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${step}:${of.key}`, 36, 66, (g) => { g.translate(0, -1); drawKid(g, outfitOpts(emo, of), step); });
+    return sprite(`kid:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${step}:${of.key}:${noArms ? 1 : 0}`, 36, 66, (g) => { g.translate(0, -1); drawKid(g, Object.assign(outfitOpts(emo, of), noArms ? { noArms: true } : {}), step); });
   }
   const TEACHER = (g) => {
     rrect(g, -7, 2, 14, 15, 5); fillStroke(g, '#3fae8a', 1.8);                         // 가디건
@@ -702,15 +733,13 @@
     circle(g, 0, -6, 8); fillStroke(g, '#ffd9b8', 1.8);
     circle(g, 0, -15.5, 3.8); fillStroke(g, '#4a3030', 1.6);                         // 올림머리
     g.beginPath(); g.arc(0, -6.8, 8.1, Math.PI * 1.0, Math.PI * 2.0); g.quadraticCurveTo(2, -9, -8.1, -6.2); g.closePath(); fillStroke(g, '#4a3030', 1.6);
-    g.lineWidth = 1.2; g.strokeStyle = OL; circle(g, -2.9, -4.5, 2.4); g.stroke(); circle(g, 2.9, -4.5, 2.4); g.stroke();
-    circle(g, -2.9, -4.3, 0.9); g.fillStyle = OL; g.fill(); circle(g, 2.9, -4.3, 0.9); g.fill();
-    g.beginPath(); g.arc(0, -1.3, 1.8, 0.1 * Math.PI, 0.9 * Math.PI); g.lineWidth = 1.2; g.stroke();
+    g.lineWidth = 1.2; g.strokeStyle = OL; circle(g, -2.9, -4.5, 2.4); g.stroke(); circle(g, 2.9, -4.5, 2.4); g.stroke();   // 안경 (눈·입은 실시간)
   };
 
   /* ---------- 배경 (월드별) ---------- */
   const BG = {};        // worldId -> (g, W, H) 그리기 함수 (art-worlds.js가 채움)
   const HELPER = {};    // worldId -> (g) 도우미 그리기 함수
-  const LOOK = { school: { sleeve: '#3fae8a', s: 1 } };   // 사람별 소매 색·크기 (art-worlds.js가 채움)
+  const LOOK = { school: { sleeve: '#3fae8a', s: 1, face: { brow: '#4a3030' } } };   // 사람별 소매 색·크기 (art-worlds.js가 채움)
 
   /* ---------- 팔·다리와 몸짓: 행동을 보고 어떤 도움이 필요한지/주고받는지 알 수 있게 ---------- */
   const SKIN = '#ffd9b8', PANTS = '#454a63';
@@ -791,6 +820,54 @@
     }
   }
   /** 사람 몸짓 그리기: 다리(몸 뒤) → 몸 그림 → 팔·손·소품(몸 앞). 화면 좌표 손 위치를 돌려준다 */
+  /* ---------- 사람 표정 (실시간): 하는 일에 따라 표정이 바뀌고, 가끔 눈을 깜빡인다. 좌표는 사람 그림 기준 (머리 0,-6 · 눈 ±2.9,-4.4) ---------- */
+  function personExpr(pose, sad) {
+    switch (pose && pose.name) {
+      case 'cheer': return 'joy';
+      case 'wave': case 'beckon': return sad ? 'worried' : 'open';
+      case 'teach': return 'talk';
+      case 'pat': return 'warm';
+      case 'reach': return sad ? 'worried' : 'warm';
+      case 'cower': return 'scared';
+      case 'lost': case 'carry': return 'worried';
+      default: return sad ? 'worried' : 'smile';
+    }
+  }
+  function personFace(ctx, expr, t, f, seed) {
+    f = f || {};
+    const blink = expr !== 'joy' && expr !== 'warm' && expr !== 'scared' && ((t + seed) % 3.6) < 0.13;
+    const ex = 2.9, ey = -4.4;
+    ctx.lineCap = 'round'; ctx.strokeStyle = OL;
+    // 눈
+    for (const sx of [-1, 1]) {
+      const x = sx * ex;
+      if (expr === 'joy' || expr === 'warm') { ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, ey + 0.6, 1.35, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }   // ^^ 웃는 눈
+      else if (expr === 'scared') { ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(x - sx * 1.3, ey - 1); ctx.lineTo(x + sx * 0.9, ey); ctx.lineTo(x - sx * 1.3, ey + 1); ctx.stroke(); }   // >< 질끈
+      else if (blink) { ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(x - 1.2, ey); ctx.quadraticCurveTo(x, ey + 0.7, x + 1.2, ey); ctx.stroke(); }
+      else { oval(ctx, x, ey, 1.15, 1.5); ctx.fillStyle = '#2b1d14'; ctx.fill(); circle(ctx, x + 0.4, ey - 0.55, 0.45); ctx.fillStyle = '#fff'; ctx.fill(); }
+    }
+    // 눈썹: 걱정·무서움이면 안쪽이 올라감
+    ctx.strokeStyle = f.brow || '#3b2b25'; ctx.lineWidth = 0.9;
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      if (expr === 'worried' || expr === 'scared') { ctx.moveTo(sx * 4.3, ey - 1.9); ctx.lineTo(sx * 1.6, ey - 2.9); }
+      else { ctx.moveTo(sx * 4.2, ey - 2.4); ctx.quadraticCurveTo(sx * 2.9, ey - 3.1, sx * 1.6, ey - 2.5); }
+      ctx.stroke();
+    }
+    // 볼
+    oval(ctx, -5, -2, 1.3, 0.8); ctx.fillStyle = expr === 'joy' ? 'rgba(255,100,110,.6)' : 'rgba(255,120,120,.45)'; ctx.fill(); oval(ctx, 5, -2, 1.3, 0.8); ctx.fill();
+    // 입
+    const my = -1.5; ctx.strokeStyle = OL; ctx.lineWidth = 1.1;
+    if (f.beard && expr !== 'joy' && expr !== 'talk') { ctx.beginPath(); ctx.arc(0, my - 0.4, 1.4, 0.15 * Math.PI, 0.85 * Math.PI); ctx.strokeStyle = '#fff3e0'; ctx.stroke(); return; }
+    if (expr === 'joy') { ctx.beginPath(); ctx.moveTo(-2.1, my - 0.6); ctx.quadraticCurveTo(0, my + 3.4, 2.1, my - 0.6); ctx.closePath(); fillStroke(ctx, '#c8403e', 1); oval(ctx, 0, my + 1.4, 1, 0.6); ctx.fillStyle = '#ff9a9a'; ctx.fill(); }
+    else if (expr === 'open') { ctx.beginPath(); ctx.moveTo(-1.6, my - 0.3); ctx.quadraticCurveTo(0, my + 2.2, 1.6, my - 0.3); ctx.closePath(); fillStroke(ctx, '#c8403e', 1); }
+    else if (expr === 'talk') { const k = (Math.sin(t * 13) + 1) / 2; oval(ctx, 0, my + 0.4, 1.2, 0.35 + k * 1.1); fillStroke(ctx, '#c8403e', 1); }
+    else if (expr === 'worried') { ctx.beginPath(); ctx.moveTo(-1.6, my + 0.8); ctx.quadraticCurveTo(-0.8, my + 0.1, 0, my + 0.7); ctx.quadraticCurveTo(0.8, my + 1.3, 1.6, my + 0.6); ctx.stroke();
+      const k = (t * 0.9 + seed) % 1; ctx.save(); ctx.globalAlpha *= 1 - k; ctx.fillStyle = '#7fd3ff'; ctx.beginPath(); const sx = 6.2, sy = -8 + k * 3; ctx.moveTo(sx, sy - 1.6); ctx.quadraticCurveTo(sx + 1.2, sy + 0.4, sx, sy + 0.8); ctx.quadraticCurveTo(sx - 1.2, sy + 0.4, sx, sy - 1.6); ctx.fill(); ctx.restore(); }   // 식은땀
+    else if (expr === 'scared') { ctx.beginPath(); ctx.moveTo(-1.6, my + 0.6); for (let i = 1; i <= 4; i++) ctx.lineTo(-1.6 + i * 0.8, my + (i % 2 ? 0 : 0.6)); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(0, my - 0.2, 1.8, 0.12 * Math.PI, 0.88 * Math.PI); ctx.stroke(); }   // 미소
+  }
+  const seedOf = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 997; return h / 97; };
   function drawPersonPosed(ctx, c, look, x, y, pose, t) {
     const s = look.s || 1, dir = pose.dir < 0 ? -1 : 1;
     const P = personPose(pose.name, t, pose.ang);
@@ -800,6 +877,7 @@
     oval(ctx, P.lf[0] - 0.6, P.lf[1], 2.6, 1.6); fillStroke(ctx, '#2a2440', 1.2); oval(ctx, P.rf[0] + 0.6, P.rf[1], 2.6, 1.6); fillStroke(ctx, '#2a2440', 1.2);
     ctx.restore();
     blit(ctx, c, x, y, K_KID, K_KID, dir < 0);
+    enter(); personFace(ctx, personExpr(pose, look.sad || pose.sad), t, look.face, look.seed || 0); ctx.restore();   // 실시간 표정 (팔보다 먼저: 무서워 얼굴을 가리면 손이 위에)
     enter();
     limb(ctx, -6.3, 4.5, P.L[0], P.L[1], look.sleeve, 3); limb(ctx, 6.3, 4.5, P.R[0], P.R[1], look.sleeve, 3);
     if (P.prop === 'bags' || P.prop === 'gift') drawPersonProp(ctx, P, t);
@@ -965,6 +1043,13 @@
       const flip = !spec.noFlip && e.x > px;   // 주인공 쪽을 바라봄 (글자가 있는 그림은 뒤집지 않음)
       blit(ctx, base, e.x, e.y - hop, sx * k, sy * k, flip);
       if (e.flash > 0) { ctx.globalAlpha = 0.7; blit(ctx, tinted(`enW:${boss ? e.def.name : e.type}:${r}`, base, '#ffffff'), e.x, e.y - hop, sx * k, sy * k, flip); ctx.globalAlpha = 1; }
+      if (boss && base.face) {   // 왕의 실시간 표정
+        const hpR = e.maxhp ? e.hp / e.maxhp : 1;
+        const mode = e.flash > 0 ? 'hurt' : e.warn ? 'charge' : hpR < 0.34 ? 'rage' : 'menace';
+        const look = Math.max(-1, Math.min(1, (px - e.x) / 80)) * (flip ? -1 : 1);
+        ctx.save(); ctx.translate(e.x, e.y - hop); ctx.scale((flip ? -1 : 1) * sx * k, sy * k);
+        bossFace(ctx, base.face, mode, now / 1000, look, ph(e)); ctx.restore();
+      }
     },
 
     /** 주인공. act(선택): {pose:'pick', k:0~1} 줍기 · {pose:'reach', tx, ty} 돕기(손 내밀기) · {pose:'learn'} 손 들고 배우기.
@@ -981,7 +1066,7 @@
       const sy = K_KID * (1 - 0.2 * crouch), feet = p.y - 4 - bob + 13 * K_KID;
       const cheerHop = pose === 'cheer' ? Math.abs(Math.sin(now / 150)) * 4 : 0, nod = pose === 'learn' ? Math.abs(Math.sin(now / 260)) * 1.2 : 0;
       const cy = feet - 13 * sy - cheerHop + nod;
-      blit(ctx, kidSprite(emo, step), p.x, cy, K_KID, sy, dir < 0);
+      blit(ctx, kidSprite(emo, step, null, true), p.x, cy, K_KID, sy, dir < 0);
       // 팔 (몸 앞)
       const f = dir < 0 ? -1 : 1, sleeve = outfitOpts(emo, outfit).body, t = now / 1000;
       const sw = moving ? Math.sin(now / 110 * Math.PI / 2) * 1.6 : Math.sin(t * 2) * 0.3;
@@ -1070,7 +1155,7 @@
     drawPerson(ctx, id, x, y, pose, now) {
       const key = HELPER[id] ? id : 'school', fn = HELPER[id] || TEACHER;
       const c = sprite('helper:' + key, 24, 42, (g) => { g.translate(0, 2); fn(g); });
-      const look = LOOK[key] || LOOK.school, s = look.s || 1;
+      const look0 = LOOK[key] || LOOK.school, look = look0.seed === undefined ? Object.assign(look0, { seed: seedOf(key) }) : look0, s = look.s || 1;
       this.shadow(ctx, x, y + K_KID * (2 + 17 * (1 - s) + s * 21), 9 * K_KID * s);
       return drawPersonPosed(ctx, c, look, x, y, pose || { name: 'idle' }, (now || performance.now()) / 1000);
     },
@@ -1079,6 +1164,8 @@
       const c = sprite('helper:' + (HELPER[worldId] ? worldId : 'school'), 24, 42, (g) => { g.translate(0, 2); fn(g); });
       this.shadow(ctx, x, y + 19 * K_KID, 9 * K_KID);
       blit(ctx, c, x, y, K_KID, K_KID);
+      const look = LOOK[HELPER[worldId] ? worldId : 'school'] || LOOK.school, s = look.s || 1;   // 멈춘 그림: 웃는 얼굴 (도움이 필요하면 걱정 얼굴)
+      ctx.save(); ctx.translate(x, y); ctx.scale(K_KID, K_KID); ctx.translate(0, 2 + 17 * (1 - s)); ctx.scale(s, s); personFace(ctx, look.sad ? 'worried' : 'smile', 0.5, look.face, 0); ctx.restore();
     },
 
     drawBullet(ctx, b) {

@@ -283,6 +283,12 @@
     }
     g.__lid = shade(c.col, -0.1);
     const es = r * 0.25 * fs, gap = r * 0.36 * fs;   // 눈을 조금 크게, 반짝임은 eye()에서
+    if (boss && c.eyes !== 'none' && c.acc !== 'hands') {   // 왕: 얼굴은 게임 중 실시간으로 그린다 (맞으면 찡그리고, 위기엔 화내고, 주인공을 쳐다봄)
+      g.canvas.face = { fx, fy, es, gap, mood: c.eyes || 'normal', col: c.col };
+      if (c.acc) acc(g, r, c.acc, c);
+      if (c.acc2) acc(g, r, c.acc2, c);
+      return;
+    }
     if (c.eyes !== 'none' && c.acc !== 'hands') {
       const mood = boss && (c.eyes === 'normal' || !c.eyes) ? 'angry' : (c.eyes || 'normal');
       eye(g, fx - gap, fy - es * 0.3, es, mood); eye(g, fx + gap, fy - es * 0.3, es, mood, -1);
@@ -440,9 +446,11 @@
     if (o.nurseCap) { rrect(g, -5, -15.5, 10, 4.5, 1.5); fillStroke(g, '#ffffff', 1.4); g.fillStyle = '#e53935'; g.fillRect(-0.6, -14.8, 1.2, 3); g.fillRect(-1.5, -13.9, 3, 1.2); }
     if (o.sunhat) { oval(g, 0, -11, 12, 3); fillStroke(g, '#ffe082', 1.4); g.beginPath(); g.arc(0, -11, 6.5, Math.PI, Math.PI * 2); fillStroke(g, '#ffe082', 1.4); }
     if (o.headset) { g.beginPath(); g.arc(0, -6, 9.2, Math.PI * 1.1, Math.PI * 1.9); g.lineWidth = 1.6; g.strokeStyle = OL; g.stroke(); line(g, [-8.5, -3, -5, 1], 1.2); circle(g, -4.5, 1.3, 1.2); g.fillStyle = OL; g.fill(); }
-    // 얼굴
+    if (o.hair !== 'helmet' && o.hair !== 'cap') { g.strokeStyle = 'rgba(255,240,220,.35)'; g.lineWidth = 1.3; g.beginPath(); g.arc(-1, -8.5, 5.4, Math.PI * 1.15, Math.PI * 1.5); g.stroke(); }   // 머릿결 빛
+    // 얼굴: 눈·입은 게임 중 실시간으로 그린다 (Art.drawPerson의 표정). 안경·수염만 그림에
     if (o.glasses) { g.lineWidth = 1.2; g.strokeStyle = OL; circle(g, -2.9, -4.5, 2.4); g.stroke(); circle(g, 2.9, -4.5, 2.4); g.stroke(); }
-    circle(g, -2.9, -4.3, 0.95); g.fillStyle = OL; g.fill(); circle(g, 2.9, -4.3, 0.95); g.fill();
+    if (o.beard) { g.beginPath(); g.arc(0, -3, 6.5, 0.1 * Math.PI, 0.9 * Math.PI); g.lineTo(-5.5, -1); g.closePath(); fillStroke(g, hc, 1.2); }
+    return;
     if (o.beard) { g.beginPath(); g.arc(0, -3, 6.5, 0.1 * Math.PI, 0.9 * Math.PI); g.lineTo(-5.5, -1); g.closePath(); fillStroke(g, hc, 1.2); }
     else if (o.sad) {   // 걱정스러운 얼굴: 시옷 눈썹 + 내려간 입
       g.lineWidth = 1.1; g.strokeStyle = OL; g.beginPath(); g.moveTo(-4.6, -6.1); g.lineTo(-1.5, -7.1); g.moveTo(4.6, -6.1); g.lineTo(1.5, -7.1); g.stroke();
@@ -464,16 +472,16 @@
     mountain: { hair: 'helmet', outfit: '#ff7043', vest: '#ffe082' },
     stage:    { hair: 'short', hairCol: '#7b1fa2', outfit: '#6a1b9a', headset: true },
   };
-  for (const id in H) { HELPER[id] = (g) => person(g, H[id]); LOOK[id] = { sleeve: H[id].outfit, s: 1 }; }
+  for (const id in H) { HELPER[id] = (g) => person(g, H[id]); LOOK[id] = { sleeve: H[id].outfit, s: 1, face: { beard: !!H[id].beard, brow: H[id].hairCol || '#3b2b25' } }; }
   // 선행: 도움이 필요한 사람들 (아이·할머니·친구)
   const NPC = {
     child:  { s: 0.78, o: { hair: 'short', hairCol: '#5d4037', outfit: '#ffb74d', scarf: '#4fc3f7' } },
     elder:  { s: 0.95, o: { hair: 'bun', hairCol: '#e0e0e0', outfit: '#a1887f', glasses: true } },
     friend: { s: 0.9,  o: { hair: 'long', hairCol: '#3b2b25', outfit: '#81c784', book: '#ffd54f' } },
   };
-  for (const k in NPC) { HELPER['npc:' + k] = (g) => { g.translate(0, 17 * (1 - NPC[k].s)); g.scale(NPC[k].s, NPC[k].s); person(g, NPC[k].o); }; LOOK['npc:' + k] = { sleeve: NPC[k].o.outfit, s: NPC[k].s };
+  for (const k in NPC) { HELPER['npc:' + k] = (g) => { g.translate(0, 17 * (1 - NPC[k].s)); g.scale(NPC[k].s, NPC[k].s); person(g, NPC[k].o); }; LOOK['npc:' + k] = { sleeve: NPC[k].o.outfit, s: NPC[k].s, face: { brow: NPC[k].o.hairCol || '#3b2b25', kid: k === 'child' } };
     const so = Object.assign({}, NPC[k].o, { sad: true });   // 도움이 필요할 때의 걱정스러운 얼굴
-    HELPER['npc:' + k + ':sad'] = (g) => { g.translate(0, 17 * (1 - NPC[k].s)); g.scale(NPC[k].s, NPC[k].s); person(g, so); }; LOOK['npc:' + k + ':sad'] = LOOK['npc:' + k]; }
+    HELPER['npc:' + k + ':sad'] = (g) => { g.translate(0, 17 * (1 - NPC[k].s)); g.scale(NPC[k].s, NPC[k].s); person(g, so); }; LOOK['npc:' + k + ':sad'] = Object.assign({}, LOOK['npc:' + k], { sad: true }); }
 
   /* ---------- 배경 ---------- */
   function floorPlanks(g, W, H2, base, step) { g.fillStyle = base; g.fillRect(0, 0, W, H2); for (let y = 0, i = 0; y < H2; y += step, i++) { g.fillStyle = i % 2 ? 'rgba(255,255,255,.02)' : 'rgba(0,0,0,.05)'; g.fillRect(0, y, W, step); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, y, W, 1); } }
