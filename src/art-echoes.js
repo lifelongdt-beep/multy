@@ -263,6 +263,8 @@
   const ECHO_ALPHA = 0.85;  // main.js가 0.3을 넘기므로 실제 불투명도 약 0.26 (처음 0.63 → 0.39 → 0.26)
   Object.assign(Art, {
     ECHO_FORM_IDS: IDS,
+    /** 지금 고른 에코 모습 */
+    get echoForm() { return form; },
     /** 게임에 쓸 에코 모습 */
     setEchoForm(id) { form = FORMS[id] ? id : 'star'; return form; },
     /** 에코 모습 하나 그리기 (메뉴 미리보기 등). scale: 크기 배율, t: 초 */

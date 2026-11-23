@@ -11,6 +11,10 @@
   canvas{width:100%;height:100%;display:block;background:#161a2e;border-radius:6px}
   .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(8,10,20,.82);text-align:center;padding:24px;box-sizing:border-box}
   .overlay.hidden{display:none}
+  /* 게임 밖 화면: 뒤의 메뉴 배경(해 질 녘 길 · 주인공 · 에코)이 비쳐 보이게 옅게 */
+  #start,#tutorial{background:linear-gradient(rgba(8,10,24,.25),rgba(8,10,24,.08) 45%,rgba(8,10,24,.35))}
+  #end{background:linear-gradient(rgba(8,10,24,.45),rgba(8,10,24,.3) 50%,rgba(8,10,24,.55))}
+  #panel{background:rgba(8,10,24,.62)}
   .icn{vertical-align:-3px;flex-shrink:0}
   .tabs{display:flex;gap:6px;width:100%}
   .dex{width:100%;background:#222845;border:2px solid #3a4272;border-radius:12px;padding:6px 8px;box-sizing:border-box}
@@ -188,6 +192,7 @@
 <script src="src/art-bg.js"></script>
 <script src="src/art-bullets.js"></script>
 <script src="src/art-echoes.js"></script>
+<script src="src/art-menu.js"></script>
 <script src="src/icons.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/main.js"></script>

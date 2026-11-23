@@ -720,6 +720,11 @@
     ctx.setTransform(sc, 0, 0, cv.height / H, sx * sc, sy * sc);
     const th = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).theme;
     const useArt = artOn();
+    // 게임 밖 화면(첫 화면·상점·내 캐릭터·선행·과제·결과): 해 질 녘 길 위의 주인공과 에코, 지평선을 흐르는 12개 월드
+    if ((state === 'menu' || state === 'end') && useArt && Art.drawMenuScene) {
+      Art.drawMenuScene(ctx, W, H, performance.now(), { emo: GameUI.emoji(), cycle: GameUI.outfitCycle(), win: state === 'end' ? !!(sim && sim.result === 'clear') : undefined });
+      return;
+    }
     if (useArt) Art.drawBackground(ctx, W, H, (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).id); else {
     ctx.fillStyle = th.bg; ctx.fillRect(-20, -20, W + 40, H + 40);
     ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
