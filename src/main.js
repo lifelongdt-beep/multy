@@ -776,7 +776,7 @@
     // 도우미(선생님 등): 빛나는 상담 구역 + 게이지. 가까이 가서 잠시 머물면 조언 카드를 받는다
     if (sim.helper) {
       const hp = sim.helper, bob = Math.sin(performance.now() / 300) * 2;
-      const fadeA = hp.state === 'wait' ? 1 : Math.min(1, Math.max(0, hp.fade / 35));   // 배운 뒤엔 손을 흔들며 인사하고 천천히 사라짐
+      const fadeA = hp.state === 'wait' ? 1 : Math.min(1, Math.max(0, hp.fade / 25));   // 배운 뒤엔 손을 흔들며 인사하고 천천히 사라짐
       ctx.globalAlpha = fadeA;
       const glow = ctx.createRadialGradient(hp.x, hp.y, 4, hp.x, hp.y, hp.r + 8);
       glow.addColorStop(0, 'rgba(255,225,120,.35)'); glow.addColorStop(1, 'rgba(255,225,120,.05)');
