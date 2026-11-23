@@ -82,3 +82,13 @@ test('월드 곡은 장소에 어울리는 악기로 16마디(A→B), 월드마�
   const kinds = (id) => new Set(Mu.compose(id, false).events.map((e) => e.kind));
   assert.ok(kinds('beach').has('wave') && kinds('subway').has('clack') && kinds('mountain').has('bird'), '파도·선로·새소리');
 });
+
+test('경쾌한 빠르기: 월드 곡은 모두 100 BPM 이상, 메인 화면은 따로 만든 메인 테마', () => {
+  for (const id of ORDER) assert.ok(Mu.SONGS[id].bpm >= 100, `${id}: ${Mu.SONGS[id].bpm}`);
+  const m = Mu.compose('menu', false);
+  assert.strictEqual(m.name, '에코 러시 메인 테마');
+  assert.strictEqual(m.bars, 16);
+  assert.ok(!ORDER.includes('menu'));
+  const sig = (c) => c.events.filter((e) => e.kind === 'lead').slice(0, 24).map((e) => `${e.step}:${e.midi}`).join(',');
+  for (const id of ORDER) assert.notStrictEqual(sig(Mu.compose(id, false)), sig(m), `메인 테마 ≠ ${id}`);
+});

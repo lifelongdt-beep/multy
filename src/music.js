@@ -23,15 +23,15 @@
   // 드럼 패턴: 16칸(16분음표), x=강하게, o=약하게
   const D = {
     pop:     { k: 'x.......x.o.....', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' },
-    soft:    { k: 'x.........x.....', s: '....o.......o...', h: '..o...o...o...o.' },
+    soft:    { k: 'x.....x...x.....', s: '....x.......x...', h: 'x.o.x.o.x.o.x.o.' },
     swing:   { k: 'x.....x...x.....', s: '....x.......x..o', h: 'x..ox..ox..ox..o' },
     train:   { k: 'x...x...x...x...', s: '....x.......x...', h: 'xoxoxoxoxoxoxoxo' },
-    lofi:    { k: 'x......x..x.....', s: '....x.......x...', h: '..o...o...o...oo' },
+    lofi:    { k: 'x......x..x.....', s: '....x.......x...', h: 'x.o.x.o.x.o.x.oo' },
     dance:   { k: 'x...x...x...x...', s: '....x.......x...', h: '..x...x...x...x.' },
-    box:     { k: 'x...............', s: '................', h: '....o.......o...' },
+    box:     { k: 'x.......x.......', s: '....o.......o...', h: '..o...o...o...o.' },
     tropic:  { k: 'x..x..x...x..x..', s: '....x.......x...', h: 'x.oxx.oxx.oxx.ox' },
-    air:     { k: 'x.......x.......', s: '....o.......o...', h: 'o.o.o.o.o.o.o.o.' },
-    gentle:  { k: 'x.......x.......', s: '........o.......', h: '..o...o...o...o.' },
+    air:     { k: 'x.......x.x.....', s: '....x.......x...', h: 'x.o.x.o.x.o.x.o.' },
+    gentle:  { k: 'x.....x.x.......', s: '....x.......x...', h: 'x.o.x.o.x.o.x.o.' },
     folk:    { k: 'x.....x.x.......', s: '....x.......x...', h: 'x.xxx.xxx.xxx.xx' },
     rock:    { k: 'x.x...x.x.x.....', s: '....x.......x...', h: 'xxxxxxxxxxxxxxxx' },
     boss:    { k: 'x...x...x...x.x.', s: '....x.......x.xx', h: 'xxxxxxxxxxxxxxxx' },
@@ -42,18 +42,19 @@
 
   /* 월드별 곡 설계 (root: MIDI 음 번호, prog: 음계 도수 0~6, 한 마디에 한 코드) */
   const SONGS = {
-    school:   { name: '종소리 행진곡', bpm: 112, root: 60, scale: 'major',      prog: [0, 4, 5, 3], lead: { wave: 'square',   oct: 1, style: 'melody' }, bass: { wave: 'triangle', pat: 'x...x...x...x.x.' }, pad: { wave: 'triangle', vol: 0.05 }, drums: 'pop',    seed: 11 },
-    academy:  { name: '연필 사각사각',  bpm: 100, root: 57, scale: 'dorian',     prog: [0, 3, 6, 4], lead: { wave: 'triangle', oct: 1, style: 'arp' },    bass: { wave: 'sine',     pat: 'x.....x.x.......' }, pad: { wave: 'sine',     vol: 0.05 }, drums: 'soft',   seed: 23 },
-    office:   { name: '야근 재즈',      bpm: 96,  root: 53, scale: 'major',      prog: [1, 4, 0, 5], lead: { wave: 'sine',     oct: 1, style: 'melody' }, bass: { wave: 'triangle', pat: 'x...x...x...x...' }, pad: { wave: 'sawtooth', vol: 0.025 }, drums: 'swing', swing: 0.33, seven: true, seed: 37 },
-    subway:   { name: '덜컹덜컹 퇴근길', bpm: 120, root: 52, scale: 'minor',      prog: [0, 5, 2, 6], lead: { wave: 'square',   oct: 1, style: 'arp' },    bass: { wave: 'sawtooth', pat: 'x.xxx.xxx.xxx.xx' }, pad: { wave: 'triangle', vol: 0.04 }, drums: 'train',  seed: 41 },
-    home:     { name: '한밤의 로파이',  bpm: 80,  root: 61, scale: 'major',      prog: [3, 2, 1, 4], lead: { wave: 'sine',     oct: 1, style: 'bell' },   bass: { wave: 'sine',     pat: 'x.......x..x....' }, pad: { wave: 'triangle', vol: 0.06 }, drums: 'lofi',   seven: true, seed: 53 },
-    gym:      { name: '한 세트 더!',    bpm: 128, root: 55, scale: 'mixolydian', prog: [0, 6, 3, 0], lead: { wave: 'sawtooth', oct: 1, style: 'melody' }, bass: { wave: 'square',   pat: 'x.x.x.x.x.x.x.x.' }, pad: { wave: 'square',   vol: 0.02 }, drums: 'dance',  seed: 67 },
-    library:  { name: '조용한 오르골',  bpm: 88,  root: 62, scale: 'major',      prog: [0, 5, 3, 4], lead: { wave: 'sine',     oct: 2, style: 'bell' },   bass: { wave: 'sine',     pat: 'x.......x.......' }, pad: { wave: 'sine',     vol: 0.04 }, drums: 'box',    seed: 71 },
-    beach:    { name: '파도 칼립소',    bpm: 104, root: 58, scale: 'major',      prog: [0, 3, 4, 0], lead: { wave: 'triangle', oct: 1, style: 'melody' }, bass: { wave: 'triangle', pat: 'x..x..x.x..x..x.' }, pad: { wave: 'sine',     vol: 0.04 }, drums: 'tropic', seed: 83 },
-    airport:  { name: '구름 위 산책',   bpm: 110, root: 63, scale: 'lydian',     prog: [0, 1, 4, 0], lead: { wave: 'sine',     oct: 1, style: 'arp' },    bass: { wave: 'sine',     pat: 'x.......x...x...' }, pad: { wave: 'triangle', vol: 0.06 }, drums: 'air',    seed: 97 },
-    hospital: { name: '따뜻한 회복',    bpm: 92,  root: 57, scale: 'major',      prog: [0, 2, 3, 4], lead: { wave: 'triangle', oct: 1, style: 'bell' },   bass: { wave: 'sine',     pat: 'x.......x.......' }, pad: { wave: 'sine',     vol: 0.06 }, drums: 'gentle', seed: 101 },
-    mountain: { name: '정상을 향해',    bpm: 108, root: 50, scale: 'dorian',     prog: [0, 6, 3, 0], lead: { wave: 'square',   oct: 1, style: 'melody' }, bass: { wave: 'triangle', pat: 'x...x.x.x...x.x.' }, pad: { wave: 'triangle', vol: 0.05 }, drums: 'folk',   seed: 113 },
-    stage:    { name: '꿈의 무대',      bpm: 124, root: 64, scale: 'major',      prog: [0, 4, 5, 3], lead: { wave: 'sawtooth', oct: 1, style: 'melody' }, bass: { wave: 'sawtooth', pat: 'x.x.x.x.x.x.x.x.' }, pad: { wave: 'sawtooth', vol: 0.025 }, drums: 'rock',   seed: 127 },
+    school:   { name: '종소리 행진곡', bpm: 136, root: 60, scale: 'major',      prog: [0, 4, 5, 3], lead: { wave: 'square',   oct: 1, style: 'melody' }, bass: { wave: 'triangle', pat: 'x...x...x...x.x.' }, pad: { wave: 'triangle', vol: 0.05 }, drums: 'pop',    seed: 11 },
+    academy:  { name: '연필 사각사각',  bpm: 126, root: 57, scale: 'dorian',     prog: [0, 3, 6, 4], lead: { wave: 'triangle', oct: 1, style: 'arp' },    bass: { wave: 'sine',     pat: 'x..x..x.x..x..x.' }, pad: { wave: 'sine',     vol: 0.05 }, drums: 'soft',   seed: 23 },
+    office:   { name: '야근 재즈',      bpm: 124,  root: 53, scale: 'major',      prog: [1, 4, 0, 5], lead: { wave: 'sine',     oct: 1, style: 'melody' }, bass: { wave: 'triangle', pat: 'x...x...x...x...' }, pad: { wave: 'sawtooth', vol: 0.025 }, drums: 'swing', swing: 0.33, seven: true, seed: 37 },
+    subway:   { name: '덜컹덜컹 퇴근길', bpm: 142, root: 52, scale: 'minor',      prog: [0, 5, 2, 6], lead: { wave: 'square',   oct: 1, style: 'arp' },    bass: { wave: 'sawtooth', pat: 'x.xxx.xxx.xxx.xx' }, pad: { wave: 'triangle', vol: 0.04 }, drums: 'train',  seed: 41 },
+    home:     { name: '한밤의 로파이',  bpm: 104,  root: 61, scale: 'major',      prog: [3, 2, 1, 4], lead: { wave: 'sine',     oct: 1, style: 'bell' },   bass: { wave: 'sine',     pat: 'x..x....x.xx..x.' }, pad: { wave: 'triangle', vol: 0.06 }, drums: 'lofi',   seven: true, seed: 53 },
+    gym:      { name: '한 세트 더!',    bpm: 148, root: 55, scale: 'mixolydian', prog: [0, 6, 3, 0], lead: { wave: 'sawtooth', oct: 1, style: 'melody' }, bass: { wave: 'square',   pat: 'x.x.x.x.x.x.x.x.' }, pad: { wave: 'square',   vol: 0.02 }, drums: 'dance',  seed: 67 },
+    library:  { name: '조용한 오르골',  bpm: 116,  root: 62, scale: 'major',      prog: [0, 5, 3, 4], lead: { wave: 'sine',     oct: 1, style: 'bell' },   bass: { wave: 'sine',     pat: 'x...x...x...x.x.' }, pad: { wave: 'sine',     vol: 0.04 }, drums: 'box',    seed: 71 },
+    beach:    { name: '파도 칼립소',    bpm: 128, root: 58, scale: 'major',      prog: [0, 3, 4, 0], lead: { wave: 'triangle', oct: 1, style: 'melody' }, bass: { wave: 'triangle', pat: 'x..x..x.x..x..x.' }, pad: { wave: 'sine',     vol: 0.04 }, drums: 'tropic', seed: 83 },
+    airport:  { name: '구름 위 산책',   bpm: 132, root: 63, scale: 'lydian',     prog: [0, 1, 4, 0], lead: { wave: 'sine',     oct: 1, style: 'arp' },    bass: { wave: 'sine',     pat: 'x...x.x.x...x.x.' }, pad: { wave: 'triangle', vol: 0.06 }, drums: 'air',    seed: 97 },
+    hospital: { name: '따뜻한 회복',    bpm: 118,  root: 57, scale: 'major',      prog: [0, 2, 3, 4], lead: { wave: 'triangle', oct: 1, style: 'bell' },   bass: { wave: 'sine',     pat: 'x...x...x..xx...' }, pad: { wave: 'sine',     vol: 0.06 }, drums: 'gentle', seed: 101 },
+    mountain: { name: '정상을 향해',    bpm: 134, root: 50, scale: 'dorian',     prog: [0, 6, 3, 0], lead: { wave: 'square',   oct: 1, style: 'melody' }, bass: { wave: 'triangle', pat: 'x...x.x.x...x.x.' }, pad: { wave: 'triangle', vol: 0.05 }, drums: 'folk',   seed: 113 },
+    menu:     { name: '에코 러시 메인 테마', bpm: 140, root: 62, scale: 'major', prog: [0, 5, 3, 4], lead: { wave: 'square', oct: 1, style: 'melody' }, bass: { wave: 'sawtooth', pat: 'x.x.x.x.x.x.x.x.' }, pad: { wave: 'sawtooth', vol: 0.03 }, drums: 'pop', seed: 7 },
+    stage:    { name: '꿈의 무대',      bpm: 150, root: 64, scale: 'major',      prog: [0, 4, 5, 3], lead: { wave: 'sawtooth', oct: 1, style: 'melody' }, bass: { wave: 'sawtooth', pat: 'x.x.x.x.x.x.x.x.' }, pad: { wave: 'sawtooth', vol: 0.025 }, drums: 'rock',   seed: 127 },
   };
 
   /* 월드마다 어울리는 악기 편성 (코드 음악 업그레이드)
@@ -71,6 +72,7 @@
     airport:  { lead: 'flute',      bass: 'sub',       pad: 'strings', counter: { inst: 'epiano',   style: 'arp8',    oct: 1 }, perc: { kind: 'shaker', pat: '..o...o...o...o.' }, amb: 'ding',     progB: [5, 1, 0, 4], style: 'melody' },
     hospital: { lead: 'harp',       bass: 'upright',   pad: 'strings', counter: { inst: 'flute',    style: 'sustain', oct: 1 }, perc: null,                                    amb: null,       progB: [5, 3, 0, 4] },
     mountain: { lead: 'flute',      bass: 'upright',   pad: 'strings', counter: { inst: 'pluck',    style: 'strum',   oct: 0 }, perc: null,                                    amb: 'bird',     progB: [3, 0, 6, 4] },
+    menu:     { lead: 'synthlead',  bass: 'synthbass', pad: 'strings', counter: { inst: 'marimba',  style: 'arp8',    oct: 1 }, perc: { kind: 'clap',   pat: '....x.......x..x' }, amb: null,       progB: [3, 4, 2, 5] },
     stage:    { lead: 'brass',      bass: 'synthbass', pad: 'strings', counter: { inst: 'synthlead', style: 'arp8',   oct: 1 }, perc: { kind: 'clap',   pat: '....x.......x...' }, amb: 'crowd',    progB: [3, 4, 5, 4] },
   };
   for (const id in ARRANGE) {
