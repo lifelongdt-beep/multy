@@ -124,6 +124,7 @@
 
   function handleEvents() {
     for (const ev of sim.drainEvents()) {
+      if (tutorial) tutTip(ev.k === 'deed' ? ev.what : ev.k === 'dropWarn' ? 'drop' : ev.k);   // 처음 생긴 일이면 튜토리얼 안내
       switch (ev.k) {
         case 'shoot': Sfx.play('shoot'); break;
         case 'dmg':
@@ -376,6 +377,9 @@
   let sim = null, state = 'menu';   // menu | play | paused | levelup | end
   let tutorial = false;             // 지금 판이 튜토리얼(에코 10명과 함께하는 체험)인지
   let tipIdx = 0;
+  let tipQueue = [], tipSeen = {};   // 튜토리얼: 기다리는 안내 · 이미 보여 준 상황
+  /** 그 상황이 처음 생겼을 때 안내를 한 번 줄 세운다 */
+  function tutTip(key) { if (!tutorial || tipSeen[key] || !EchoTutorial.EVENT_TIPS || !EchoTutorial.EVENT_TIPS[key]) return; tipSeen[key] = true; tipQueue.push(EchoTutorial.EVENT_TIPS[key]); }
   let acc = 0, last = 0;
 
   function resize() {
@@ -390,7 +394,7 @@
   function startRun(opts) {
     Sfx.unlock(); Sfx.play('click');
     tutorial = !!(opts && opts.tutorial === true);
-    tipIdx = 0;
+    tipIdx = 0; tipQueue = []; tipSeen = {};
     let clearedEchoes = 0;
     if (tutorial) {
       const seed = (Date.now() ^ 0x9e3779b9) >>> 0;
@@ -418,7 +422,13 @@
   let tipFreeze = 0;
   function tutorialTips() {
     const tips = EchoTutorial.TIPS;
-    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { toast = { text: tips[tipIdx].text, t: 270 }; tipIdx++; tipFreeze = TIP_FREEZE; }   // 새 설명이 뜨면 잠깐 멈춤
+    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { tipQueue.push(tips[tipIdx].text); tipIdx++; }
+    // 상태로 알 수 있는 '처음': 탄이 날아옴 · 선생님 원 안에 들어감 · 바닥에 선행 거리가 생김
+    if (sim.ebullets.length) tutTip('shot');
+    if (sim.helperShield && sim.helperShield()) tutTip('shield');
+    if (sim.deeds && sim.deeds.spots.length) tutTip('spotSeen');
+    // 앞 안내를 충분히 읽은 뒤(약 2.7초) 다음 안내. 새 설명이 뜨면 잠깐 멈춤
+    if (tipQueue.length && toast.t <= 110) { toast = { text: tipQueue.shift(), t: 300 }; tipFreeze = TIP_FREEZE; }
   }
 
   /* ---------- 일시정지 ---------- */
