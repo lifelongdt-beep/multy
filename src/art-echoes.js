@@ -259,6 +259,8 @@
   const IDS = Object.keys(FORMS);
 
   let form = 'star';
+  let offEcho = null;
+  const ECHO_ALPHA = 1.3;   // main.js가 0.3을 넘기므로 실제 불투명도 약 0.39 (예전 0.63)
   Object.assign(Art, {
     ECHO_FORM_IDS: IDS,
     /** 게임에 쓸 에코 모습 */
@@ -275,9 +277,15 @@
       const t = now / 1000 + ec.id * 0.37, bob = Math.sin(now / 400 + ec.id) * 1.8;
       const dir = ec._lx !== undefined && Math.abs(ec.x - ec._lx) > 0.05 ? (ec.x < ec._lx ? -1 : 1) : (ec._dir || 1); ec._lx = ec.x; ec._dir = dir;
       ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(ec.x, ec.y + 15, 9, 3, 0, 0, Math.PI * 2); ctx.fill();   // 바닥 그림자 (떠 있는 느낌)
-      ctx.save(); ctx.globalAlpha = Math.min(1, alpha * 2.1);
-      ctx.translate(ec.x, ec.y - 2 + bob); ctx.scale(1.45 * dir, 1.45); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      (FORMS[form] || FORMS.star)(ctx, t);
+      // 반투명: 따로 그린 뒤 한 번에 흐리게 찍는다 (겹친 부분이 진해지지 않고 고르게 비침 → 진한 색의 적과 한눈에 구분)
+      const R = 26, Q = 3;
+      if (!offEcho) { offEcho = document.createElement('canvas'); offEcho.width = offEcho.height = R * 2 * Q; }
+      const g = offEcho.getContext('2d');
+      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, offEcho.width, offEcho.height);
+      g.setTransform(1.45 * dir * Q, 0, 0, 1.45 * Q, R * Q, R * Q); g.lineCap = 'round'; g.lineJoin = 'round';
+      (FORMS[form] || FORMS.star)(g, t);
+      ctx.save(); ctx.globalAlpha = Math.min(1, alpha * ECHO_ALPHA);
+      ctx.drawImage(offEcho, ec.x - R, ec.y - 2 + bob - R, R * 2, R * 2);
       ctx.restore();
     },
   });
