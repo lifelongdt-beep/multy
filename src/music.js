@@ -429,13 +429,14 @@
     compose, SONGS, bossSong, bossThemeSong,
     /** 지금 녹음 곡이 나오는지 (테스트·디버그용) */
     get source() { return fileNow ? 'file:' + fileNow.key : (playing && !synthQuiet ? 'synth' : 'none'); },
-    /** 월드 곡 재생 시작 (같은 곡이면 그대로) */
-    play(worldId) {
+    /** 월드 곡 재생 시작 (같은 곡이면 그대로). opts.code: 녹음 곡 대신 코드 음악으로 (메인 화면) */
+    play(worldId, opts) {
       const c = ctx(); if (!c) return;
-      if (playing && want && want.world === worldId && !want.boss) { this.resume(); return; }
+      const key = opts && opts.code ? null : fileKey(worldId, null);
+      if (playing && want && want.world === worldId && !want.boss && want.key === key) { this.resume(); return; }
       playing = true; paused = false; filePausedAt = null;
       if (cur && cur.world !== worldId) { cur = null; pending = null; }
-      want = { key: fileKey(worldId, null), world: worldId, boss: false };
+      want = { key, world: worldId, boss: false };
       sync();
     },
     /** 보스 곡으로 전환/복귀. bossDef가 있으면 그 왕의 패턴(exam·spiral·charge·lane) 곡으로. 왕 사이 쉬는 동안(bossDef 없음)은 지금 곡 유지 */
