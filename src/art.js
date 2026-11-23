@@ -42,6 +42,69 @@
   }
 
   /* ---------- 그리기 도우미 ---------- */
+  /* ---------- 선행 소품 (24x24 기준, 가운데 0,0) ---------- */
+  function heartPath(g, r) {
+    g.beginPath(); g.moveTo(0, r * 0.95);
+    g.bezierCurveTo(-r * 1.25, r * 0.1, -r * 1.05, -r * 1.0, 0, -r * 0.42);
+    g.bezierCurveTo(r * 1.05, -r * 1.0, r * 1.25, r * 0.1, 0, r * 0.95); g.closePath();
+  }
+  function heartArt(col, hi) {
+    return (g) => {
+      heartPath(g, 10); fillStroke(g, col, 1.8);
+      g.save(); heartPath(g, 10); g.clip();
+      const gr = g.createLinearGradient(-8, -8, 8, 9); gr.addColorStop(0, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(80,0,40,.25)');
+      g.fillStyle = gr; g.fillRect(-12, -12, 24, 24); g.restore();
+      g.fillStyle = hi; oval(g, -4.6, -4.2, 2.6, 1.7); g.fill(); circle(g, -1.4, -5.6, 0.9); g.fill();
+    };
+  }
+  const DEED_ART = {
+    heart: heartArt('#ffcf3f', 'rgba(255,255,240,.9)'),
+    heartPink: heartArt('#ff6fa8', 'rgba(255,240,248,.9)'),
+    cup(g) {   // 버려진 컵 → 줍기
+      g.beginPath(); g.moveTo(-6, -6); g.lineTo(6, -6); g.lineTo(4.4, 10); g.lineTo(-4.4, 10); g.closePath(); fillStroke(g, '#f4f1ea', 1.8);
+      g.fillStyle = '#ff7a7a'; g.fillRect(-5.3, 0, 10.4, 4.2);
+      g.beginPath(); g.moveTo(-7.5, -9); g.lineTo(7.5, -9); g.lineTo(7, -5.6); g.lineTo(-7, -5.6); g.closePath(); fillStroke(g, '#5cc6ff', 1.6);
+      g.strokeStyle = OL; g.lineWidth = 1.8; g.beginPath(); g.moveTo(1.5, -9); g.lineTo(4, -13); g.lineTo(7.5, -13); g.stroke();
+      g.strokeStyle = '#ffe14d'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(1.5, -9); g.lineTo(4, -13); g.lineTo(7.5, -13); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(-3.8, -4, 1.3, 9);
+    },
+    pot(g) {   // 쓰러진 화분 → 세우기
+      g.fillStyle = '#4caf50';
+      for (const [a, l] of [[-0.6, 9], [0, 11], [0.6, 9]]) { g.save(); g.translate(0, -3); g.rotate(a); oval(g, 0, -l / 2, 3, l / 2); fillStroke(g, '#5ccf62', 1.5); g.restore(); }
+      g.strokeStyle = '#2e7d32'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, -3); g.lineTo(0, -12); g.stroke();
+      g.beginPath(); g.moveTo(-7, -3); g.lineTo(7, -3); g.lineTo(5, 10); g.lineTo(-5, 10); g.closePath(); fillStroke(g, '#d9744a', 1.8);
+      g.beginPath(); g.rect(-8, -4.5, 16, 3.6); fillStroke(g, '#e88a5e', 1.6);
+      g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(-4.5, 0, 1.4, 8);
+    },
+    teddy(g) {   // 잃어버린 인형 → 돌려주기
+      const br = '#c98a52', lt = '#efc79a';
+      for (const sx of [-1, 1]) { circle(g, sx * 6, -8, 3.2); fillStroke(g, br, 1.6); circle(g, sx * 6, -8, 1.5); g.fillStyle = lt; g.fill(); }
+      for (const sx of [-1, 1]) { oval(g, sx * 4.5, 9, 3.4, 2.6); fillStroke(g, br, 1.6); oval(g, sx * 7.5, 3, 2.3, 3.4); fillStroke(g, br, 1.6); }
+      oval(g, 0, 4.5, 6, 6); fillStroke(g, br, 1.7); oval(g, 0, 5.5, 3.4, 3.4); g.fillStyle = lt; g.fill();
+      circle(g, 0, -4, 7); fillStroke(g, br, 1.8);
+      oval(g, 0, -1.8, 3.2, 2.4); g.fillStyle = lt; g.fill();
+      g.fillStyle = OL; circle(g, -2.6, -5.2, 1.1); g.fill(); circle(g, 2.6, -5.2, 1.1); g.fill(); oval(g, 0, -2.6, 1.2, 0.8); g.fill();
+      g.fillStyle = '#fff'; circle(g, -2.2, -5.6, 0.4); g.fill(); circle(g, 3, -5.6, 0.4); g.fill();
+      g.fillStyle = '#ff6fa8'; g.beginPath(); g.moveTo(0, 2.4); g.lineTo(-3.4, 0.8); g.lineTo(-3.4, 4); g.closePath(); g.moveTo(0, 2.4); g.lineTo(3.4, 0.8); g.lineTo(3.4, 4); g.closePath(); g.fill();
+    },
+    gift(g) {
+      g.beginPath(); g.rect(-8, -2, 16, 11); fillStroke(g, '#ff6f91', 1.8);
+      g.beginPath(); g.rect(-9.5, -6, 19, 4.5); fillStroke(g, '#ff8fab', 1.7);
+      g.fillStyle = '#ffe14d'; g.fillRect(-1.8, -6, 3.6, 15);
+      g.strokeStyle = OL; g.lineWidth = 1.6;
+      for (const sx of [-1, 1]) { g.beginPath(); g.ellipse(sx * 3.6, -8.4, 3.6, 2.2, sx * -0.5, 0, Math.PI * 2); g.fillStyle = '#ffe14d'; g.fill(); g.stroke(); }
+      circle(g, 0, -7, 1.6); g.fillStyle = '#ffd000'; g.fill(); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-6.5, -1, 2, 8);
+    },
+    flag(g) {   // 도착 깃발
+      g.strokeStyle = OL; g.lineWidth = 3.2; g.beginPath(); g.moveTo(-6, 11); g.lineTo(-6, -11); g.stroke();
+      g.strokeStyle = '#e6e9f5'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(-6, 11); g.lineTo(-6, -11); g.stroke();
+      g.beginPath(); g.moveTo(-5, -10); g.quadraticCurveTo(1, -12.5, 8, -9.5); g.lineTo(6, -5); g.lineTo(8, -0.5); g.quadraticCurveTo(1, -3, -5, -1); g.closePath(); fillStroke(g, '#ffd84d', 1.7);
+      g.fillStyle = '#ff9f1c'; g.beginPath(); g.moveTo(-5, -5.5); g.quadraticCurveTo(1, -7.5, 6.6, -5.2); g.lineTo(7.2, -3.4); g.quadraticCurveTo(1, -5.2, -5, -3.6); g.closePath(); g.fill();
+      oval(g, -6, 11, 4.5, 1.6); g.fillStyle = 'rgba(0,0,0,.25)'; g.fill();
+    },
+  };
+
   function fillStroke(g, fill, lw) { g.fillStyle = fill; g.fill(); g.lineWidth = lw || 2; g.strokeStyle = OL; g.stroke(); }
   function circle(g, x, y, r) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); }
   function oval(g, x, y, rx, ry) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); }
@@ -554,6 +617,12 @@
     drawKidPreview(ctx, x, y, emo, cycle, scale) {
       const W = root.EchoWorlds, of = W.outfitOf(cycle);
       blit(ctx, kidSprite(emo, 0, of), x, y, scale || 2, scale || 2);
+    },
+    /** 선행 소품 그림: cup·pot·teddy·heart·heartPink·gift·flag (size = 화면 크기 px) */
+    drawDeed(ctx, kind, x, y, size) {
+      const fn = DEED_ART[kind]; if (!fn) return;
+      const c = sprite('deed:' + kind, 28, 28, fn);
+      const k = (size || 18) / 24; blit(ctx, c, x, y, k, k);
     },
     drawTeacher(ctx, x, y) { this.drawHelper(ctx, 'school', x, y); },
     drawHelper(ctx, worldId, x, y) {

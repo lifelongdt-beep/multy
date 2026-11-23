@@ -175,6 +175,18 @@
     ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y + 22, 14, 5.5, 0, 0, 7); ctx.stroke();   // 노란 바닥 링 = 내 편인 사람 (적=빨강, 에코=파랑, 나=초록)
     if (useArt) Art.drawHelper(ctx, 'npc:' + kind, x, y); else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(NPC_EMO[kind] || '🧑', x, y, 28); }
   }
+  /** 선행 소품: 그림(Art)이 있으면 그림, 없으면 같은 모양의 선 그림(Glyphs) */
+  const DEED_FALLBACK = { heart: '💛', heartPink: '💗', cup: '🥤', pot: '🪴', teddy: '🧸', gift: '🎁', flag: '🚩' };
+  function deedArt(kind, x, y, size) {
+    if (window.Art && Art.drawDeed) Art.drawDeed(ctx, kind, x, y, size); else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(DEED_FALLBACK[kind], x, y, size); }
+  }
+  /** 결과 화면용: 캔버스 그림을 작은 이미지로 */
+  function deedImg(draw, w, h, dispH) {
+    const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2;
+    const g = c.getContext('2d'); g.scale(2, 2); if (window.Art) draw(g);
+    const im = document.createElement('img'); im.src = c.toDataURL(); im.alt = ''; im.style.height = dispH + 'px'; im.style.verticalAlign = 'middle';
+    return im;
+  }
   function drawBubbles() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (let i = bubbles.length - 1; i >= 0; i--) {
@@ -183,7 +195,7 @@
       if (b.t >= b.max) { bubbles.splice(i, 1); continue; }
       const k = b.t / b.max, a = k < 0.15 ? k / 0.15 : k > 0.7 ? (1 - k) / 0.3 : 1;
       ctx.globalAlpha = a;
-      if (b.heart) { emoji('💗', b.x + Math.sin(b.t / 6 + b.x) * 4, b.y - b.t * 0.7, 12); continue; }
+      if (b.heart) { deedArt('heartPink', b.x + Math.sin(b.t / 6 + b.x) * 4, b.y - b.t * 0.7, 12); continue; }
       ctx.font = b.small ? 'bold 10px sans-serif' : 'bold 12px sans-serif';
       const tw = ctx.measureText(b.text).width + 14, y = b.y - b.t * 0.15;
       ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(b.x - tw / 2, y - 10, tw, 20, 9) : ctx.rect(b.x - tw / 2, y - 10, tw, 20); ctx.fill();
@@ -200,7 +212,7 @@
     if (!people) for (const sp of d.spots) {
       const a = Math.min(1, sp.t / 60), pul = 0.5 + 0.5 * Math.sin(now / 260 + sp.x);
       ctx.globalAlpha = a * (0.25 + 0.2 * pul); ctx.fillStyle = '#ff8cc0'; ctx.beginPath(); ctx.arc(sp.x, sp.y, 15, 0, 7); ctx.fill();
-      ctx.globalAlpha = a; emoji(sp.kind === 'litter' ? '🥤' : sp.kind === 'pot' ? '🪴' : '🧸', sp.x, sp.y, 18);
+      ctx.globalAlpha = a; deedArt(sp.kind === 'litter' ? 'cup' : sp.kind === 'pot' ? 'pot' : 'teddy', sp.x, sp.y, 20);
     }
     ctx.globalAlpha = 1;
     if (!people) return;
@@ -218,7 +230,7 @@
     }
     ctx.globalAlpha = 1;
     // 순해진 방해 요소: 머리 위 작은 하트
-    for (const e of sim.enemies) if (e.calm > 0) { ctx.globalAlpha = Math.min(1, e.calm / 30) * 0.9; emoji('💗', e.x, e.y - e.r - 6 + Math.sin(now / 200 + e.x) * 2, 10); }
+    for (const e of sim.enemies) if (e.calm > 0) { ctx.globalAlpha = Math.min(1, e.calm / 30) * 0.9; deedArt('heartPink', e.x, e.y - e.r - 6 + Math.sin(now / 200 + e.x) * 2, 10); }
     ctx.globalAlpha = 1;
     // 함께 싸우는 도와준 사람들
     for (const a of sim.allies) {
@@ -230,7 +242,7 @@
     ctx.globalAlpha = 1;
     // 지난 판에 도와준 사람이 찾아옴
     const vs = d.visitor;
-    if (vs) { ctx.globalAlpha = vs.state === 'come' ? 1 : Math.max(0, vs.fade / 70); drawNPC(useArt, vs.kind, vs.x, vs.y); if (vs.state === 'come') emoji('🎁', vs.x + 14, vs.y - 20, 14); ctx.globalAlpha = 1; }
+    if (vs) { ctx.globalAlpha = vs.state === 'come' ? 1 : Math.max(0, vs.fade / 70); drawNPC(useArt, vs.kind, vs.x, vs.y); if (vs.state === 'come') deedArt('gift', vs.x + 14, vs.y - 20, 15); ctx.globalAlpha = 1; }
     // 곤란한 사람: 머리 위 ❗ 말풍선 (도와주면 💛)
     const rs = d.rescue;
     if (rs) {
@@ -244,7 +256,7 @@
         // 남은 시간: 말풍선 둘레
         const left = 1 - rs.t / (EchoSim.TUNING.deedRescueStay * TICK);
         ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rs.x, by, 11, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
-      } else if (rs.state === 'done') emoji('💛', rs.x, by, 18);
+      } else if (rs.state === 'done') deedArt('heart', rs.x, by, 18);
       ctx.globalAlpha = 1;
     }
     // 친구: 체력 막대 + 도착 깃발. 멀어지면 멈춰 서서 손짓(…)
@@ -252,7 +264,7 @@
     if (es) {
       ctx.globalAlpha = es.state === 'walk' ? 1 : Math.max(0, es.fade / 90);
       if (es.state === 'walk') {
-        ctx.globalAlpha *= 0.5 + 0.3 * Math.sin(now / 300); emoji('🚩', es.goal, es.y - 10, 20); ctx.globalAlpha = 1;
+        ctx.globalAlpha *= 0.5 + 0.3 * Math.sin(now / 300); deedArt('flag', es.goal, es.y - 10, 22); ctx.globalAlpha = 1;
         ctx.strokeStyle = 'rgba(255,216,77,.35)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(es.x, es.y + 16); ctx.lineTo(es.goal, es.y + 16); ctx.stroke(); ctx.setLineDash([]);
       }
       const step = es.state === 'walk' && !es.waiting ? Math.abs(Math.sin(now / 140)) * 2 : 0;
@@ -264,7 +276,7 @@
         ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(es.x - w / 2, es.y - 30, w, 4);
         ctx.fillStyle = f > 0.4 ? '#7dffb2' : '#ffd84d'; ctx.fillRect(es.x - w / 2, es.y - 30, w * f, 4);
         if (es.waiting) { ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('…', es.x + 14, es.y - 22); }
-      } else if (es.state === 'done') emoji('💛', es.x, es.y - 34, 18);
+      } else if (es.state === 'done') deedArt('heart', es.x, es.y - 34, 18);
       ctx.globalAlpha = 1;
     }
   }
@@ -466,8 +478,7 @@
     const lines = [`🎓 학점 +${Meta.fmtNum(sum.earned)}`];
     // 오늘의 선행: 도운 사람들의 얼굴 + 작은 선행 수
     if (dd.people.length || dd.spotCount) {
-      const faces = dd.people.map((k) => (Meta.DEED_KIND_INFO[k] || {}).emoji || '🧑').join('');
-      lines.push(`💛 ${faces ? faces + ' 도운 사람 ' + dd.people.length + '명' : ''}${faces && dd.spotCount ? ' · ' : ''}${dd.spotCount ? '작은 선행 ' + dd.spotCount + '개' : ''}`);
+      lines.push({ deed: true, people: dd.people.slice(), text: `${dd.people.length ? '도운 사람 ' + dd.people.length + '명' : ''}${dd.people.length && dd.spotCount ? ' · ' : ''}${dd.spotCount ? '작은 선행 ' + dd.spotCount + '개' : ''}` });
     }
     if (sum.newTitle) lines.push(`${sum.newTitle.icon} 새 칭호: ${sum.newTitle.name}`);
     for (const a of sum.newAch) lines.push(`🏆 ${a.name} +${a.reward}`);
@@ -495,7 +506,16 @@
       if (short) lines.push(`🧰 장비 부족: ${short.atk ? `⚔ 공격 ${short.atk}레벨 ` : ''}${short.def ? `🛡 방어 ${short.def}레벨 ` : ''}더 필요 (상점)`);
     }
     $('reward').innerHTML = '';
-    lines.forEach((t) => { const d = document.createElement('div'); d.textContent = t; if (t.length > 18) d.className = 'wide'; $('reward').appendChild(d); });   // 짧은 결과는 한 줄에 2~3개, 긴 안내는 한 줄 전체
+    lines.forEach((t) => {
+      const d = document.createElement('div');
+      if (t && t.deed) {   // 오늘의 선행: 그린 하트 + 도운 사람들 얼굴 그림
+        d.className = 'wide deedchip';
+        d.appendChild(deedImg((g) => Art.drawDeed(g, 'heart', 12, 12, 22), 24, 24, 20));
+        for (const k of t.people.slice(0, 8)) d.appendChild(deedImg((g) => Art.drawHelper(g, 'npc:' + k, 18, 30), 36, 60, 34));
+        const sp = document.createElement('span'); sp.textContent = t.text; d.appendChild(sp);
+      } else { d.textContent = t; if (t.length > 18) d.className = 'wide'; }
+      $('reward').appendChild(d);
+    });   // 짧은 결과는 한 줄에 2~3개, 긴 안내는 한 줄 전체   // 짧은 결과는 한 줄에 2~3개, 긴 안내는 한 줄 전체
     if (sum.newAch.length || sum.missionsDone.length || sum.newWorld || sum.newCycle !== null || sum.newTitle) Sfx.play('levelup');
     $('end').classList.remove('hidden');
   }
@@ -730,7 +750,7 @@
     // 탄환 / 형광펜 / 적 탄환
     if (useArt) Art.drawParticles(ctx);
     for (const b of sim.bullets) {
-      if (b.owner === 'ally') { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji('💗', b.x, b.y, 12); continue; }
+      if (b.owner === 'ally') { deedArt('heartPink', b.x, b.y, 12); continue; }
       if (useArt) { Art.drawBullet(ctx, b); continue; }
       ctx.globalAlpha = b.owner === 'echo' ? 0.4 : 1;
       ctx.fillStyle = b.crit ? '#ffd34d' : b.owner === 'echo' ? '#8fe3ff' : '#ffe27a';
@@ -851,7 +871,7 @@
     ctx.textAlign = 'right'; ctx.font = '12px sans-serif';
     const alive = sim.echoes.filter((e) => e.alive && !e.down).length;   // 지금 화면에 나와 있는 에코 수
     ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
-    if (sim.deeds) { ctx.font = '11px sans-serif'; ctx.fillStyle = '#ffb3d4'; ctx.fillText(`💛 ${sim.deeds.gauge}/${EchoSim.TUNING.deedGaugeNeed}`, W - 8, 29); ctx.fillStyle = '#fff'; }
+    if (sim.deeds) { ctx.font = '11px sans-serif'; ctx.fillStyle = '#ffb3d4'; const gt = `${sim.deeds.gauge}/${EchoSim.TUNING.deedGaugeNeed}`; ctx.fillText(gt, W - 8, 29); const ga = ctx.textAlign, gb = ctx.textBaseline; deedArt('heart', W - 16 - ctx.measureText(gt).width, 25, 11); ctx.textAlign = ga; ctx.textBaseline = gb; ctx.fillStyle = '#fff'; }
 
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림). 카드가 떠 있으면 안내는 숨김
