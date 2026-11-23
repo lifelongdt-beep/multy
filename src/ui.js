@@ -100,6 +100,25 @@
       map.appendChild(card);
     }
     body.appendChild(map);
+    // 3) 과거의 나 · 복장 도감: 회차마다 입었던 복장을 장식 단계까지 모두 (복장별 한 줄, 얻은 단계만)
+    const upto = Math.min(top, 999), from = Math.max(0, upto - 99);   // 너무 많으면 최근 100회차
+    body.appendChild(el('div', 'msg', `📖 과거의 나 · 복장 도감 (1~${upto + 1}회차${from ? ` 중 최근 100` : ''})`));
+    const rows = [];
+    for (let c = from; c <= upto; c++) { const o = EchoWorlds.outfitOf(c), id = o.style + '.' + o.variant; let row = rows.find((r) => r.id === id); if (!row) rows.push(row = { id, o, cycles: [] }); row.cycles.push(c); }
+    for (const row of rows) {
+      const line = el('div', 'dex');
+      line.appendChild(el('div', 'dn', row.o.name + (row.o.variant ? ` 🎨${row.o.variant + 1}` : '')));
+      const cells = el('div', 'dc');
+      for (const c of row.cycles) {
+        const o = EchoWorlds.outfitOf(c), cell = el('div', 'dx' + (c === cur ? ' cur' : ''));
+        const cv = el('canvas'); cv.width = 64; cv.height = 80; cell.appendChild(cv);
+        cell.appendChild(el('small', '', `${c + 1}회차`)); cell.appendChild(el('div', 'st', '★'.repeat(o.stars)));
+        paintOutfit(cv, c, 1, false);
+        cell.onclick = () => { lookPreview = c === cur ? null : c; Sfx.play('click'); rerender(); $('panel').scrollTop = 0; };
+        cells.appendChild(cell);
+      }
+      line.appendChild(cells); body.appendChild(line);
+    }
   }
 
   /* ---------- 선행: 칭호 · 도감 ---------- */
