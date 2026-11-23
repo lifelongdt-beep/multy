@@ -1,4 +1,4 @@
-/* Endless Me — 이모지 대신 직접 그린 그림 (24x24 벡터)
+/* Echo Rush — 이모지 대신 직접 그린 그림 (24x24 벡터)
  * 같은 그림을 메뉴(SVG)와 게임 화면(캔버스, Path2D) 모두에서 쓴다.
  *  - 메뉴: 화면 글자 속 이모지를 자동으로 그림으로 바꾼다 (MutationObserver)
  *  - 캔버스: fillText / measureText 가 이모지를 만나면 그 자리에 그림을 그린다

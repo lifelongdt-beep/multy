@@ -1,4 +1,4 @@
-/* Endless Me — 메타 화면 (상점 / 캐릭터 / 도전 과제·미션 / 백업) */
+/* Echo Rush — 메타 화면 (상점 / 캐릭터 / 도전 과제·미션 / 백업) */
 (function () {
   'use strict';
   const M = Meta;

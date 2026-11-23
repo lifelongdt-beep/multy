@@ -1,4 +1,4 @@
-/* Endless Me — 버튼 아이콘 (이모지 대신 직접 그린 선 아이콘, SVG)
+/* Echo Rush — 버튼 아이콘 (이모지 대신 직접 그린 선 아이콘, SVG)
  * 둥근 선 · 같은 굵기 · currentColor 로 버튼 글자색을 따른다.
  */
 (function (root) {
