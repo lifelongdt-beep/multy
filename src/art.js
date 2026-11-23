@@ -522,7 +522,7 @@
     if (o.girl) {   // 여자 주인공: 양갈래(분홍 머리끈). 뒷머리는 몸보다 먼저 그림
       for (const sx of [-1, 1]) { oval(g, sx * 9.2, 0.5, 2.6, 4); fillStroke(g, '#3b2b25', 1.4); circle(g, sx * 8.6, -3.2, 1.5); fillStroke(g, '#ff7eb6', 1); }
     }
-    circle(g, 0, -6.5, 7.6); fillStroke(g, '#ffd9b8', 1.8);
+    circle(g, 0, -6.5, 7.6); fillStroke(g, o.skin || '#ffd9b8', 1.8);
     const hidesHair = ['space'].indexOf(o.head) < 0 && ['cap', 'detective', 'knight', 'explorer', 'pilot', 'fire'].indexOf(o.head) >= 0;
     if (!hidesHair) { g.beginPath(); g.arc(0, -7.2, 7.7, Math.PI * 1.02, Math.PI * 1.98); g.quadraticCurveTo(3, -9.5, -1, -8.5); g.quadraticCurveTo(-4, -8, -7.6, -6.5); g.closePath(); fillStroke(g, '#3b2b25', 1.6); }
     if (o.spiky && !hidesHair && !o.head) { g.beginPath(); g.moveTo(-5, -12.6); g.lineTo(-3.6, -16.2); g.lineTo(-1.6, -13.6); g.lineTo(0.2, -16.8); g.lineTo(2, -13.6); g.lineTo(4.2, -15.8); g.lineTo(5.4, -12.2); g.closePath(); fillStroke(g, '#3b2b25', 1.4); }   // 운동부: 삐죽 머리 (모자를 쓰면 숨김)
@@ -541,6 +541,12 @@
   }
   let outfit = { style: 0, tier: 0, variant: 0, key: '0.0.0' };
   let kidLook = 'boy';   // 주인공 모습: 'boy' | 'girl'
+  let kidColor = null;   // 직접 고른 옷 색 (#hex). null = 복장 원래 색
+  let kidSkin = null;    // 직접 고른 얼굴(피부) 색 (#hex). null = 기본
+  function shade(hex, k) {   // k<0 어둡게, k>0 밝게
+    const n = parseInt(hex.slice(1), 16), f = (x) => Math.round(k < 0 ? x * (1 + k) : x + (255 - x) * k).toString(16).padStart(2, '0');
+    return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
+  }
   /** 지금 회차의 복장 + 캐릭터 고유 표시를 합친 그리기 옵션 */
   function outfitOpts(emo, of) {
     const st = STYLES[of.style] || STYLES[0], v = of.variant, t = of.tier;
@@ -550,12 +556,20 @@
     if (t >= 2) { o.neck = st.neck; o.nc = c(st.nc); }
     if (t >= 3) { o.outer = st.outer; o.oc = c(st.oc); }
     if (t >= 4) { o.aura = true; o.gold = true; }
+    if (kidColor) {   // 직접 고른 옷 색: 몸통(교복·후드티는 테두리·모자까지 같은 계열로)
+      o.body = kidColor;
+      const light = parseInt(kidColor.slice(1, 3), 16) > 200;
+      if (of.style === 0 || of.style === 2) o.trim = shade(kidColor, light ? -0.3 : -0.35);
+      if (of.style === 2 && o.hc) o.hc = kidColor;
+      if (of.style === 0 && o.hc) o.hc = shade(kidColor, -0.35);
+    }
     if (kidLook === 'girl') o.girl = true;
+    if (kidSkin) o.skin = kidSkin;
     return Object.assign(o, CHAR[emo] || {});
   }
   function kidSprite(emo, step, of) {
     of = of || outfit;
-    return sprite(`kid:${kidLook}:${emo}:${step}:${of.key}`, 32, 58, (g) => { g.translate(0, -1); drawKid(g, outfitOpts(emo, of), step); });
+    return sprite(`kid:${kidLook}:${kidColor}:${kidSkin}:${emo}:${step}:${of.key}`, 32, 58, (g) => { g.translate(0, -1); drawKid(g, outfitOpts(emo, of), step); });
   }
   const TEACHER = (g) => {
     rrect(g, -7, 2, 14, 15, 5); fillStroke(g, '#3fae8a', 1.8);                         // 가디건
@@ -581,7 +595,7 @@
     g.lineCap = 'round'; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1);
     g.strokeStyle = OL; g.lineWidth = w + 2; g.stroke(); g.strokeStyle = col; g.lineWidth = w; g.stroke();
   }
-  function palm(g, x, y, r) { circle(g, x, y, r || 1.9); fillStroke(g, SKIN, 1.1); }
+  function palm(g, x, y, r, skin) { circle(g, x, y, r || 1.9); fillStroke(g, skin || SKIN, 1.1); }
   /** 사람(선생님·도우미·선행 인물) 포즈. 좌표는 사람 그림 기준(어깨 ±6.3,4.5 · 엉덩이 ±3.3,16), 오른쪽(+x)을 바라봄.
    *  돌려주는 값: L/R 손 위치, lf/rf 발 위치, prop(손에 든 소품) */
   function personPose(name, t, ang) {
@@ -852,7 +866,7 @@
       }
       ctx.save(); ctx.translate(p.x, cy); ctx.scale(K_KID * f, sy); ctx.translate(0, -1);
       limb(ctx, -5.4, 2.6, L[0], L[1], sleeve, 2.8); limb(ctx, 5.4, 2.6, R[0], R[1], sleeve, 2.8);
-      palm(ctx, L[0], L[1], 1.8); palm(ctx, R[0], R[1], 1.8);
+      palm(ctx, L[0], L[1], 1.8, kidSkin); palm(ctx, R[0], R[1], 1.8, kidSkin);
       ctx.restore();
       ctx.globalAlpha = 1;
       return [p.x + f * K_KID * R[0], cy + sy * (R[1] - 1)];
@@ -861,7 +875,7 @@
     /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 파란 유령 */
     drawEcho(ctx, ec, emo, now, alpha) {
       const base = kidSprite(emo, 0);
-      const ghost = tinted(`ghost:${kidLook}:${emo}:${outfit.key}`, base, '#6fd3ff', 0.55);
+      const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${emo}:${outfit.key}`, base, '#6fd3ff', 0.55);
       const bob = Math.sin(now / 400 + ec.id) * 1.5;
       this.groundMark(ctx, ec.x, ec.y + 13 * K_KID, 9 * K_KID, '#6fd6ff', alpha * 1.4);
       ctx.globalAlpha = alpha * 1.25;
@@ -873,6 +887,10 @@
     /** 회차를 알려 주면 그 회차의 복장으로 주인공·에코를 그린다 */
     /** 주인공 모습(남자 'boy' / 여자 'girl') */
     setLook(look) { kidLook = look === 'girl' ? 'girl' : 'boy'; return kidLook; },
+    /** 옷 색 (#hex, null이면 복장 원래 색) */
+    /** 얼굴(피부) 색 (#hex, null이면 기본) */
+    setSkin(hex) { kidSkin = typeof hex === 'string' && /^#[0-9a-f]{6}$/i.test(hex) ? hex : null; return kidSkin; },
+    setColor(hex) { kidColor = typeof hex === 'string' && /^#[0-9a-f]{6}$/i.test(hex) ? hex : null; return kidColor; },
     setOutfit(cycle) { const W = root.EchoWorlds; outfit = W && W.outfitOf ? W.outfitOf(cycle) : outfit; return outfit; },
     /** 메뉴 미리보기 등: 원하는 회차 복장으로 주인공을 그린다 */
     drawKidPreview(ctx, x, y, emo, cycle, scale) {
