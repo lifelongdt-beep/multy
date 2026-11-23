@@ -153,7 +153,8 @@
           }
           else if (ev.what === 'visitGift') { Sfx.play('levelup'); thanks(ev.x, ev.y, VISIT); }
           else if (ev.what === 'allyBye') { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 34, y: ev.y + (Math.random() - 0.5) * 20, t: -i * 3, max: 50 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); }   // 하트가 반짝이며 사라짐
-          else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') Sfx.play('heal');
+          else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') { Sfx.play('heal'); if (ev.what === 'escortStart') escortTalk = { text: '같이 가 줄래?', t: 150 }; }
+          else if (ev.what === 'friendHurt') escortTalk = { text: '아야!', t: 45 };
           break;
         case 'trainPass': { const em = (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'; Sfx.pass(ev.dir, em === '🚆' || em === '🛒' || em === '🛏️', em === '🌊'); break; }
         case 'dropWarn': Sfx.play('dropWarn'); break;
@@ -169,6 +170,46 @@
   }
 
   /* ---------- 선행 그리기: 곤란한 사람 · 지켜 줄 친구 · 작은 선행 거리 ---------- */
+  // 도움이 필요하다는 걸 "보이게": 작은 말풍선(사정 → 부탁을 번갈아) + 몸짓(떨림·손짓·식은땀)
+  const NEED_TALK = {
+    child:  ['무서워요…', '도와주세요!'],
+    elder:  ['짐이 무거워…', '도와줄래요?'],
+    friend: ['길을 잃었어…', '도와줘!'],
+  };
+  let escortTalk = null;   // 지켜 줄 친구의 짧은 말풍선 {text, t}
+  /** 작은 말풍선: (x, y)는 꼬리 끝(말하는 사람 머리 위). 화면 밖으로 나가지 않게 좌우 보정 */
+  function talkBubble(text, x, y, alpha, warn) {
+    ctx.save(); ctx.globalAlpha = alpha === undefined ? 1 : alpha;
+    ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(text).width + 12, h = 17;
+    const bx = Math.min(W - 4 - w / 2, Math.max(4 + w / 2, x)), by = y - h - 6;
+    ctx.fillStyle = 'rgba(255,255,255,.96)'; ctx.strokeStyle = warn ? '#ff6b8a' : '#ffd84d'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(bx - w / 2, by, w, h, 8); else ctx.rect(bx - w / 2, by, w, h);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 4, by + h - 0.5); ctx.lineTo(x + 4, by + h - 0.5); ctx.lineTo(x, y); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = warn ? '#ff6b8a' : '#ffd84d'; ctx.beginPath(); ctx.moveTo(x - 4, by + h); ctx.lineTo(x, y); ctx.lineTo(x + 4, by + h); ctx.stroke();
+    ctx.fillStyle = '#3a2a40'; ctx.fillText(text, bx, by + h / 2 + 0.5);
+    ctx.restore();
+  }
+  /** 손짓: 손을 흔들어 부르는 물결 두 줄 (머리 옆) */
+  function waveHand(x, y, now) {
+    const k = Math.sin(now / 110);
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    for (let i = 0; i < 2; i++) {
+      const r = 5 + i * 4, a0 = -0.9 + k * 0.25;
+      ctx.beginPath(); ctx.arc(x, y, r, a0, a0 + 1.2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  /** 식은땀 방울: 머리 옆에서 흘러내린다 */
+  function sweatDrop(x, y, now) {
+    const k = (now / 900) % 1;
+    ctx.save(); ctx.globalAlpha = 1 - k; ctx.fillStyle = '#8fd3ff';
+    const dy = y + k * 10;
+    ctx.beginPath(); ctx.moveTo(x, dy - 4); ctx.quadraticCurveTo(x + 3, dy, x, dy + 2.5); ctx.quadraticCurveTo(x - 3, dy, x, dy - 4); ctx.fill();
+    ctx.restore();
+  }
   const NPC_EMO = { child: '🧒', elder: '👵', friend: '🧑' };
   function drawNPC(useArt, kind, x, y) {
     ctx.fillStyle = 'rgba(255,216,77,.22)'; ctx.beginPath(); ctx.ellipse(x, y + 22, 14, 5.5, 0, 0, 7); ctx.fill();
@@ -189,6 +230,7 @@
   }
   function drawBubbles() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (escortTalk && --escortTalk.t <= 0) escortTalk = null;
     for (let i = bubbles.length - 1; i >= 0; i--) {
       const b = bubbles[i]; b.t += 1;
       if (b.t < 0) continue;
@@ -213,6 +255,9 @@
       const a = Math.min(1, sp.t / 60), pul = 0.5 + 0.5 * Math.sin(now / 260 + sp.x);
       ctx.globalAlpha = a * (0.25 + 0.2 * pul); ctx.fillStyle = '#ff8cc0'; ctx.beginPath(); ctx.arc(sp.x, sp.y, 15, 0, 7); ctx.fill();
       ctx.globalAlpha = a; deedArt(sp.kind === 'litter' ? 'cup' : sp.kind === 'pot' ? 'pot' : 'teddy', sp.x, sp.y, 20);
+      // 지나가며 주워 달라는 표시: 위에서 통통 튀는 작은 화살표
+      const ay = sp.y - 20 - Math.abs(Math.sin(now / 220 + sp.x)) * 5;
+      ctx.fillStyle = '#ffd84d'; ctx.beginPath(); ctx.moveTo(sp.x - 5, ay - 4); ctx.lineTo(sp.x + 5, ay - 4); ctx.lineTo(sp.x, ay + 2); ctx.closePath(); ctx.fill();
     }
     ctx.globalAlpha = 1;
     if (!people) return;
@@ -248,15 +293,27 @@
     if (rs) {
       ctx.globalAlpha = rs.state === 'wait' ? 1 : Math.max(0, rs.fade / 90);
       const bob = rs.state === 'done' ? -Math.abs(Math.sin(now / 160)) * 5 : 0;
-      drawNPC(useArt, rs.kind, rs.x, rs.y + bob);
       const by = rs.y - 34 + Math.sin(now / 200) * 2;
       if (rs.state === 'wait') {
-        ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.beginPath(); ctx.arc(rs.x, by, 9, 0, 7); ctx.fill();
-        ctx.fillStyle = '#ff4d6d'; ctx.font = 'bold 13px sans-serif'; ctx.fillText('!', rs.x, by + 1);
-        // 남은 시간: 말풍선 둘레
-        const left = 1 - rs.t / (EchoSim.TUNING.deedRescueStay * TICK);
-        ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rs.x, by, 11, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
-      } else if (rs.state === 'done') deedArt('heart', rs.x, by, 18);
+        // 남은 시간: 발밑 고리가 줄어든다 (노랑 → 빨강)
+        const left = Math.max(0, 1 - rs.t / (EchoSim.TUNING.deedRescueStay * TICK));
+        ctx.strokeStyle = left > 0.35 ? '#ffd84d' : '#ff6b8a'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(rs.x, rs.y + 22, 19, 7.5, 0, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
+        // 몸짓: 떨면서 움츠러든다
+        const shiver = Math.sin(now / 35) * 1.3, squash = 0.93 + 0.03 * Math.sin(now / 160);
+        ctx.save(); ctx.translate(rs.x + shiver, rs.y + 22); ctx.scale(1, squash); ctx.translate(-(rs.x + shiver), -(rs.y + 22));
+        drawNPC(useArt, rs.kind, rs.x + shiver, rs.y);
+        ctx.restore();
+        waveHand(rs.x + 15, rs.y - 12, now);          // 손을 흔들며 부른다
+        sweatDrop(rs.x - 13, rs.y - 14, now);         // 식은땀
+        // 말풍선: 사정과 부탁을 번갈아. 내가 가까이 오면 "조금만 더!"
+        const near = Math.hypot(sim.player.x - rs.x, sim.player.y - rs.y) < 110;
+        const lines = NEED_TALK[rs.kind] || NEED_TALK.friend;
+        talkBubble(near ? '조금만 더!' : lines[Math.floor(now / 1600) % lines.length], rs.x, by + 6, 1, !near);
+      } else {
+        drawNPC(useArt, rs.kind, rs.x, rs.y + bob);
+        if (rs.state === 'done') deedArt('heart', rs.x, by, 18);
+      }
       ctx.globalAlpha = 1;
     }
     // 친구: 체력 막대 + 도착 깃발. 멀어지면 멈춰 서서 손짓(…)
@@ -275,7 +332,8 @@
         const w = 26, f = Math.max(0, es.hp / es.maxhp);
         ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(es.x - w / 2, es.y - 30, w, 4);
         ctx.fillStyle = f > 0.4 ? '#7dffb2' : '#ffd84d'; ctx.fillRect(es.x - w / 2, es.y - 30, w * f, 4);
-        if (es.waiting) { ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('…', es.x + 14, es.y - 22); }
+        if (escortTalk && escortTalk.t > 0) talkBubble(escortTalk.text, es.x, es.y - 34, Math.min(1, escortTalk.t / 20), escortTalk.text === '아야!');
+        else if (es.waiting) { waveHand(es.x + 15, es.y - 12, now); talkBubble('기다릴게, 같이 가자!', es.x, es.y - 34, 1, true); }
       } else if (es.state === 'done') deedArt('heart', es.x, es.y - 34, 18);
       ctx.globalAlpha = 1;
     }
@@ -313,7 +371,7 @@
     playerEmoji = GameUI.emoji();
     if (window.Art) Art.setOutfit(GameUI.outfitCycle());   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = [];
+    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
