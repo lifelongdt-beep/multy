@@ -35,6 +35,7 @@
     const of = EchoWorlds.outfitOf(M.outfitCycle(save));
     const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
     const emo = (M.CHARACTERS[save.chars.selected] || M.CHARACTERS.student).emoji;
+    if (Art.setLook) Art.setLook(save.look);
     c.setTransform(2, 0, 0, 2, 0, 0); Art.drawKidPreview(c, 28, 38, emo, M.outfitCycle(save), 1.15);
     $('outfitName').textContent = `${of.name} ${'★'.repeat(of.stars)}${of.variant ? ` · 색 ${of.variant + 1}` : ''}`;
     const t = M.titleOf(M.deedScore(save)).title;
@@ -48,6 +49,7 @@
     if (!window.Art) return;
     const emo = (M.CHARACTERS[charId || save.chars.selected] || M.CHARACTERS.student).emoji;   // 캐릭터 종류(고유 표시)를 고르는 열쇠로만 씀, 화면엔 그림으로
     const k = cv.width / 56;   // 56 x 70 논리 크기 기준
+    if (Art.setLook) Art.setLook(save.look);
     c.setTransform(k, 0, 0, k, 0, 0); Art.drawKidPreview(c, 28, 38, emo, cycle, scale);
     if (locked) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(10,12,24,.92)'; c.fillRect(0, 0, cv.width, cv.height); c.globalCompositeOperation = 'source-over'; }
   }
@@ -77,6 +79,15 @@
         box.appendChild(auto);
       }
     }
+    // 남자 / 여자 주인공 고르기
+    const gRow = el('div', 'row lookSex');
+    for (const [id, label] of [['boy', '👦 남자'], ['girl', '👧 여자']]) {
+      const b = el('button', (save.look || 'boy') === id ? '' : 'sub', label);
+      b.style.minWidth = '0'; b.style.padding = '8px 16px'; b.style.fontSize = '14px';
+      b.onclick = () => { if ((save.look || 'boy') === id) return; save.look = id; Sfx.play('click'); commit(); rerender(); };
+      gRow.appendChild(b);
+    }
+    box.insertBefore(gRow, ln);
     body.appendChild(box);
     paintOutfit(big, show, 1.3, false);
     tabs(body, [{ id: 'outfit', html: Icons.svg('shirt', 16) + '<span>복장</span>' }, { id: 'char', html: Icons.svg('person', 16) + '<span>캐릭터</span>' }], lookTab, (id) => { lookTab = id; rerender(); });
@@ -442,6 +453,7 @@
     selectWorld(id) { if (!M.selectWorld(save, id)) return false; if (window.GameEchoes && GameEchoes.world() !== id) GameEchoes.reset(id); commit(); return true; },
     /** 입고 있는 복장(회차 번호) */
     outfitCycle() { return M.outfitCycle(save); },
+    look() { return save.look === 'girl' ? 'girl' : 'boy'; },
     /** 회차 고르기 (결과 화면의 "다음 회차로" 버튼 등) */
     selectCycle(c) { const ok = M.selectCycle(save, c); if (ok) { if (window.GameEchoes && GameEchoes.world() !== save.worlds.selected) GameEchoes.reset(save.worlds.selected); commit(); } return ok; },
     /** 시작하려는 월드에 장비가 모자라면 {atk, def} 부족분, 충분하면 null */

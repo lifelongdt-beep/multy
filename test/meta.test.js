@@ -438,3 +438,11 @@ test('끝난 채 남아 있던 미션은 완료 기록으로 옮기고 새 미�
   assert.strictEqual(s.daily.history.length, 1);
   assert.strictEqual(M.refillMissions(s), false);
 });
+
+test('주인공 모습(남자/여자): 기본은 남자, 저장 후에도 유지, 이상한 값은 남자', () => {
+  assert.strictEqual(M.defaultSave().look, 'boy');
+  const s = M.defaultSave(); s.look = 'girl';
+  assert.strictEqual(M.sanitize(JSON.parse(JSON.stringify(s))).look, 'girl');
+  assert.strictEqual(M.sanitize({ look: 'robot' }).look, 'boy');
+  assert.strictEqual(M.sanitize({}).look, 'boy', '예전 저장 데이터는 남자');
+});
