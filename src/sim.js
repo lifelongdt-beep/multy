@@ -144,6 +144,8 @@
   // teamMul: 매점 장비의 팀 공격력(에코에게도 적용, 플레이어 몫은 dmgMul에 이미 포함) · takenMul: 매점 장비의 받는 피해 배율
   const NO_BONUS = { maxhp: 0, dmgMul: 1, speedMul: 1, cooldownMul: 1, magnet: 0, xpMul: 1, regen: 0, echoPower: 0, teamMul: 1, takenMul: 1, startStats: {} };
 
+  /** 총알 단계: 기본 위력(1) 대비 12% 강해질 때마다 1단계. 모양은 단계 % 30, 30단계마다 한 바퀴 */
+  function bulletTier(dmg) { return Math.max(0, Math.floor(Math.log(Math.max(1, dmg)) / Math.log(1.12) + 1e-9)); }
   function derive(st, b) {
     b = b || NO_BONUS;
     const T = TUNING;
@@ -538,6 +540,7 @@
         this.bullets.push({
           x, y, vx: Math.cos(a) * 6, vy: Math.sin(a) * 6,
           dmg: d.dmg * pm * (crit ? d.critMul : 1), crit, pierce: d.pierce, life: 46, owner, hit: [],
+          tier: owner === 'player' ? bulletTier(d.dmg) : 0,   // 총알 단계: 강해질수록 모양이 바뀐다 (30가지, 30단계마다 처음부터)
         });
       }
       if (owner === 'player') this._ev({ k: 'shoot' });
@@ -1145,7 +1148,7 @@
     }
     return Sim._pool;
   };
-  const api = { Sim, addEcho, mulberry32, derive, NO_BONUS, WORLDS, WORLD_ORDER: Worlds.ORDER, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, MAX_ECHOES, MAX_LEVEL };
+  const api = { bulletTier, Sim, addEcho, mulberry32, derive, NO_BONUS, WORLDS, WORLD_ORDER: Worlds.ORDER, UPGRADES, SYNERGIES, ENEMY_TYPES, WAVES, SWARMS, TUNING, W, H, PLAY_BOTTOM, TICK, RUN_TICKS, OVERTIME_TICKS, BOSS_TICK, MAX_ECHOES, MAX_LEVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoSim = api;
 })(typeof window !== 'undefined' ? window : globalThis);

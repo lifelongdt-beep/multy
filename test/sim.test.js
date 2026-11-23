@@ -319,3 +319,16 @@ test('한꺼번에 여러 레벨이 오르면: 첫 레벨만 카드로 고르고
   assert.ok(s.drainEvents().some((e) => e.k === 'autoPick'));
   assert.strictEqual(E.TUNING.choiceAutoSec, 3, '고르는 시간 3초');
 });
+
+test('총알 단계: 강해질수록 단계가 오르고(30가지 모양 · 30단계마다 처음부터), 내 총알에만 붙는다', () => {
+  const E = require('../src/sim.js');
+  assert.strictEqual(E.bulletTier(1), 0);
+  assert.ok(E.bulletTier(2) > E.bulletTier(1.5) && E.bulletTier(1.5) > E.bulletTier(1.1));
+  assert.strictEqual(E.bulletTier(Math.pow(1.12, 30)) % 30, 0, '30단계면 다시 첫 모양');
+  const s = new E.Sim({ seed: 3, events: false, world: 'school' });
+  s.player.stats.dmg = 3;
+  s._make(Object.keys(E.WORLDS.school.enemies)[0], s.player.x + 60, s.player.y);
+  for (let i = 0; i < 40 && !s.bullets.length; i++) s.step({ dx: 0, dy: 0 });
+  const b = s.bullets.find((x) => x.owner === 'player');
+  assert.ok(b && b.tier >= 7, `공격 Lv3이면 7단계 이상 (${b && b.tier})`);
+});
