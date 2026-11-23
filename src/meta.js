@@ -238,6 +238,7 @@
       gear: {},                                   // 월드 매점 장비 'world:atk|def' -> level
       cycle: 0,                                   // 지금 플레이하는 회차(0=1회차). 월드 메뉴에서 열린 회차 중 고를 수 있다
       maxCycle: 0,                                // 열린 가장 높은 회차. 12개 월드를 모두 극복하면 +1
+      look: 'boy',                                // 주인공 모습: 'boy'(남자) | 'girl'(여자)
       outfitPick: null,                           // 골라 입은 복장(그 복장을 얻은 회차 번호). null = 지금 회차 복장 자동
       deeds: { people: 0, escorts: 0, spots: 0, book: {}, visitor: null },   // 선행 기록: 도운 사람 · 지켜 준 친구 · 작은 선행 · 도감('world:kind' -> 횟수) · 다음 판에 찾아올 사람
     };
@@ -302,6 +303,7 @@
     }
     if (isNum(raw.cycle) && raw.cycle >= 0) d.cycle = Math.min(9999, Math.floor(raw.cycle));
     d.maxCycle = Math.max(d.cycle, isNum(raw.maxCycle) && raw.maxCycle >= 0 ? Math.min(9999, Math.floor(raw.maxCycle)) : 0);
+    if (raw.look === 'girl') d.look = 'girl';
     if (isNum(raw.outfitPick) && raw.outfitPick >= 0 && raw.outfitPick <= d.maxCycle) d.outfitPick = Math.floor(raw.outfitPick);
     if (raw.gear && typeof raw.gear === 'object') {
       const max = Worlds.gearMaxLevel(d.maxCycle);

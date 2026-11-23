@@ -146,7 +146,7 @@
         case 'helped': Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y + (Math.random() - 0.5) * 24, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
         case 'warm': warmFx.push({ x: ev.x, y: ev.y, r: ev.r, t: 0 }); break;
         case 'deed':   // 선행: 소리·반짝임만 (설명은 튜토리얼 안내에서)
-          if (ev.what === 'spot') { Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
+          if (ev.what === 'spot') { pickAnim = { t: 0, max: 26, item: ev.kind === 'pot' ? 'pot' : ev.kind === 'toy' ? 'teddy' : 'cup' }; Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
           else if (ev.what === 'rescued' || ev.what === 'escortDone' || ev.what === 'gaugeFull') {
             Sfx.play('levelup'); if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, '#ff8cc0', 12, false);
             if (ev.x !== undefined) thanks(ev.x, ev.y, THANKS);
@@ -154,7 +154,6 @@
           else if (ev.what === 'visitGift') { Sfx.play('levelup'); thanks(ev.x, ev.y, VISIT); }
           else if (ev.what === 'allyBye') { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 34, y: ev.y + (Math.random() - 0.5) * 20, t: -i * 3, max: 50 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); }   // 하트가 반짝이며 사라짐
           else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') { Sfx.play('heal'); if (ev.what === 'escortStart') escortTalk = { text: '같이 가 줄래?', t: 150 }; }
-          else if (ev.what === 'friendHurt') escortTalk = { text: '아야!', t: 45 };
           break;
         case 'trainPass': { const em = (sim.world.rules.trains && sim.world.rules.trains.emoji) || '🚆'; Sfx.pass(ev.dir, em === '🚆' || em === '🛒' || em === '🛏️', em === '🌊'); break; }
         case 'dropWarn': Sfx.play('dropWarn'); break;
@@ -170,13 +169,14 @@
   }
 
   /* ---------- 선행 그리기: 곤란한 사람 · 지켜 줄 친구 · 작은 선행 거리 ---------- */
-  // 도움이 필요하다는 걸 "보이게": 작은 말풍선(사정 → 부탁을 번갈아) + 몸짓(떨림·손짓·식은땀)
-  const NEED_TALK = {
-    child:  ['무서워요…', '도와주세요!'],
-    elder:  ['짐이 무거워…', '도와줄래요?'],
-    friend: ['길을 잃었어…', '도와줘!'],
-  };
+  // 도움이 필요하다는 건 "몸짓"으로 보여 준다 (아이: 얼굴을 가리고 떪 · 어르신: 무거운 짐에 휘청 · 친구: 지도를 들고 머리를 긁적).
+  // 몸짓만으로는 모자란 사정만 아주 짧은 말풍선으로, 가끔씩만.
+  const NEED_SHORT = { child: '무서워요', elder: '너무 무거워요', friend: '길을 잃었어요' };
+  const NEED_POSE = { child: 'cower', elder: 'carry', friend: 'lost' };
   let escortTalk = null;   // 지켜 줄 친구의 짧은 말풍선 {text, t}
+  let pickAnim = null;     // 주인공이 선행 거리를 줍는 동작 {t, max, item}
+  /** 뻗는 팔의 각도(바라보는 쪽 기준, 위아래로 너무 꺾이지 않게) */
+  function reachAng(fx, fy, tx, ty) { return Math.max(-1.1, Math.min(1.1, Math.atan2(ty - fy, Math.abs(tx - fx) || 1))); }
   /** 작은 말풍선: (x, y)는 꼬리 끝(말하는 사람 머리 위). 화면 밖으로 나가지 않게 좌우 보정 */
   function talkBubble(text, x, y, alpha, warn) {
     ctx.save(); ctx.globalAlpha = alpha === undefined ? 1 : alpha;
@@ -192,16 +192,6 @@
     ctx.fillStyle = '#3a2a40'; ctx.fillText(text, bx, by + h / 2 + 0.5);
     ctx.restore();
   }
-  /** 손짓: 손을 흔들어 부르는 물결 두 줄 (머리 옆) */
-  function waveHand(x, y, now) {
-    const k = Math.sin(now / 110);
-    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
-    for (let i = 0; i < 2; i++) {
-      const r = 5 + i * 4, a0 = -0.9 + k * 0.25;
-      ctx.beginPath(); ctx.arc(x, y, r, a0, a0 + 1.2); ctx.stroke();
-    }
-    ctx.restore();
-  }
   /** 식은땀 방울: 머리 옆에서 흘러내린다 */
   function sweatDrop(x, y, now) {
     const k = (now / 900) % 1;
@@ -211,10 +201,12 @@
     ctx.restore();
   }
   const NPC_EMO = { child: '🧒', elder: '👵', friend: '🧑' };
-  function drawNPC(useArt, kind, x, y) {
-    ctx.fillStyle = 'rgba(255,216,77,.22)'; ctx.beginPath(); ctx.ellipse(x, y + 22, 14, 5.5, 0, 0, 7); ctx.fill();
-    ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y + 22, 14, 5.5, 0, 0, 7); ctx.stroke();   // 노란 바닥 링 = 내 편인 사람 (적=빨강, 에코=파랑, 나=초록)
-    if (useArt) Art.drawHelper(ctx, 'npc:' + kind, x, y); else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(NPC_EMO[kind] || '🧑', x, y, 28); }
+  function drawNPC(useArt, kind, x, y, pose) {
+    ctx.fillStyle = 'rgba(255,216,77,.22)'; ctx.beginPath(); ctx.ellipse(x, y + 29, 14, 5.5, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y + 29, 14, 5.5, 0, 0, 7); ctx.stroke();   // 노란 바닥 링 = 내 편인 사람 (적=빨강, 에코=파랑, 나=초록)
+    if (useArt && Art.drawPerson) return Art.drawPerson(ctx, 'npc:' + kind + (pose && pose.sad ? ':sad' : ''), x, y, pose, performance.now());
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(NPC_EMO[kind] || '🧑', x, y, 28);
+    return { L: [x - 10, y + 6], R: [x + 10, y + 6] };
   }
   /** 선행 소품: 그림(Art)이 있으면 그림, 없으면 같은 모양의 선 그림(Glyphs) */
   const DEED_FALLBACK = { heart: '💛', heartPink: '💗', cup: '🥤', pot: '🪴', teddy: '🧸', gift: '🎁', flag: '🚩' };
@@ -231,6 +223,7 @@
   function drawBubbles() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     if (escortTalk && --escortTalk.t <= 0) escortTalk = null;
+    if (pickAnim && ++pickAnim.t >= pickAnim.max) pickAnim = null;
     for (let i = bubbles.length - 1; i >= 0; i--) {
       const b = bubbles[i]; b.t += 1;
       if (b.t < 0) continue;
@@ -282,12 +275,17 @@
       // 떠나기 1초 전부터 반짝반짝 깜빡이며 흐려지고 머리 위로 하트가 피어오른다
       ctx.globalAlpha = a.t < 60 ? (a.t / 60) * (0.55 + 0.45 * Math.abs(Math.sin(now / 70))) : 1;
       if (a.t < 60 && a.t % 8 === 0) bubbles.push({ heart: true, x: a.x + (Math.random() - 0.5) * 20, y: a.y - 14, t: 0, max: 40 });
-      drawNPC(useArt, a.kind, a.x, a.y - Math.abs(Math.sin(now / 180 + a.ang)) * 3);
+      drawNPC(useArt, a.kind, a.x, a.y - Math.abs(Math.sin(now / 180 + a.ang)) * 3, { name: 'throw', dir: sim.player.x < a.x ? -1 : 1 });
     }
     ctx.globalAlpha = 1;
     // 지난 판에 도와준 사람이 찾아옴
     const vs = d.visitor;
-    if (vs) { ctx.globalAlpha = vs.state === 'come' ? 1 : Math.max(0, vs.fade / 70); drawNPC(useArt, vs.kind, vs.x, vs.y); if (vs.state === 'come') deedArt('gift', vs.x + 14, vs.y - 20, 15); ctx.globalAlpha = 1; }
+    if (vs) {
+      ctx.globalAlpha = vs.state === 'come' ? 1 : Math.max(0, vs.fade / 70);
+      const come = vs.state === 'come', hd = drawNPC(useArt, vs.kind, vs.x, vs.y, come ? { name: 'give', dir: sim.player.x < vs.x ? -1 : 1 } : { name: 'wave', dir: sim.player.x < vs.x ? -1 : 1 });
+      if (come) deedArt('gift', (hd.L[0] + hd.R[0]) / 2, (hd.L[1] + hd.R[1]) / 2 - 4, 15);   // 두 손 사이의 선물
+      ctx.globalAlpha = 1;
+    }
     // 곤란한 사람: 머리 위 ❗ 말풍선 (도와주면 💛)
     const rs = d.rescue;
     if (rs) {
@@ -298,21 +296,24 @@
         // 남은 시간: 발밑 고리가 줄어든다 (노랑 → 빨강)
         const left = Math.max(0, 1 - rs.t / (EchoSim.TUNING.deedRescueStay * TICK));
         ctx.strokeStyle = left > 0.35 ? '#ffd84d' : '#ff6b8a'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.ellipse(rs.x, rs.y + 22, 19, 7.5, 0, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
-        // 몸짓: 떨면서 움츠러든다
-        const shiver = Math.sin(now / 35) * 1.3, squash = 0.93 + 0.03 * Math.sin(now / 160);
-        ctx.save(); ctx.translate(rs.x + shiver, rs.y + 22); ctx.scale(1, squash); ctx.translate(-(rs.x + shiver), -(rs.y + 22));
-        drawNPC(useArt, rs.kind, rs.x + shiver, rs.y);
-        ctx.restore();
-        waveHand(rs.x + 15, rs.y - 12, now);          // 손을 흔들며 부른다
-        sweatDrop(rs.x - 13, rs.y - 14, now);         // 식은땀
-        // 말풍선: 사정과 부탁을 번갈아. 내가 가까이 오면 "조금만 더!"
-        const near = Math.hypot(sim.player.x - rs.x, sim.player.y - rs.y) < 110;
-        const lines = NEED_TALK[rs.kind] || NEED_TALK.friend;
-        talkBubble(near ? '조금만 더!' : lines[Math.floor(now / 1600) % lines.length], rs.x, by + 6, 1, !near);
+        ctx.beginPath(); ctx.ellipse(rs.x, rs.y + 29, 19, 7.5, 0, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
+        // 몸짓: 아이는 얼굴을 가리고 떨고, 어르신은 무거운 짐에 휘청, 친구는 지도를 들고 두리번.
+        // 내가 가까이 오면 나를 향해 손을 뻗는다 (도움을 받는 중)
+        const p = sim.player, near = Math.hypot(p.x - rs.x, p.y - rs.y) < 110, face = p.x < rs.x ? -1 : 1;
+        let pose, ox = 0, oy = 0;
+        if (near) pose = { name: 'reach', sad: true, dir: face, ang: reachAng(rs.x, rs.y, p.x, p.y) };
+        else {
+          pose = { name: NEED_POSE[rs.kind] || 'lost', sad: true, dir: rs.kind === 'friend' ? (Math.floor(now / 1300) % 2 ? -1 : 1) : face };
+          if (rs.kind === 'child') ox = Math.sin(now / 35) * 1.1;                 // 부들부들
+          if (rs.kind === 'elder') { ox = Math.sin(now / 260) * 1.6; oy = Math.abs(Math.sin(now / 260)) * 1.5; }   // 휘청휘청
+        }
+        drawNPC(useArt, rs.kind, rs.x + ox, rs.y + oy, pose);
+        if (!near && rs.kind !== 'child') sweatDrop(rs.x - 12 * pose.dir, rs.y - 14, now);   // 식은땀
+        // 몸짓만으로 모자란 사정만 짧게: 처음 2초 + 5초마다 1.3초
+        if (!near && (rs.t < 120 || rs.t % 300 < 80)) talkBubble(NEED_SHORT[rs.kind] || '도와주세요', rs.x, by + 4, 1, true);
       } else {
-        drawNPC(useArt, rs.kind, rs.x, rs.y + bob);
-        if (rs.state === 'done') deedArt('heart', rs.x, by, 18);
+        drawNPC(useArt, rs.kind, rs.x, rs.y + bob, rs.state === 'done' ? { name: 'cheer' } : { name: 'walk', dir: rs.x < W / 2 ? -1 : 1 });
+        if (rs.state === 'done') deedArt('heart', rs.x, by - 6, 18);
       }
       ctx.globalAlpha = 1;
     }
@@ -326,14 +327,22 @@
       }
       const step = es.state === 'walk' && !es.waiting ? Math.abs(Math.sin(now / 140)) * 2 : 0;
       if (es.inv > 0 && Math.floor(es.inv / 4) % 2) ctx.globalAlpha *= 0.4;
-      drawNPC(useArt, 'friend', es.x, es.y - step);
+      let fpose;
+      if (es.state === 'walk') {
+        const p = sim.player, dpx = p.x - es.x, ahead = dpx * es.dir >= -6, d2 = Math.hypot(dpx, p.y - es.y);
+        if (es.inv > 0) fpose = { name: 'hurt', sad: true, dir: es.dir };                        // 맞아서 머리를 감싼다
+        else if (es.waiting) fpose = { name: 'beckon', sad: true, dir: dpx < 0 ? -1 : 1 };                   // 멈춰 서서 이리 오라고 손짓
+        else if (d2 < 75 && ahead) fpose = { name: 'walkHold', dir: es.dir, ang: reachAng(es.x, es.y, p.x, p.y) };   // 손잡고 함께 걷기
+        else fpose = { name: 'walk', dir: es.dir };
+      } else fpose = es.state === 'done' ? { name: 'cheer' } : { name: 'cower' };
+      drawNPC(useArt, 'friend', es.x + (es.inv > 20 ? Math.sin(now / 25) * 1.6 : 0), es.y - step, fpose);   // 맞으면 움찔움찔
       ctx.globalAlpha = es.state === 'walk' ? 1 : Math.max(0, es.fade / 90);
       if (es.state === 'walk') {
         const w = 26, f = Math.max(0, es.hp / es.maxhp);
         ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(es.x - w / 2, es.y - 30, w, 4);
         ctx.fillStyle = f > 0.4 ? '#7dffb2' : '#ffd84d'; ctx.fillRect(es.x - w / 2, es.y - 30, w * f, 4);
         if (escortTalk && escortTalk.t > 0) talkBubble(escortTalk.text, es.x, es.y - 34, Math.min(1, escortTalk.t / 20), escortTalk.text === '아야!');
-        else if (es.waiting) { waveHand(es.x + 15, es.y - 12, now); talkBubble('기다릴게, 같이 가자!', es.x, es.y - 34, 1, true); }
+        else if (es.waiting && Math.floor(now / 2200) % 2 === 0) talkBubble('같이 가!', es.x, es.y - 34, 1, true);   // 손짓에 짧게만 덧붙임
       } else if (es.state === 'done') deedArt('heart', es.x, es.y - 34, 18);
       ctx.globalAlpha = 1;
     }
@@ -369,9 +378,9 @@
       sim = new Sim({ seed: (Date.now() ^ (runCount * 2654435761)) >>> 0, echoes, bonus: GameUI.bonus(), world: GameUI.worldId(), cycle: GameUI.cycle(), visitor: GameUI.takeVisitor() });
     }
     playerEmoji = GameUI.emoji();
-    if (window.Art) Art.setOutfit(GameUI.outfitCycle());   // 회차별 복장 (에코도 같은 옷)
+    if (window.Art) { if (Art.setLook) Art.setLook(GameUI.look()); Art.setOutfit(GameUI.outfitCycle()); }   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null;
+    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -774,7 +783,10 @@
         ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.r - 5, -Math.PI / 2, -Math.PI / 2 + (hp.prog / hp.need) * Math.PI * 2); ctx.stroke();
       }
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      if (useArt) Art.drawHelper(ctx, sim.world.id, hp.x, hp.y + bob); else emoji(hp.emoji, hp.x, hp.y + bob, 34);
+      const pl = sim.player, inZone = Math.hypot(pl.x - hp.x, pl.y - hp.y) < hp.r + pl.r, tface = pl.x < hp.x ? -1 : 1;
+      const tpose = hp.state === 'wait' ? (inZone ? { name: 'pat', dir: tface, ang: reachAng(hp.x, hp.y, pl.x, pl.y) } : { name: 'beckon', dir: tface })
+        : hp.state === 'done' ? { name: 'cheer' } : { name: 'wave', dir: tface };
+      if (useArt && Art.drawPerson) Art.drawPerson(ctx, sim.world.id, hp.x, hp.y + bob, tpose, performance.now()); else emoji(hp.emoji, hp.x, hp.y + bob, 34);
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
       ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
       if (tutorial) ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
@@ -850,8 +862,16 @@
     if (lastPX !== null && Math.abs(p.x - lastPX) > 0.3) faceDir = p.x < lastPX ? -1 : 1;
     lastPX = p.x; lastPY = p.y;
     const blink = p.inv > 0 && Math.floor(p.inv / 4) % 2;
-    if (useArt) Art.drawPlayer(ctx, p, playerEmoji, moving, faceDir, now, blink);
-    else {
+    let act = null;
+    const dd = sim.deeds, prs = dd && dd.rescue, pes = dd && dd.escort, php = sim.helper;
+    if (pickAnim) act = { pose: 'pick', k: pickAnim.t / pickAnim.max };
+    else if (prs && prs.state === 'wait' && Math.hypot(p.x - prs.x, p.y - prs.y) < 110) act = { pose: 'reach', tx: prs.x, ty: prs.y };
+    else if (pes && pes.state === 'walk' && !pes.waiting && Math.hypot(p.x - pes.x, p.y - pes.y) < 75) act = { pose: 'reach', tx: pes.x, ty: pes.y };
+    else if (php && php.state === 'wait' && Math.hypot(p.x - php.x, p.y - php.y) < php.r + p.r) act = { pose: 'learn', tx: php.x, ty: php.y };
+    if (useArt) {
+      const hand = Art.drawPlayer(ctx, p, playerEmoji, moving, faceDir, now, blink, act);
+      if (pickAnim && hand) deedArt(pickAnim.item, hand[0], hand[1] - 4, 13);   // 주운 물건을 손에 들고
+    } else {
       if (blink) ctx.globalAlpha = 0.4;
       emoji(playerEmoji, p.x, p.y + 1, 22); ctx.globalAlpha = 1;
     }
