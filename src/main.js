@@ -70,7 +70,6 @@
   addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === '1' || k === '2' || k === '3') { pickCard(+k - 1); return; }
-    if (k === 'g') { toggleArt(); return; }
     if (k === 'escape' || k === 'p') { if (state === 'play') pauseGame(); else if (state === 'paused') resumeGame(); return; }
     keys[k] = true;
   });
@@ -107,13 +106,12 @@
   function bossFxActive() { return !!bossFx && bossFx.t < BOSS_FX_LEN; }
   /* ---------- 새 그림체 (시안: 학교 월드). 일시정지 화면의 🎨 버튼 / G키로 이전 그림체와 바꿔 비교 ---------- */
   let artPref = 'new';
-  try { artPref = localStorage.getItem('echo-art') || 'new'; } catch (e) { /* 무시 */ }
+  // 이전 그림체는 더 이상 쓰지 않음 (비교용 전환 버튼 제거)
   function artOn() { const w = sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]; return artPref === 'new' && !!window.Art && Art.supports(w); }
   function toggleArt() {
     artPref = artPref === 'new' ? 'old' : 'new';
     try { localStorage.setItem('echo-art', artPref); } catch (e) { /* 무시 */ }
     if (window.Art) Art.clearParticles();
-    const b = document.getElementById('artBtn'); if (b) b.innerHTML = Icons.svg('palette') + `<span>그림체: ${artPref === 'new' ? '새 그림체' : '이전'}</span>`;
   }
   window.EchoArt = { toggle: toggleArt, get pref() { return artPref; } };
   let lastPX = null, lastPY = null, faceDir = 1;   // 자동 선택된 아이템 아이콘 반짝임 {id, icon, t}
@@ -344,8 +342,6 @@
   $('pauseBtn').onclick = () => { Sfx.play('click'); pauseGame(); };
   $('resume').onclick = () => { Sfx.play('click'); quitArmed = false; resumeGame(); };
   $('quit').onclick = () => { Sfx.play('click'); quitRun(); };
-  $('artBtn').onclick = () => { Sfx.play('click'); toggleArt(); render(); };
-  $('artBtn').innerHTML = Icons.svg('palette') + `<span>그림체: ${artPref === 'new' ? '새 그림체' : '이전'}</span>`;
   // 앱을 내리거나 다른 창으로 가면 자동으로 일시정지 (전화·알림 등)
   document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
   addEventListener('blur', () => pauseGame());
@@ -517,8 +513,14 @@
     if (!resetArmed) { resetArmed = true; label(`에코 ${echoes.length}명 지우기? 한 번 더`); setTimeout(() => { resetArmed = false; label('에코 기록 초기화'); }, 3000); return; }
     resetArmed = false; echoes = []; runCount = 0; save(); label('초기화됨'); GameUI.refresh();
   };
-  const muteIcon = () => { $('mute').innerHTML = Icons.svg(Sfx.isMuted() ? 'soundOff' : 'soundOn', 17); };
-  $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); muteIcon(); };
+  const muteIcon = () => {
+    $('mute').innerHTML = Icons.svg(Sfx.isMuted() ? 'soundOff' : 'soundOn', 17);
+    $('bMusic').innerHTML = `<span>🎵 배경음악: ${Sfx.musicOn() ? '켜짐' : '꺼짐'}</span>`; $('bMusic').style.opacity = Sfx.musicOn() ? 1 : 0.55;
+    $('bSfx').innerHTML = `<span>🔔 효과음: ${Sfx.sfxOn() ? '켜짐' : '꺼짐'}</span>`; $('bSfx').style.opacity = Sfx.sfxOn() ? 1 : 0.55;
+  };
+  $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); muteIcon(); };   // 위 버튼: 전체 켜기/끄기
+  $('bMusic').onclick = () => { Sfx.setMusic(!Sfx.musicOn()); muteIcon(); };
+  $('bSfx').onclick = () => { Sfx.setSfx(!Sfx.sfxOn()); Sfx.play('click'); muteIcon(); };
   Icons.apply(); muteIcon(); $('reset').innerHTML = Icons.svg('trash') + '<span>에코 기록 초기화</span>'; $('again').innerHTML = Icons.svg('retry') + '<span>한 판만 더</span>';
 
   /* ---------- 렌더 ---------- */

@@ -19,6 +19,7 @@
       const w = M.WORLDS[save.worlds.selected] || M.WORLDS.school;
       $('bWorld').textContent = `🗺️ 월드: ${w.emoji} ${w.name}` + (save.cycle > 0 ? ` · 🔁 ${save.cycle + 1}회차` : '');
       drawOutfit();
+      badges();
       // 이번 월드의 큰 도전에 필요한 에코: 지금 몇 명 모였는지 (에코를 모아야 넘는다는 걸 한눈에)
       if (window.GameEchoes) {
         const need = w.boss.needEchoes, have = GameEchoes.world() === w.id ? GameEchoes.count() : 0;
@@ -49,7 +50,7 @@
     c.setTransform(k, 0, 0, k, 0, 0); Art.drawKidPreview(c, 28, 38, emo, cycle, scale);
     if (locked) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(10,12,24,.92)'; c.fillRect(0, 0, cv.width, cv.height); c.globalCompositeOperation = 'source-over'; }
   }
-  let lookPreview = null;   // 지도에서 눌러 본 회차 (없으면 지금 회차)
+  let lookPreview = null, lookTab = 'outfit';   // 지도에서 눌러 본 회차 (없으면 지금 회차)
   function renderLook() {
     const body = $('pbody'); body.innerHTML = '';
     const top = M.topCycle(save), cur = M.outfitCycle(save), show = lookPreview === null ? cur : lookPreview;
@@ -77,6 +78,8 @@
     }
     body.appendChild(box);
     paintOutfit(big, show, 1.3, false);
+    tabs(body, [{ id: 'outfit', label: '👕 복장' }, { id: 'char', label: '🧑 캐릭터' }], lookTab, (id) => { lookTab = id; rerender(); });
+    if (lookTab === 'char') { renderChars(body); return; }
     // 2) 나의 업적: 지금까지 얻은 복장만 보여 준다 (앞으로 나올 복장은 비밀)
     const owned = [];
     for (let c = Math.min(top, 999); c >= 0; c--) {   // 복장(스타일·색)별로 가장 많이 꾸민 단계 하나씩
@@ -97,7 +100,6 @@
       map.appendChild(card);
     }
     body.appendChild(map);
-    renderChars(body);
   }
 
   /* ---------- 선행: 칭호 · 도감 ---------- */
@@ -127,6 +129,27 @@
     body.appendChild(grid);
     body.appendChild(el('div', 'msg', '칭호'));
     for (const t of M.TITLES) body.appendChild(item(sc >= t.at ? t.icon : '🔒', t.name, `💛 ${t.at}`, { done: sc >= t.at }));
+  }
+  /** 탭 줄: [{id, label}] 중 cur 를 강조, 누르면 onPick(id) */
+  function tabs(body, list, cur, onPick) {
+    const row = el('div', 'tabs');
+    for (const t of list) { const b = el('button', cur === t.id ? 'on' : '', t.label); b.onclick = () => { if (cur !== t.id) { Sfx.play('click'); onPick(t.id); } }; row.appendChild(b); }
+    body.appendChild(row);
+  }
+  // 새 소식 빨간 점: 마지막으로 본 칭호·도전 과제 수 (기기에 저장)
+  let seen = { title: '', ach: 0 };
+  try { seen = Object.assign(seen, JSON.parse(localStorage.getItem('echo-seen') || '{}')); } catch (e) { /* 무시 */ }
+  const saveSeen = () => { try { localStorage.setItem('echo-seen', JSON.stringify(seen)); } catch (e) { /* 무시 */ } };
+  function badges() {
+    const top = M.topCycle(save);
+    const shopNew = M.SHOP.some((it) => { const lv = M.shopLevel(save, it.id); return lv < M.shopMax(save, it.id) && M.shopCost(it.id, lv, top) <= save.coins; })
+      || M.GEAR_ITEMS.some((g) => M.gearAvailable(save, g.world) && M.gearLevel(save, g.id) < M.gearMax(save) && M.gearCost(save, g.id) <= save.coins);
+    const charNew = Object.keys(M.CHARACTERS).some((id) => save.chars.unlocked.indexOf(id) < 0 && M.charReqMet(save, id) && M.CHARACTERS[id].cost <= save.coins);
+    const titleNow = M.titleOf(M.deedScore(save)).title.name, achNow = M.ACHIEVEMENTS.filter((a) => save.ach[a.id]).length;
+    if (!seen.title && M.deedScore(save) === 0) seen.title = titleNow;
+    const deedNew = titleNow !== seen.title, questNew = achNow > seen.ach;
+    const set = (id, on) => { const b = $(id); if (b) b.classList.toggle('badge', !!on); };
+    set('bShop', shopNew); set('bLook', charNew); set('bDeed', deedNew); set('bQuest', questNew); set('bMore', deedNew || questNew);
   }
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
   function item(icon, title, desc, opts) {
@@ -197,9 +220,12 @@
   }
 
   /* ---------- 상점 ---------- */
+  let shopTab = 'basic';
   function renderShop() {
     const body = $('pbody'); body.innerHTML = '';
-    body.appendChild(el('div', 'msg', '🏪 기본 강화 (모든 월드 공통)' + (M.topCycle(save) > 0 ? ` · 🔁 ${M.topCycle(save) + 1}회차 가격` : '')));
+    tabs(body, [{ id: 'basic', label: '기본 강화' }, { id: 'gear', label: '🧰 장비' }], shopTab, (id) => { shopTab = id; rerender(); $('panel').scrollTop = 0; });
+    if (shopTab === 'gear') { renderGear(body); return; }
+    body.appendChild(el('div', 'msg', '모든 월드 공통' + (M.topCycle(save) > 0 ? ` · 🔁 ${M.topCycle(save) + 1}회차 가격` : '')));
     for (const it of M.SHOP) {
       const lv = M.shopLevel(save, it.id);
       const mx = M.shopMax(save, it.id), maxed = lv >= mx;
@@ -211,7 +237,6 @@
       b.onclick = () => { if (M.buyUpgrade(save, it.id).ok) { Sfx.play('levelup'); commit(); rerender(); } };
       row.appendChild(b); body.appendChild(row);
     }
-    renderGear(body);
   }
 
   function renderGear(body) {
@@ -220,7 +245,8 @@
     body.appendChild(el('div', 'msg', `🧰 월드 매점 · 장비는 에코에게도 적용돼요 (최대 Lv ${max}${save.cycle > 0 ? ` · ${save.cycle + 1}회차` : ''})`));
     body.appendChild(el('div', 'msg', `내 장비 ⚔${gt.atk} 🛡${gt.def} · ${M.WORLDS[sel].emoji} ${M.WORLDS[sel].name} 권장 ⚔${rec.atk} 🛡${rec.def}` + (gt.atk < rec.atk || gt.def < rec.def ? ' ⚠' : ' ✅')));
     let lockedShown = false;
-    for (const wid of M.WORLD_ORDER) {
+    const order = [sel].concat(M.WORLD_ORDER.filter((x) => x !== sel));   // 지금 월드 장비를 맨 위에
+    for (const wid of order) {
       const w = M.WORLDS[wid];
       if (!M.gearAvailable(save, wid)) {
         if (!lockedShown) { body.appendChild(item('🔒', `${w.emoji} ${w.name} 매점`, `${w.name}에 도착하면 새 장비를 살 수 있어요`)); lockedShown = true; }
@@ -342,10 +368,10 @@
   $('bShop').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏪 상점', renderShop); };
   $('bMore').onclick = () => { Sfx.unlock(); Sfx.play('click'); const m = $('more'), open = m.style.display === 'none'; m.style.display = open ? 'flex' : 'none'; $('bMore').innerHTML = Icons.svg('dots') + `<span>${open ? '접기' : '더보기'}</span>`; };
   if (window.Icons) $('bMore').innerHTML = Icons.svg('dots') + '<span>더보기</span>';
-  const openLook = () => { Sfx.unlock(); Sfx.play('click'); lookPreview = null; openPanel('👕 내 캐릭터', renderLook); };
+  const openLook = () => { Sfx.unlock(); Sfx.play('click'); lookPreview = null; lookTab = $('bLook').classList.contains('badge') ? 'char' : 'outfit'; openPanel('👕 내 캐릭터', renderLook); };
   $('bLook').onclick = openLook; $('outfitPv').onclick = openLook; $('outfitPv').style.cursor = 'pointer';
-  $('bDeed').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💛 선행', renderDeeds); };
-  $('bQuest').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('🏆 과제 · 미션', renderQuests); };
+  $('bDeed').onclick = () => { Sfx.unlock(); Sfx.play('click'); seen.title = M.titleOf(M.deedScore(save)).title.name; saveSeen(); openPanel('💛 선행', renderDeeds); };
+  $('bQuest').onclick = () => { Sfx.unlock(); Sfx.play('click'); seen.ach = M.ACHIEVEMENTS.filter((a) => save.ach[a.id]).length; saveSeen(); openPanel('🏆 과제 · 미션', renderQuests); };
   $('bBackup').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💾 백업', renderBackup); };
   $('pback').onclick = () => { Sfx.play('click'); closePanel(); };
   refresh();

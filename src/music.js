@@ -181,7 +181,7 @@
   function ctx() { return root.Sfx && root.Sfx.context ? root.Sfx.context() : null; }
   function out(c) {
     if (!bus) {
-      bus = c.createGain(); bus.gain.value = root.Sfx.isMuted() ? 0 : VOLUME;
+      bus = c.createGain(); bus.gain.value = root.Sfx.isMusicMuted() ? 0 : VOLUME;
       bus.connect(root.Sfx.output());
       const n = c.sampleRate; noiseBuf = c.createBuffer(1, n, c.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;

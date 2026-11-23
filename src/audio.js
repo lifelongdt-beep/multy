@@ -3,11 +3,14 @@
   'use strict';
   let ctx = null;
   let master = null;
-  let muted = false;
+  // 배경음악과 효과음을 따로 켜고 끈다 (기기에 저장)
+  let sfxOff = false, musicOff = false;
+  try { const v = JSON.parse(localStorage.getItem('echo-sound') || '{}'); sfxOff = !!v.sfxOff; musicOff = !!v.musicOff; } catch (e) { /* 무시 */ }
+  const saveSound = () => { try { localStorage.setItem('echo-sound', JSON.stringify({ sfxOff, musicOff })); } catch (e) { /* 무시 */ } };
   const last = {};
 
   function ac() {
-    if (muted) return null;
+    if (sfxOff) return null;
     return ctxAlways();
   }
   /** 음소거여도 컨텍스트는 만든다 (배경음악은 음량 0으로 계속 박자를 유지) */
@@ -219,20 +222,26 @@
   root.Sfx = {
     play(name) {
       const d = DEF[name];
-      if (!d || muted) return;
+      if (!d || sfxOff) return;
       const now = (root.performance || Date).now();
       if (last[name] && now - last[name] < d.gap) return;
       last[name] = now;
       d.fn();
     },
     /** 지나가는 소리 (열차는 무겁게, 공·파도·카트 등은 바람 소리만) */
-    warn(emoji) { if (muted) return; const now = (root.performance || Date).now(); if (last.warn && now - last.warn < 400) return; last.warn = now; (WARN[emoji] || WARN['🚆'])(); },
-    pass(dir, heavy, water) { if (muted) return; const now = (root.performance || Date).now(); if (last.pass && now - last.pass < 250) return; last.pass = now; if (water) { fnoise(1.3, 0.2, 'lowpass', 1400, 300, 0, 0.35); fnoise(0.9, 0.06, 'highpass', 4000, 2500, 0.1, 0.2); return; } passSound(dir >= 0 ? 1 : -1, !!heavy); },
+    warn(emoji) { if (sfxOff) return; const now = (root.performance || Date).now(); if (last.warn && now - last.warn < 400) return; last.warn = now; (WARN[emoji] || WARN['🚆'])(); },
+    pass(dir, heavy, water) { if (sfxOff) return; const now = (root.performance || Date).now(); if (last.pass && now - last.pass < 250) return; last.pass = now; if (water) { fnoise(1.3, 0.2, 'lowpass', 1400, 300, 0, 0.35); fnoise(0.9, 0.06, 'highpass', 4000, 2500, 0.1, 0.2); return; } passSound(dir >= 0 ? 1 : -1, !!heavy); },
     unlock() { ac(); },
-    setMuted(m) { muted = !!m; if (root.Music) root.Music.setMuted(muted); },
+    /** 전체 켜기/끄기 (위쪽 소리 버튼) */
+    setMuted(m) { sfxOff = musicOff = !!m; saveSound(); if (root.Music) root.Music.setMuted(musicOff); },
+    setSfx(on) { sfxOff = !on; saveSound(); },
+    setMusic(on) { musicOff = !on; saveSound(); if (root.Music) root.Music.setMuted(musicOff); },
+    sfxOn() { return !sfxOff; },
+    musicOn() { return !musicOff; },
+    isMusicMuted() { return musicOff; },
     /** 배경음악(music.js)용: 같은 AudioContext와 출력 */
     context() { return ctxAlways(); },
     output() { ctxAlways(); return master; },
-    isMuted() { return muted; },
+    isMuted() { return sfxOff && musicOff; },
   };
 })(typeof window !== 'undefined' ? window : globalThis);
