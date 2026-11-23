@@ -1045,7 +1045,6 @@
       if (e.warn) { sx *= 1 + Math.sin(now / 30) * 0.06; }          // 돌진 직전 부르르
       const k = boss ? 1.1 : K_EN, fy = e.y + r * 0.95 * k;
       this.shadow(ctx, e.x, fy, r * 0.85 * k);
-      this.groundMark(ctx, e.x, fy, r * 1.05 * k, '#ff3355', boss ? 0.95 : 0.85);
       const flip = !spec.noFlip && e.x > px;   // 주인공 쪽을 바라봄 (글자가 있는 그림은 뒤집지 않음)
       // 빨간 테두리: 모양을 따라 빨간 윤곽을 둘러 회색·반투명한 에코와 한눈에 구분 (밝은 배경·어두운 배경 모두)
       const rim = tinted(`enR:${boss ? e.def.name : e.type}:${r}`, base, '#ff2f55'), d = boss ? 2.2 : 1.6;
