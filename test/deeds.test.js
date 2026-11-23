@@ -64,7 +64,7 @@ test('선행 배치는 같은 시드면 같다 (결정적)', () => {
   assert.strictEqual(a.kills, b.kills);
 });
 
-test('도와준 사람은 잠시 함께 싸우고(하트), 주변 방해 요소는 순해진다', () => {
+test('도와준 사람은 싸우지 않고 손 흔들며 안전한 곳으로 떠나고, 응원(공격력 +)을 남긴다. 주변 방해 요소는 순해진다', () => {
   const s = new Sim({ seed: 7, echoes: [], world: 'school' });
   s.player.hp = 1e9;
   run(s, TUNING.deedRescueFirst * TICK + 2, pick);
@@ -76,11 +76,15 @@ test('도와준 사람은 잠시 함께 싸우고(하트), 주변 방해 요소�
   assert.strictEqual(s.allies.length, 1);
   assert.deepStrictEqual(s.deeds.people, [rs.kind]);
   assert.ok(near.calm > 0, '따뜻한 빛을 받아 순해짐');
-  let hearts = 0;
-  for (let i = 0; i < 120; i++) { pick(s); s.step({ x: 0, y: 0 }); hearts = Math.max(hearts, s.bullets.filter((b) => b.owner === 'ally').length); }
-  assert.ok(hearts > 0, '하트를 던짐');
+  assert.ok(s.cheer > 0, '응원을 남김');
+  const a = s.allies[0], x0 = a.x;
+  let thrown = 0;
+  for (let i = 0; i < 120; i++) { pick(s); s.step({ x: 0, y: 0 }); thrown = Math.max(thrown, s.bullets.filter((b) => b.owner === 'ally').length); }
+  assert.strictEqual(thrown, 0, '도와준 사람은 싸우지 않는다');
+  assert.ok(s.allies.length === 0 || Math.abs(s.allies[0].x - x0) > 50, '손을 흔든 뒤 화면 밖으로 걸어 나감');
   run(s, TUNING.allySec * TICK, pick);
-  assert.strictEqual(s.allies.length, 0, '시간이 지나면 인사하고 떠남');
+  assert.strictEqual(s.allies.length, 0, '안전한 곳으로 떠남');
+  assert.strictEqual(s.cheer, 0, '응원은 시간이 지나면 끝');
 });
 
 test('지난 판에 도와준 사람이 찾아와 체력·구슬 선물을 준다', () => {
@@ -91,4 +95,9 @@ test('지난 판에 도와준 사람이 찾아와 체력·구슬 선물을 준�
   assert.ok(gift);
   assert.ok(s.player.hp > s.player.maxhp * 0.5);
   assert.ok(s.gems.length >= gems0 + TUNING.visitorGems - 2);
+});
+
+test('응원 중에는 내 총알과 에코 총알의 위력이 cheerDmg만큼 오른다', () => {
+  const mk = (cheer) => { const s = new Sim({ seed: 3, echoes: [], world: 'school' }); s._make(Object.keys(s.world.enemies)[0], s.player.x + 60, s.player.y); s.cheer = cheer; s._fire(s.player.x, s.player.y, { dmg: 10, shots: 1, crit: 0, critMul: 2, pierce: 0 }, 'player', 1); return s.bullets[s.bullets.length - 1].dmg; };
+  assert.ok(Math.abs(mk(100) - mk(0) * (1 + TUNING.cheerDmg)) < 1e-9);
 });

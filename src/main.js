@@ -151,6 +151,7 @@
             Sfx.play('levelup'); if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, '#ff8cc0', 12, false);
             if (ev.x !== undefined) thanks(ev.x, ev.y, THANKS);
           }
+          else if (ev.what === 'cheer') bubbles.push({ text: '💗 응원 받는 중! 공격 +' + Math.round(EchoSim.TUNING.cheerDmg * 100) + '%', x: sim.player.x, y: sim.player.y - 44, t: -50, max: 100 });
           else if (ev.what === 'visitGift') { Sfx.play('levelup'); thanks(ev.x, ev.y, VISIT); }
           else if (ev.what === 'allyBye') { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 34, y: ev.y + (Math.random() - 0.5) * 20, t: -i * 3, max: 50 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); }   // 하트가 반짝이며 사라짐
           else if (ev.what === 'rescueStart' || ev.what === 'escortStart' || ev.what === 'visitStart') { Sfx.play('heal'); if (ev.what === 'escortStart') escortTalk = { text: '같이 가 줄래?', t: 150 }; }
@@ -272,12 +273,12 @@
     // 순해진 방해 요소: 머리 위 작은 하트
     for (const e of sim.enemies) if (e.calm > 0) { ctx.globalAlpha = Math.min(1, e.calm / 30) * 0.9; deedArt('heartPink', e.x, e.y - e.r - 6 + Math.sin(now / 200 + e.x) * 2, 10); }
     ctx.globalAlpha = 1;
-    // 함께 싸우는 도와준 사람들
+    // 도와준 사람들: 고맙다고 손을 흔든 뒤 안전한 곳(화면 밖)으로 걸어서 떠난다 (싸우지 않음)
     for (const a of sim.allies) {
       // 떠나기 1초 전부터 반짝반짝 깜빡이며 흐려지고 머리 위로 하트가 피어오른다
       ctx.globalAlpha = a.t < 60 ? (a.t / 60) * (0.55 + 0.45 * Math.abs(Math.sin(now / 70))) : 1;
       if (a.t < 60 && a.t % 8 === 0) bubbles.push({ heart: true, x: a.x + (Math.random() - 0.5) * 20, y: a.y - 14, t: 0, max: 40 });
-      drawNPC(useArt, a.kind, a.x, a.y - Math.abs(Math.sin(now / 180 + a.ang)) * 3, { name: 'throw', dir: sim.player.x < a.x ? -1 : 1 });
+      drawNPC(useArt, a.kind, a.x, a.y - (a.wave > 0 ? Math.abs(Math.sin(now / 160)) * 3 : 0), a.wave > 0 ? { name: 'wave', dir: sim.player.x < a.x ? -1 : 1 } : { name: 'walk', dir: a.dir });
     }
     ctx.globalAlpha = 1;
     // 지난 판에 도와준 사람이 찾아옴
@@ -864,6 +865,14 @@
     if (lastPX !== null && Math.abs(p.x - lastPX) > 0.3) faceDir = p.x < lastPX ? -1 : 1;
     lastPX = p.x; lastPY = p.y;
     const blink = p.inv > 0 && Math.floor(p.inv / 4) % 2;
+    if (sim.cheer > 0) {   // 응원 받는 중: 분홍 고리 + 맴도는 작은 하트 (끝나기 1초 전부터 깜빡이며 흐려짐)
+      const ca = Math.min(1, sim.cheer / 60) * (sim.cheer < 60 ? 0.5 + 0.5 * Math.abs(Math.sin(now / 90)) : 1);
+      ctx.globalAlpha = 0.55 * ca; ctx.strokeStyle = '#ff8cc0'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(p.x, p.y + 14, 20 + Math.sin(now / 200) * 2, 7, 0, 0, 7); ctx.stroke();
+      ctx.globalAlpha = ca;
+      for (let i = 0; i < 3; i++) { const an = now / 500 + i * 2.09; deedArt('heartPink', p.x + Math.cos(an) * 22, p.y - 4 + Math.sin(an) * 9, 9); }
+      ctx.globalAlpha = 1;
+    }
     let act = null;
     const dd = sim.deeds, prs = dd && dd.rescue, pes = dd && dd.escort, php = sim.helper;
     if (pickAnim) act = { pose: 'pick', k: pickAnim.t / pickAnim.max };
