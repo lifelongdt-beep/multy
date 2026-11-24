@@ -24,7 +24,7 @@
       // 이번 월드의 큰 도전에 필요한 에코: 지금 몇 명 모였는지 (에코를 모아야 넘는다는 걸 한눈에)
       if (window.GameEchoes) {
         const need = w.boss.needEchoes, have = GameEchoes.world() === w.id ? GameEchoes.count() : 0;
-        $('echoLine').textContent = `👻 에코 ${have} / ${need}명` + (have >= need ? ' ✅' : '');
+        $('echoLine').textContent = `✨ 에코 ${have} / ${need}명` + (have >= need ? ' ✅' : '');
         $('echoLine').style.color = have >= need ? '#7dffb2' : '#9fdcff';
       }
     }
@@ -283,7 +283,7 @@
       // 글은 최소한: 왕 수 · 필요 에코 · 장비 상태 한 줄 (자세한 규칙은 게임 안에서)
       const gearOk = gt.atk >= rec.atk && gt.def >= rec.def;
       const desc = open
-        ? `🏁 왕 ${w.boss.times.length} · 👻 ${w.boss.needEchoes}명` + (rec.atk + rec.def ? ` · 🧰${gearOk ? '✅' : '⚠'}` : '') + (clears ? ` · ⭐${clears}` : '')
+        ? `🏁 왕 ${w.boss.times.length} · ✨ ${w.boss.needEchoes}명` + (rec.atk + rec.def ? ` · 🧰${gearOk ? '✅' : '⚠'}` : '') + (clears ? ` · ⭐${clears}` : '')
         : `🔒 ${prev.emoji} ${prev.name} 극복 시 열림`;
       const row = item(open ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
       row.querySelector('small').style.whiteSpace = 'pre-line';
@@ -469,7 +469,7 @@
   function renderBackup() {
     const body = $('pbody'); body.innerHTML = '';
     const pool = GameEchoes.pool();
-    body.appendChild(el('div', 'msg', `서버 저장이 생기기 전까지, 기기를 바꿀 때 이 코드를 옮겨 주세요. (학점·강화·캐릭터·과제 기록 + 👻 ${M.WORLDS[pool.world] ? M.WORLDS[pool.world].name : ''} 에코 ${pool.echoes.length}명)`));
+    body.appendChild(el('div', 'msg', `서버 저장이 생기기 전까지, 기기를 바꿀 때 이 코드를 옮겨 주세요. (학점·강화·캐릭터·과제 기록 + ✨ ${M.WORLDS[pool.world] ? M.WORLDS[pool.world].name : ''} 에코 ${pool.echoes.length}명)`));
     const out = el('textarea'); out.readOnly = true; out.value = M.exportCode(save, pool);
     body.appendChild(out);
     const msg = el('div', 'msg');
@@ -490,7 +490,7 @@
     load.onclick = () => {
       const r = M.importBackup(inp.value);
       if (!r) { msg.textContent = '올바른 백업 코드가 아니에요.'; armed = false; load.textContent = '📥 불러오기'; return; }
-      const echoNote = r.pool ? ` · 👻 ${M.WORLDS[r.pool.world].name} 에코 ${r.pool.echoes.length}명` : ' · (에코 없는 옛 코드: 지금 에코는 그대로 둬요)';
+      const echoNote = r.pool ? ` · ✨ ${M.WORLDS[r.pool.world].name} 에코 ${r.pool.echoes.length}명` : ' · (에코 없는 옛 코드: 지금 에코는 그대로 둬요)';
       if (!armed) { armed = true; load.textContent = '⚠ 한 번 더 눌러 덮어쓰기'; msg.textContent = `코드 확인됨: 🎓 ${r.save.coins} 학점${echoNote}. 현재 데이터가 사라집니다.`; return; }
       save = r.save; if (r.pool) GameEchoes.replace(r.pool);
       commit(); armed = false; load.textContent = '📥 불러오기'; rerender();

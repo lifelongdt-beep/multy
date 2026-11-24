@@ -455,11 +455,11 @@
     /* ================= 12. 꿈의 무대 ================= */
     stage: {
       id: 'stage', name: '꿈의 무대', emoji: '🎤', coinMul: 6.0,
-      desc: '드디어 꿈꾸던 첫 무대! 긴장 그림자가 무대를 스치고 떨림이 한꺼번에 몰려와요. 함께하는 동료가 곁을 지켜 줍니다. 지금까지 만난 큰 도전들이 다시 찾아오고, 마지막에 무대 공포증이 기다려요.',
-      ruleText: '긴장 그림자: 경고 줄 뒤 긴장 그림자가 지나감(최대 체력의 60%) · 방해 요소가 10% 더 자주 나옴 · 큰 도전 4번',
+      desc: '드디어 꿈꾸던 첫 무대! 긴장 덩어리가 무대를 스치고 떨림이 한꺼번에 몰려와요. 함께하는 동료가 곁을 지켜 줍니다. 지금까지 만난 큰 도전들이 다시 찾아오고, 마지막에 무대 공포증이 기다려요.',
+      ruleText: '긴장 덩어리: 경고 줄 뒤 긴장 덩어리가 지나감(최대 체력의 60%) · 방해 요소가 10% 더 자주 나옴 · 큰 도전 4번',
       unlock: { world: 'mountain' },
       theme: { bg: '#1e0f24', grid: 'rgba(255,170,255,.06)', deco: 'stars' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, trains: { first: 26, every: 34, emoji: '😨', text: '😨 긴장 그림자가 스쳐 가요! 빨간 줄을 피하세요'}, atkMul: 0.96 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.1, trains: { first: 26, every: 34, emoji: '😨', text: '😨 긴장 덩어리가 스쳐 가요! 빨간 줄을 피하세요'}, atkMul: 0.96 },
       enemies: {
         nerve:  { name: '긴장',       emoji: '😬', hp: 6,  speed: 0.85, r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         shake:  { name: '떨림',       emoji: '🫨', hp: 5,  speed: 1.0,  r: 8,  dmg: 5,  xp: 1, ai: 'zig' },

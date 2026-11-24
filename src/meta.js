@@ -58,13 +58,14 @@
     { id: 'navy',   name: '남색',   hex: '#2b3a73' },
     { id: 'white',  name: '하양',   hex: '#e6e9f0' },
     { id: 'brown',  name: '갈색',   hex: '#7a5643' },
-    // 추가 색 (저장은 번호라 기존 색 뒤에 붙임)
-    { id: 'red',    name: '빨강',   hex: '#d9483b' },
-    { id: 'green',  name: '초록',   hex: '#3fa66a' },
-    { id: 'sky',    name: '하늘',   hex: '#5ab0e8' },
-    { id: 'yellow', name: '노랑',   hex: '#f2c23a' },
-    { id: 'pink',   name: '분홍',   hex: '#ee7fae' },
-    { id: 'mint',   name: '민트',   hex: '#5fcfb8' },
+    // 추가 색 (저장은 번호라 기존 색 뒤에 붙임). 게임 속 신호색(초록 고리=나 · 빨강=방해 요소 · 노랑=도와줄 사람 · 분홍=선행 · 하늘 빛=줍는 물건)은
+    // 밝은 형광 톤이라, 옷 색은 한 톤 깊고 차분하게 해서 표시와 헷갈리지 않게
+    { id: 'red',    name: '빨강',   hex: '#b03a3a' },
+    { id: 'green',  name: '초록',   hex: '#2f7d4a' },
+    { id: 'sky',    name: '하늘',   hex: '#4b8fc4' },
+    { id: 'yellow', name: '노랑',   hex: '#d9a521' },
+    { id: 'pink',   name: '분홍',   hex: '#d46a98' },
+    { id: 'mint',   name: '민트',   hex: '#3a9e8c' },
     { id: 'black',  name: '검정',   hex: '#2b2b33' },
   ];
   /** 주인공 얼굴(피부) 색 */
@@ -185,7 +186,7 @@
     { id: 'magnet', icon: '🧲', name: '넓은 자석',     max: 5, base: 180, per: 8,    fmt: (v) => `구슬 흡수 범위 +${v}` },
     { id: 'xp',     icon: '📚', name: '빠른 습득',     max: 5, base: 360, per: 0.08, fmt: (v) => `경험치 +${Math.round(v * 100)}%` },
     { id: 'regen',  icon: '🍱', name: '든든한 도시락', max: 5, grow: true, base: 420, per: 0.25,  fmt: (v) => `체력 재생 +${v.toFixed(1)}/초` },
-    { id: 'echo',   icon: '👻', name: '에코 단련',     max: 5, grow: true, base: 480, per: 0.05, fmt: (v) => `에코 공격력 +${Math.round(v * 100)}%` },
+    { id: 'echo',   icon: '✨', name: '에코 단련',     max: 5, grow: true, base: 480, per: 0.05, fmt: (v) => `에코 공격력 +${Math.round(v * 100)}%` },
     { id: 'coin',   icon: '🎓', name: '장학금',        max: 5, base: 540, per: 0.10, fmt: (v) => `학점 획득 +${Math.round(v * 100)}%` },
   ];
   const SHOP_BY_ID = {}; SHOP.forEach((s) => { SHOP_BY_ID[s.id] = s; });
@@ -267,8 +268,8 @@
     { id: 'gear_20',       icon: '🧰', name: '든든한 장비',   desc: '매점 장비 레벨 합계 20',               reward: 300,  test: (s, run, sv) => !!sv && sv.gear && Object.values(sv.gear).reduce((a, b) => a + b, 0) >= 20 },
     { id: 'help_1',     icon: '🙋', name: '도움 요청하기', desc: '선생님·선배께 도움을 청해 조언 받기',  reward: 40,  test: (s) => s.helped >= 1 },
     { id: 'help_10',    icon: '💛', name: '든든한 인연',   desc: '도움을 청해 조언을 10번 받기',        reward: 150, test: (s) => s.helped >= 10 },
-    { id: 'echo_5',     icon: '👻', name: '유령 친구들',   desc: '에코 5명과 함께 플레이',      reward: 80,  test: (s, run) => !!run && run.echoes >= 5 },
-    { id: 'echo_10',    icon: '👥', name: '유령 반 편성',  desc: '에코 10명과 함께 플레이',     reward: 200, test: (s, run) => !!run && run.echoes >= 10 },
+    { id: 'echo_5',     icon: '✨', name: '에코 친구들',   desc: '에코 5명과 함께 플레이',      reward: 80,  test: (s, run) => !!run && run.echoes >= 5 },
+    { id: 'echo_10',    icon: '👥', name: '에코 반 편성',  desc: '에코 10명과 함께 플레이',     reward: 200, test: (s, run) => !!run && run.echoes >= 10 },
   ];
 
   /* ---------- 일일 미션 ---------- */

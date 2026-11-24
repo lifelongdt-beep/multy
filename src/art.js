@@ -26,7 +26,7 @@
     cache.set(key, c);
     return c;
   }
-  /** 같은 모양을 한 가지 색으로 덮은 판 (맞았을 때 흰색 번쩍임, 에코의 유령 색) */
+  /** 같은 모양을 한 가지 색으로 덮은 판 (맞았을 때 흰색 번쩍임 등) */
   function tinted(key, base, color, amount) {
     return sprite(key, base.lw, base.lh, (g) => {
       g.translate(-base.lw / 2, -base.lh / 2);
@@ -133,12 +133,13 @@
       g.fillStyle = 'rgba(40,110,30,.35)'; circle(g, 6, 5, 2.4); g.fill(); circle(g, -6, 6, 1.8); g.fill(); shine(g, -5, -6, 3.5);
       g.__lid = '#8bd85a'; gloomFace(g, 0, -1, 12, 'angry');
     },
-    '😨'(g) {   // 긴장 그림자: 어두운 보라 그림자, 떨리는 눈
-      g.beginPath(); g.moveTo(-14, 14); g.quadraticCurveTo(-16, -6, -6, -13); g.quadraticCurveTo(0, -17, 6, -13); g.quadraticCurveTo(16, -6, 14, 14);
-      for (let i = 0; i < 4; i++) g.quadraticCurveTo(10.5 - i * 7, 9, 7 - i * 7, 14);
-      g.closePath(); fillStroke(g, '#4a3b6e', 2);
-      shine(g, -6, -7, 3.5); gloomFace(g, 0, -2, 13, 'scared');
-      g.strokeStyle = 'rgba(200,180,255,.6)'; g.lineWidth = 1.4; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 17, -6); g.lineTo(sx * 20, -3); g.lineTo(sx * 17, 0); g.stroke(); }
+    '😨'(g) {   // 긴장 덩어리: 꽁꽁 뭉친 매듭 머리를 인 납작한 덩어리 (유령처럼 보이지 않게 아래가 평평하고 다리 같은 물결 없음)
+      g.beginPath(); if (g.roundRect) g.roundRect(-14, -9, 28, 22, 9); else g.rect(-14, -9, 28, 22); fillStroke(g, '#4a3b6e', 2);   // 몸: 둥근 네모
+      g.strokeStyle = '#8f7bc4'; g.lineWidth = 2.2; g.beginPath();                                                                   // 머리 위 꼬인 실타래(매듭)
+      g.moveTo(-7, -9); g.bezierCurveTo(-10, -18, 2, -20, 0, -12); g.bezierCurveTo(-2, -6, 10, -16, 6, -19); g.bezierCurveTo(3, -21, 10, -12, 8, -9); g.stroke();
+      g.strokeStyle = '#1c1930'; g.lineWidth = 0.9; g.stroke();
+      shine(g, -8, -4, 3); gloomFace(g, 0, 2, 12, 'scared');
+      g.strokeStyle = 'rgba(200,180,255,.6)'; g.lineWidth = 1.4; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 17, -4); g.lineTo(sx * 20, -1); g.lineTo(sx * 17, 2); g.lineTo(sx * 20, 5); g.stroke(); }   // 떨림
     },
   };
 
@@ -1119,7 +1120,7 @@
       return [p.x + f * K_KID * R[0], cy + sy * (R[1] - 1)];
     },
 
-    /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 회색 유령 (옷·머리·얼굴 색과 상관없이 모두 같은 회색 톤) */
+    /** (예전 그림: 주인공 모습의 회색 그림자. art-echoes.js가 고른 에코 모습으로 바꿔 그린다) */
     drawEcho(ctx, ec, emo, now, alpha) {
       const base = kidSprite(emo, 0);
       const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${outfit.key}`, base, ECHO_GRAY, 0.82);
