@@ -1144,7 +1144,7 @@
         const dist = Math.hypot(ax, ay);
         if (dist < d.magnet) { g.x += (ax / (dist || 1)) * 4; g.y += (ay / (dist || 1)) * 4; }
         if (dist < p.r + 5) {
-          if (g.kind === 'coffee') { p.hp = Math.min(p.maxhp, p.hp + g.v); this._ev({ k: 'heal' }); }
+          if (g.kind === 'coffee') { p.hp = Math.min(p.maxhp, p.hp + g.v); this._ev({ k: 'drink', x: p.x, y: p.y }); }   // 회복 아이템(우유 등)을 마심
           else { p.xp += g.v * this.bonus.xpMul * (this.world.rules.xpMul || 1); this.gemCount += 1; this._ev({ k: 'gem' }); }
           this.gems[i] = this.gems[this.gems.length - 1]; this.gems.pop();
         }

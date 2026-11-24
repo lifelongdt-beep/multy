@@ -1122,10 +1122,12 @@
         R = [5.4 + Math.cos(ca) * 10, 2.6 + Math.sin(ca) * 10];          // 그 사람 쪽으로 손을 내민다
       } else if (pose === 'learn') {                                       // 배우는 중: 공책을 들고 고개를 끄덕이며 받아 적기
         L = [-3.8, 8.6]; R = [1.2 + Math.sin(t * 14) * 1.3, 7.4 + Math.abs(Math.sin(t * 7)) * 1.2];
+      } else if (pose === 'drink') {                                       // 꿀꺽: 두 손으로 들고 빨대로 마시기
+        const k = Math.sin(t * 16) * 0.35; L = [-2.4, -1.2 + k]; R = [2.2, -1.6 - k];
       } else if (pose === 'cheer') {                                       // 만세!
         const k = Math.sin(t * 10) * 1.4; L = [-8, -9.5 + k]; R = [8, -9.5 - k];
       }
-      if (pose !== 'learn') { L = shortArm([-5.4, 2.6], L); R = shortArm([5.4, 2.6], R); }   // 다리 없는 몸에 맞게 짧은 팔 (공책 쓰기는 손이 공책에 닿게)
+      if (pose !== 'learn' && pose !== 'drink') { L = shortArm([-5.4, 2.6], L); R = shortArm([5.4, 2.6], R); }   // 다리 없는 몸에 맞게 짧은 팔 (공책 쓰기는 손이 공책에 닿게)
       ctx.save(); ctx.translate(p.x, cy); ctx.scale(K_KID * f, sy); ctx.translate(0, -1 + KID_DROP * KID_S);
       limb(ctx, -5.4, 2.6, L[0], L[1], sleeve, 2.8); limb(ctx, 5.4, 2.6, R[0], R[1], sleeve, 2.8);
       if (pose === 'learn') {   // 작은 공책 + 연필
@@ -1136,7 +1138,7 @@
       palm(ctx, L[0], L[1], 1.8, kidSkin); palm(ctx, R[0], R[1], 1.8, kidSkin);
       ctx.restore();
       ctx.globalAlpha = 1;
-      return [p.x + f * K_KID * R[0], cy + sy * (R[1] - 1)];
+      return [p.x + f * K_KID * R[0], cy + sy * (R[1] - 1 + KID_DROP * KID_S)];   // 손의 화면 위치 (몸을 내린 만큼 포함)
     },
 
     /** (예전 그림: 주인공 모습의 회색 그림자. art-echoes.js가 고른 에코 모습으로 바꿔 그린다) */
@@ -1289,6 +1291,11 @@
       ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
       for (let i = -1; i <= 1; i++) { const bx = h.x - h.dir * (90 + (now / 8 + i * 17) % 30); ctx.beginPath(); ctx.moveTo(bx, h.y + i * 11); ctx.lineTo(bx - h.dir * 22, h.y + i * 11); ctx.stroke(); }
       blit(ctx, c, h.x, h.y + shake, 1, 1, h.dir < 0);
+    },
+    /** 손에 든 회복 아이템 (빛·그림자 없이 그림만) */
+    drawDropIcon(ctx, kind, x, y, sc) {
+      const key = kind === '🍫' ? 'choco' : kind === '💊' ? 'pill' : 'milk';
+      blit(ctx, sprite('drop:' + key, 22, 24, (q) => DROP[key](q)), x, y, sc, sc);
     },
     /** 회복 아이템: 🥛 우유 · 🍫 초콜릿 · 💊 비타민 (살짝 둥실거리며 반짝) */
     drawDrop(ctx, g, kind, now) {
