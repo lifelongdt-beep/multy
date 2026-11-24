@@ -103,7 +103,42 @@
   let warmFx = [];      // 선행 순간 퍼지는 따뜻한 빛 {x, y, r, t}
   const THANKS = ['고마워!', '덕분이야 💛', '정말 고마워요', '너 최고야!', '살았다~', '고마워, 친구야', '복 받을 거야', '힘이 났어!'];
   const VISIT = ['지난번엔 고마웠어!', '은혜 갚으러 왔어 💛', '이거 받아!', '또 만났네!'];
-  function thanks(x, y, list, delay) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: -(delay || 0), max: 80 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
+  function thanks(x, y, list, delay) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: -(delay || 0), max: 100 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
+  /* 마음 칸(선행 게이지): 하트 4칸. 주운 선행 물건이 하트가 되어 날아와 칸을 채우고, 4개가 차면 반짝 축하 */
+  let deedHud = { filled: 0, fly: [], pop: [0, 0, 0, 0], party: 0 };
+  function deedSlotXY(i) { const n = EchoSim.TUNING.deedGaugeNeed; return [W - 14 - (n - 1 - i) * 14, 28]; }
+  function deedFly(x, y) { deedHud.fly.push({ x0: x, y0: y - 8, t: 0, max: 34, slot: Math.min(EchoSim.TUNING.deedGaugeNeed - 1, deedHud.filled + deedHud.fly.length) }); }
+  function heartPath(c, x, y, s) {   // 하트 모양 (가운데 x,y · 크기 s)
+    c.beginPath(); c.moveTo(x, y + s * 0.38);
+    c.bezierCurveTo(x - s * 0.62, y - s * 0.05, x - s * 0.42, y - s * 0.55, x, y - s * 0.22);
+    c.bezierCurveTo(x + s * 0.42, y - s * 0.55, x + s * 0.62, y - s * 0.05, x, y + s * 0.38); c.closePath();
+  }
+  function drawDeedHud() {
+    const n = EchoSim.TUNING.deedGaugeNeed, h = deedHud, now = performance.now();
+    if (!h.fly.length && !h.party) h.filled = Math.min(n, sim.deeds.gauge);   // 날아가는 하트·축하가 없을 땐 실제 값에 맞춤
+    for (let i = h.fly.length - 1; i >= 0; i--) {   // 날아가는 하트: 위로 휘며 마음 칸으로
+      const f = h.fly[i]; f.t += 1;
+      const [tx, ty] = deedSlotXY(f.slot), k = Math.min(1, f.t / f.max), e = 1 - Math.pow(1 - k, 3);
+      const x = f.x0 + (tx - f.x0) * e, y = f.y0 + (ty - f.y0) * e - Math.sin(k * Math.PI) * 40, sz = 18 - 6 * k;
+      ctx.save(); ctx.globalAlpha = 0.45; ctx.fillStyle = '#ff8cc0'; heartPath(ctx, x - (tx - f.x0) * 0.04, y + 6, sz * 0.8); ctx.fill(); ctx.restore();   // 꼬리 빛
+      ctx.fillStyle = '#ff6fae'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; heartPath(ctx, x, y, sz); ctx.fill(); ctx.stroke();
+      if (f.t >= f.max) {
+        h.fly.splice(i, 1); h.filled = Math.min(n, h.filled + 1); h.pop[f.slot] = 14;
+        if (h.filled >= n) { h.party = 70; Sfx.play('deedFull'); for (let j = 0; j < n; j++) h.pop[j] = 18; for (let j = 0; j < 10; j++) bubbles.push({ heart: true, x: W - 35 + (Math.random() - 0.5) * 60, y: 40 + Math.random() * 10, t: -j * 2, max: 50 }); }
+        else Sfx.play('deedSlot');
+      }
+    }
+    for (let i = 0; i < n; i++) {   // 하트 칸: 빈 칸은 테두리만, 찬 칸은 분홍 (막 찬 칸은 통 튐)
+      const [x, y] = deedSlotXY(i), pk = h.pop[i] > 0 ? Math.sin((h.pop[i]-- / 14) * Math.PI) : 0;
+      const full = i < h.filled, glow = h.party > 0;
+      const s = 11 * (1 + 0.45 * pk + (glow ? 0.12 * Math.sin(now / 90 + i) : 0));
+      if (glow) { ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffe58a'; heartPath(ctx, x, y, s * 1.6); ctx.fill(); ctx.restore(); }
+      heartPath(ctx, x, y, s);
+      if (full) { ctx.fillStyle = glow ? '#ff9fcb' : '#ff6fae'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke(); }
+      else { ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,179,212,.8)'; ctx.lineWidth = 1.3; ctx.stroke(); }
+    }
+    if (h.party > 0 && --h.party === 0) h.filled = Math.min(n, sim.deeds.gauge);   // 축하가 끝나면 빈 칸으로 (다시 모으기)
+  }
   let headFlash = [];   // 새로 얻은 아이템: 주인공 머리 위에서 잠깐 반짝 {icon, t}
   // 보스 극복 연출: 슬로모션 → 부풀며 빛남 → 폭발·충격파·색종이 → 화면 번쩍
   let bossFx = null, slowmo = 0, whiteFlash = 0;
@@ -149,13 +184,13 @@
         case 'swarm': edgeFlash = 40; Sfx.play('boss'); break;
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 90 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
-        case 'helped': playerCheer = 40; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 34 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
+        case 'helped': playerCheer = 40; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 4 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
         case 'warm': warmFx.push({ x: ev.x, y: ev.y, r: ev.r, t: 0 }); break;
         case 'deed':   // 선행: 소리·반짝임만 (설명은 튜토리얼 안내에서)
-          if (ev.what === 'spot') { pickAnim = { t: 0, max: 26, item: ev.kind === 'pot' ? 'pot' : ev.kind === 'toy' ? 'teddy' : 'cup' }; Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
+          if (ev.what === 'spot') { pickAnim = { t: 0, max: 26, item: ev.kind === 'pot' ? 'pot' : ev.kind === 'toy' ? 'teddy' : 'cup' }; Sfx.play('deed'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 8, false); deedFly(ev.x, ev.y); }   // 선행 소리 + 하트가 마음 칸으로 날아감
           else if (ev.what === 'rescued' || ev.what === 'escortDone' || ev.what === 'gaugeFull') {
-            Sfx.play('levelup'); if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, '#ff8cc0', 12, false);
-            if (ev.x !== undefined && ev.what !== 'gaugeFull') { bubbles.push({ text: '만세!', x: ev.x, y: ev.y - 40, t: 0, max: 45 }); thanks(ev.x, ev.y, THANKS, 45); }   // 도와주면: 만세! → 고맙다는 말
+            if (ev.what !== 'gaugeFull') Sfx.play('levelup');   // 마음 가득은 마지막 하트가 칸에 닿을 때 축하 소리 if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, '#ff8cc0', 12, false);
+            if (ev.x !== undefined && ev.what !== 'gaugeFull') thanks(ev.x, ev.y, THANKS);   // 도와주면 바로 고맙다는 말 (만세는 몸짓으로)
             else if (ev.x !== undefined) thanks(ev.x, ev.y, THANKS);
           }
           else if (ev.what === 'cheer') cheerFx = { x0: ev.x, y0: ev.y - 20, t: 0 };   // 글자 대신 '공격력 업' 배지가 도와준 사람에게서 주인공에게 날아감
@@ -187,6 +222,15 @@
   let playerCheer = 0;     // 선생님께 배우고 난 뒤 주인공 만세 (프레임)
   /** 뻗는 팔의 각도(바라보는 쪽 기준, 위아래로 너무 꺾이지 않게) */
   function reachAng(fx, fy, tx, ty) { return Math.max(-1.1, Math.min(1.1, Math.atan2(ty - fy, Math.abs(tx - fx) || 1))); }
+  /** 도와주는 선생님(도우미)의 말: 부르기 → 곁에서 차근차근(게이지 단계별) → 다 배우면 칭찬 · 시간이 없으면 재촉 · 떠날 때 인사 */
+  const HELPER_STEPS = ['천천히, 숨 한 번 쉬고', '하나씩 같이 해 보자', '좋아, 거의 다 됐어!'];
+  function helperLine(hp, inZone) {
+    if (hp.state === 'done') return '잘했어! 이거 가져가렴';
+    if (hp.state === 'gone') return '다음에 또 올게';
+    const left = hp.stay - hp.t;
+    if (!inZone) return hp.prog > 0 ? '조금만 더 있어 줄래?' : left < 2 * TICK ? '곧 가야 해, 서둘러!' : '이리 와, 도와줄게';
+    return HELPER_STEPS[Math.min(2, Math.floor(hp.prog / hp.need * 3))];
+  }
   /** 작은 말풍선: (x, y)는 꼬리 끝(말하는 사람 머리 위). 화면 밖으로 나가지 않게 좌우 보정 */
   function talkBubble(text, x, y, alpha, warn) {
     ctx.save(); ctx.globalAlpha = alpha === undefined ? 1 : alpha;
@@ -244,7 +288,7 @@
       const b = bubbles[i]; b.t += 1;
       if (b.t < 0) continue;
       if (b.t >= b.max) { bubbles.splice(i, 1); continue; }
-      const k = b.t / b.max, a = k < 0.15 ? k / 0.15 : k > 0.7 ? (1 - k) / 0.3 : 1;
+      const k = b.t / b.max, a = k < 0.06 ? k / 0.06 : k > 0.75 ? (1 - k) / 0.25 : 1;   // 바로 또렷하게 떴다가 천천히 사라짐
       ctx.globalAlpha = a;
       if (b.heart) { deedArt('heartPink', b.x + Math.sin(b.t / 6 + b.x) * 4, b.y - b.t * 0.7, 12); continue; }
       ctx.font = b.small ? 'bold 10px sans-serif' : 'bold 12px sans-serif';
@@ -406,7 +450,7 @@
     playerEmoji = GameUI.emoji();
     if (window.Art) { if (Art.setLook) Art.setLook(GameUI.look()); if (Art.setColor) Art.setColor(GameUI.kidColor()); if (Art.setSkin) Art.setSkin(GameUI.kidSkin()); if (Art.setHair) Art.setHair(GameUI.kidHair()); if (Art.setEchoForm) Art.setEchoForm(GameUI.echoForm()); Art.setOutfit(GameUI.outfitCycle()); }   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null; playerCheer = 0; resetTips(); cheerFx = null;
+    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; deedHud = { filled: 0, fly: [], pop: [0, 0, 0, 0], party: 0 }; escortTalk = null; pickAnim = null; playerCheer = 0; resetTips(); cheerFx = null;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `✨ 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -457,7 +501,7 @@
       case 'player': return { x: p.x, y: p.y, r: 24 };
       case 'hp': return { rect: [5, 5, 106, 14] };
       case 'xp': return { rect: [5, 18, 106, 9] };
-      case 'gauge': return { rect: [W - 46, 20, 42, 15] };
+      case 'gauge': return { rect: [W - 63, 20, 59, 16] };   // 마음 칸 하트 4개
       case 'echoCount': return { rect: [W - 110, 4, 58, 15] };
       case 'timer': return { rect: [W / 2 - 30, 2, 60, 21] };
       case 'items': return { rect: [4, 31, 170, 20] };
@@ -917,8 +961,10 @@
         : { name: 'wave', dir: tface };   // 배운 뒤(또는 떠날 때): 웃으며 손을 흔들어 "안녕"
       if (useArt && Art.drawPerson) Art.drawPerson(ctx, sim.world.id, hp.x, hp.y + bob, tpose, performance.now()); else emoji(hp.emoji, hp.x, hp.y + bob, 34);
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
+      const say = helperLine(hp, inZone);
+      if (say) talkBubble(say, hp.x, hp.y - 28 + bob, fadeA);   // 선생님 말풍선: 지금 무엇을 하는지 단계별로
       ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
-      if (tutorial) ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
+      if (tutorial) ctx.fillText(hp.name, hp.x, hp.y - hp.r - 24);
       if (tutorial && hp.state === 'wait') { ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; const ht = hp.prog > 0 ? '조언을 듣는 중…' : '곁에 가서 잠시 머물러 보세요', hw = ctx.measureText(ht).width / 2; ctx.fillText(ht, Math.max(hw + 4, Math.min(W - hw - 4, hp.x)), hp.y + hp.r + 12); }   // 화면 밖으로 잘리지 않게
       ctx.globalAlpha = 1;
     }
@@ -1105,7 +1151,7 @@
     ctx.textAlign = 'right'; ctx.font = '12px sans-serif';
     const alive = sim.echoes.filter((e) => e.alive && !e.down).length;   // 지금 화면에 나와 있는 에코 수
     ctx.fillText(`✨ ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
-    if (sim.deeds) { ctx.font = '11px sans-serif'; ctx.fillStyle = '#ffb3d4'; const gt = `${sim.deeds.gauge}/${EchoSim.TUNING.deedGaugeNeed}`; ctx.fillText(gt, W - 8, 29); const ga = ctx.textAlign, gb = ctx.textBaseline; deedArt('heart', W - 16 - ctx.measureText(gt).width, 25, 11); ctx.textAlign = ga; ctx.textBaseline = gb; ctx.fillStyle = '#fff'; }
+    if (sim.deeds) { const ga = ctx.textAlign, gb = ctx.textBaseline; drawDeedHud(); ctx.textAlign = ga; ctx.textBaseline = gb; ctx.fillStyle = '#fff'; }   // 마음 칸: 하트 4개
 
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     if (tutorial && tipCur && tipCur.target && toast.t > 0) drawTipMarker(tipCur.target, performance.now());

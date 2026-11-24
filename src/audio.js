@@ -205,7 +205,10 @@
     shoot:    { gap: 110, fn: () => tone(700, 420, 0.05, 'square', 0.025) },
     hit:      { gap: 60,  fn: () => tone(220, 130, 0.04, 'sawtooth', 0.02) },
     kill:     { gap: 45,  fn: killSound },
-    gem:      { gap: 55,  fn: gemSound },   // 한꺼번에 빨아들여도 소리가 겹쳐 시끄럽지 않게
+    gem:      { gap: 55,  fn: gemSound },
+    deed:     { gap: 80,  fn: () => { tone(1046, 1046, 0.12, 'sine', 0.06); tone(1318, 1318, 0.16, 'sine', 0.05, 0.07); tone(1568, 1568, 0.32, 'triangle', 0.045, 0.14); } },   // 선행: 따뜻한 '띠링~' (구슬 소리와 다르게)
+    deedSlot: { gap: 60,  fn: () => { tone(880, 1175, 0.08, 'sine', 0.04); } },   // 하트가 마음 칸에 쏙
+    deedFull: { gap: 300, fn: () => { [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, f, 0.22, 'triangle', 0.05, i * 0.07)); tone(2093, 2093, 0.5, 'sine', 0.03, 0.38); } },   // 마음 4개 가득: 반짝 올라가는 소리   // 한꺼번에 빨아들여도 소리가 겹쳐 시끄럽지 않게
     levelup:  { gap: 120, fn: levelupSound },
     hurt:     { gap: 120, fn: hurtSound },
     nova:     { gap: 100, fn: () => { tone(300, 80, 0.3, 'sine', 0.1); noise(0.15, 0.04); } },
