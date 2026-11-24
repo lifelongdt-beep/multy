@@ -263,15 +263,16 @@
     if (!people) for (const sp of d.spots) {
       const a = Math.min(1, sp.t / 60), pul = 0.5 + 0.5 * Math.sin(now / 260 + sp.x);
       // 줍는 물건 표시: 빨간 원(적) 대신 하늘색 빛 + 반짝이 4개가 천천히 돈다 (적·친구·에코와 다른 색)
-      const gl = ctx.createRadialGradient(sp.x, sp.y, 2, sp.x, sp.y, 17);
-      gl.addColorStop(0, 'rgba(190,240,255,.55)'); gl.addColorStop(1, 'rgba(190,240,255,0)');
-      ctx.globalAlpha = a * (0.6 + 0.4 * pul); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(sp.x, sp.y, 17, 0, 7); ctx.fill();
+      const gl = ctx.createRadialGradient(sp.x, sp.y, 2, sp.x, sp.y, 23);   // 빛을 더 크고 밝게 (복잡한 화면에서도 눈에 띄게)
+      gl.addColorStop(0, 'rgba(200,245,255,.8)'); gl.addColorStop(0.55, 'rgba(190,240,255,.35)'); gl.addColorStop(1, 'rgba(190,240,255,0)');
+      ctx.globalAlpha = a * (0.7 + 0.3 * pul); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(sp.x, sp.y, 23, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(220,250,255,.75)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(sp.x, sp.y, 15 + 3 * pul, 0, 7); ctx.stroke();   // 숨 쉬듯 커졌다 작아지는 빛 고리
       ctx.fillStyle = '#e8fbff';
       for (let k = 0; k < 4; k++) {
-        const ang = now / 700 + k * Math.PI / 2 + sp.x, rx = sp.x + Math.cos(ang) * 14, ry = sp.y + Math.sin(ang) * 9, r = 2.6 + 1.2 * Math.sin(now / 180 + k);
+        const ang = now / 700 + k * Math.PI / 2 + sp.x, rx = sp.x + Math.cos(ang) * 18, ry = sp.y + Math.sin(ang) * 11, r = 3 + 1.4 * Math.sin(now / 180 + k);
         ctx.beginPath(); ctx.moveTo(rx, ry - r); ctx.quadraticCurveTo(rx, ry, rx + r, ry); ctx.quadraticCurveTo(rx, ry, rx, ry + r); ctx.quadraticCurveTo(rx, ry, rx - r, ry); ctx.quadraticCurveTo(rx, ry, rx, ry - r); ctx.fill();
       }
-      ctx.globalAlpha = a; deedArt(sp.kind === 'litter' ? 'cup' : sp.kind === 'pot' ? 'pot' : 'teddy', sp.x, sp.y, 20);
+      ctx.globalAlpha = a; deedArt(sp.kind === 'litter' ? 'cup' : sp.kind === 'pot' ? 'pot' : 'teddy', sp.x, sp.y, 23);
       // 지나가며 주워 달라는 표시: 위에서 통통 튀는 작은 화살표
       const ay = sp.y - 20 - Math.abs(Math.sin(now / 220 + sp.x)) * 5;
       ctx.fillStyle = '#ffd84d'; ctx.beginPath(); ctx.moveTo(sp.x - 5, ay - 4); ctx.lineTo(sp.x + 5, ay - 4); ctx.lineTo(sp.x, ay + 2); ctx.closePath(); ctx.fill();
@@ -407,7 +408,7 @@
     state = 'play'; acc = 0; last = performance.now();
     shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; escortTalk = null; pickAnim = null; playerCheer = 0; resetTips(); cheerFx = null;
     const needE = sim.world.boss.needEchoes;
-    if (!tutorial && echoes.length < needE) toast = { text: `👻 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
+    if (!tutorial && echoes.length < needE) toast = { text: `✨ 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
     ['start', 'levelup', 'end', 'tutorial', 'pause'].forEach((id) => $(id).classList.add('hidden'));
     $('again').innerHTML = Icons.svg('retry') + '<span>한 판만 더</span>';
@@ -547,7 +548,7 @@
     if (helped) return pick(['도움을 청한 건 용기 있는 선택이었어요 🙋', '함께하면 더 멀리 갈 수 있어요 💛', '도움을 받는 것도 실력이에요']);
     if (result === 'clear') return pick(['혼자가 아니었어요. 과거의 나도 함께했어요 💛', '큰 도전을 해냈어요. 정말 잘했어요!', '차근차근 해낸 만큼 성장했어요 🌱']);
     if (result === 'survive') return pick(['끝까지 버틴 끈기가 멋져요!', '한 번만 더 도전하면 넘을 수 있어요']);
-    return pick(['넘어져도 괜찮아요. 방금의 나는 에코가 되어 다음 판을 도와요 👻', '실패는 배움의 일부예요. 조금씩 나아지고 있어요 🌱', '선생님께 도움을 청해 보는 건 어때요? 🙋']);
+    return pick(['넘어져도 괜찮아요. 방금의 나는 에코가 되어 다음 판을 도와요 ✨', '실패는 배움의 일부예요. 조금씩 나아지고 있어요 🌱', '선생님께 도움을 청해 보는 건 어때요? 🙋']);
   }
 
   /** 튜토리얼 결과 화면: 에코·학점에 반영하지 않고, 이제 내 에코를 0명부터 쌓는다는 걸 알려준다 */
@@ -558,7 +559,7 @@
     Sfx.play(sim.result === 'dead' ? 'lose' : 'win');
     $('endTitle').textContent = sim.result === 'clear' ? `${sim.world.boss.name} 극복! 🎉` : '튜토리얼 끝!';
     $('endBadge').textContent = sim.result === 'clear' ? '🏆 승리!' : '📘 튜토리얼 끝'; $('endBadge').style.background = sim.result === 'clear' ? '#1f9d63' : '#4a5bd6';
-    $('endEchoes').textContent = '👻 에코 10명';
+    $('endEchoes').textContent = '✨ 에코 10명';
     $('stats').innerHTML = `생존 ${(sim.tick / TICK).toFixed(0)}초 · 물리친 방해 ${sim.kills} · Lv ${sim.player.level}`;
     $('reward').innerHTML = '';
     [   // 메뉴 안내: 실제 메뉴 이름 그대로
@@ -568,7 +569,7 @@
       '👕 내 캐릭터: 캐릭터를 고르고, 지금까지 얻은 복장 중에서 골라 입어요.',
       '🔁 12개 월드를 모두 넘으면 다음 회차가 열리고 새 복장 장식을 얻어요.',
     ].forEach((t) => { const d = document.createElement('div'); d.textContent = t; d.className = 'wide'; $('reward').appendChild(d); });
-    $('cheer').textContent = `👻 ${sim.world.name}의 왕은 에코 ${sim.world.boss.needEchoes}명이 모이면 넘을 수 있어요. 시작 버튼 아래 "👻 에코 0 / ${sim.world.boss.needEchoes}명"을 확인해 보세요!`;
+    $('cheer').textContent = `✨ ${sim.world.name}의 왕은 에코 ${sim.world.boss.needEchoes}명이 모이면 넘을 수 있어요. 시작 버튼 아래 "✨ 에코 0 / ${sim.world.boss.needEchoes}명"을 확인해 보세요!`;
     $('again').innerHTML = Icons.svg('play') + '<span>이제 진짜 시작!</span>';
     $('end').classList.remove('hidden');
   }
@@ -587,7 +588,7 @@
     Sfx.play(sim.result === 'clear' ? 'win' : 'lose');
     $('endBadge').textContent = badge[0]; $('endBadge').style.background = badge[1];
     $('endTitle').textContent = title;
-    $('endEchoes').textContent = `👻 에코 ${echoes.length}/${MAX_ECHOES}명`;
+    $('endEchoes').textContent = `✨ 에코 ${echoes.length}/${MAX_ECHOES}명`;
     $('cheer').textContent = cheerMessage(sim.result, sim.helped, sim.echoes.length);   // 따뜻한 한마디 한 줄
     // 본 게임 결과는 짧게: 핵심 숫자만 (자세한 설명은 튜토리얼에서)
     $('stats').textContent = `⏱ ${(sim.tick / TICK).toFixed(0)}초 · ☠ ${sim.kills} · Lv ${sim.player.level}` + (sim.bossCount > 1 ? ` · 🏁 ${sim.bossDefeated}/${sim.bossCount}` : '');
@@ -621,7 +622,7 @@
     }
     if (sim.result !== 'clear') {   // 다음 판을 위한 짧은 처방: 에코 수 · 장비
       const need = sim.world.boss.needEchoes;
-      if (echoes.length < need) lines.push(`👻 에코 ${echoes.length}/${need}명 · ${need - echoes.length}판 더 하면 에코가 모여요`);
+      if (echoes.length < need) lines.push(`✨ 에코 ${echoes.length}/${need}명 · ${need - echoes.length}판 더 하면 에코가 모여요`);
       const short = GameUI.gearShort(sim.world.id);
       if (short) lines.push(`🧰 장비 부족: ${short.atk ? `⚔ 공격 ${short.atk}레벨 ` : ''}${short.def ? `🛡 방어 ${short.def}레벨 ` : ''}더 필요 (상점)`);
     }
@@ -813,17 +814,17 @@
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-    // 에코 = 내 편: 회색 원 + 회색 테두리 유령 (적은 빨간 테두리라 한눈에 구분)
+    // 에코 = 내 편: 고른 모습의 반투명 회색 동료 (적은 빨간 테두리라 한눈에 구분)
     for (const ec of sim.echoes) {
       if (!ec.alive || ec.down > 0) continue;   // 에너지가 떨어져 사라진 동안은 그리지 않음
       // 흐리게: 내 캐릭터·적보다 눈에 덜 띄도록 (회색 테두리는 남겨 적과 구분). 맞으면 잠깐 깜빡임
       const hit = ec.inv > 0 && Math.floor(ec.inv / 4) % 2 === 0 ? 0.5 : 1;
-      if (useArt) { Art.drawEcho(ctx, ec, playerEmoji, now, 0.3 * hit); continue; }   // 새 그림체: 과거의 나 모습의 유령
+      if (useArt) { Art.drawEcho(ctx, ec, playerEmoji, now, 0.3 * hit); continue; }   // 새 그림체: 고른 에코 모습(기억 별 등)
       ctx.globalAlpha = 0.07 * hit;
       ctx.fillStyle = '#aab0bd'; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.fill();
       ctx.globalAlpha = 0.32 * hit;
       ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ec.x, ec.y, 12, 0, 7); ctx.stroke();
-      ctx.globalAlpha = 0.24 * hit; emoji('👻', ec.x, ec.y + 1, 16);
+      ctx.globalAlpha = 0.24 * hit; emoji('✨', ec.x, ec.y + 1, 16);
       ctx.globalAlpha = 1;
     }
 
@@ -911,11 +912,12 @@
     // 내 위치 표시: 몸 아래 초록 링(숨쉬듯 깜빡임) + 머리 위 ▼ (에코의 시안색과 구분)
     {
       const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 200);
-      const pr = 13 + 11 * pulse;                  // 반지름 13 ↔ 24 로 눈에 띄게 커졌다 작아졌다
+      const pr = 18 + 8 * pulse;                   // 반지름 18 ↔ 26: 가장 작을 때도 몸 밖으로 보이게
       ctx.fillStyle = `rgba(125,255,178,${0.20 - 0.12 * pulse})`;
       ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7); ctx.fill();
-      ctx.strokeStyle = `rgba(125,255,178,${0.95 - 0.45 * pulse})`; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7);
+      ctx.strokeStyle = 'rgba(10,20,30,.35)'; ctx.lineWidth = 7; ctx.stroke();                     // 바깥 어두운 테: 밝은 바닥에서도 초록 고리가 또렷하게
+      ctx.strokeStyle = `rgba(125,255,178,${1 - 0.3 * pulse})`; ctx.lineWidth = 4.5; ctx.stroke();   // 두꺼운 초록 고리
       const ay = p.y - 30 - 2 * pulse;
       ctx.fillStyle = '#7dffb2';
       ctx.beginPath(); ctx.moveTo(p.x - 5, ay - 5); ctx.lineTo(p.x + 5, ay - 5); ctx.lineTo(p.x, ay + 2); ctx.closePath(); ctx.fill();
@@ -1037,7 +1039,7 @@
     }
     ctx.textAlign = 'right'; ctx.font = '12px sans-serif';
     const alive = sim.echoes.filter((e) => e.alive && !e.down).length;   // 지금 화면에 나와 있는 에코 수
-    ctx.fillText(`👻 ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
+    ctx.fillText(`✨ ${alive}/${sim.echoes.length}   ☠ ${sim.kills}`, W - 8, 14);
     if (sim.deeds) { ctx.font = '11px sans-serif'; ctx.fillStyle = '#ffb3d4'; const gt = `${sim.deeds.gauge}/${EchoSim.TUNING.deedGaugeNeed}`; ctx.fillText(gt, W - 8, 29); const ga = ctx.textAlign, gb = ctx.textBaseline; deedArt('heart', W - 16 - ctx.measureText(gt).width, 25, 11); ctx.textAlign = ga; ctx.textBaseline = gb; ctx.fillStyle = '#fff'; }
 
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;

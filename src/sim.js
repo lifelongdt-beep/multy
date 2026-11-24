@@ -128,7 +128,7 @@
     { id: 'nova',   icon: '🔔', name: '종소리',        desc: '주기적으로 주변에 충격파' },
     { id: 'orbit',  icon: '🖍️', name: '형광펜',        desc: '몸 주위를 도는 형광펜 +1' },
     { id: 'regen',  icon: '🍱', name: '급식 시간',     desc: '체력 재생 +1.0/초' },
-    { id: 'echo',   icon: '👻', name: '에코 응원',     desc: '모든 에코의 공격력·속도 +25%' },
+    { id: 'echo',   icon: '✨', name: '에코 응원',     desc: '모든 에코의 공격력·속도 +25%' },
     { id: 'heal',   icon: '🩹', name: '보건실',        desc: '체력 35 즉시 회복', instant: true },
   ];
 

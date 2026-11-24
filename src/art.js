@@ -26,7 +26,7 @@
     cache.set(key, c);
     return c;
   }
-  /** 같은 모양을 한 가지 색으로 덮은 판 (맞았을 때 흰색 번쩍임, 에코의 유령 색) */
+  /** 같은 모양을 한 가지 색으로 덮은 판 (맞았을 때 흰색 번쩍임 등) */
   function tinted(key, base, color, amount) {
     return sprite(key, base.lw, base.lh, (g) => {
       g.translate(-base.lw / 2, -base.lh / 2);
@@ -133,12 +133,13 @@
       g.fillStyle = 'rgba(40,110,30,.35)'; circle(g, 6, 5, 2.4); g.fill(); circle(g, -6, 6, 1.8); g.fill(); shine(g, -5, -6, 3.5);
       g.__lid = '#8bd85a'; gloomFace(g, 0, -1, 12, 'angry');
     },
-    '😨'(g) {   // 긴장 그림자: 어두운 보라 그림자, 떨리는 눈
-      g.beginPath(); g.moveTo(-14, 14); g.quadraticCurveTo(-16, -6, -6, -13); g.quadraticCurveTo(0, -17, 6, -13); g.quadraticCurveTo(16, -6, 14, 14);
-      for (let i = 0; i < 4; i++) g.quadraticCurveTo(10.5 - i * 7, 9, 7 - i * 7, 14);
-      g.closePath(); fillStroke(g, '#4a3b6e', 2);
-      shine(g, -6, -7, 3.5); gloomFace(g, 0, -2, 13, 'scared');
-      g.strokeStyle = 'rgba(200,180,255,.6)'; g.lineWidth = 1.4; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 17, -6); g.lineTo(sx * 20, -3); g.lineTo(sx * 17, 0); g.stroke(); }
+    '😨'(g) {   // 긴장 덩어리: 꽁꽁 뭉친 매듭 머리를 인 납작한 덩어리 (유령처럼 보이지 않게 아래가 평평하고 다리 같은 물결 없음)
+      g.beginPath(); if (g.roundRect) g.roundRect(-14, -9, 28, 22, 9); else g.rect(-14, -9, 28, 22); fillStroke(g, '#4a3b6e', 2);   // 몸: 둥근 네모
+      g.strokeStyle = '#8f7bc4'; g.lineWidth = 2.2; g.beginPath();                                                                   // 머리 위 꼬인 실타래(매듭)
+      g.moveTo(-7, -9); g.bezierCurveTo(-10, -18, 2, -20, 0, -12); g.bezierCurveTo(-2, -6, 10, -16, 6, -19); g.bezierCurveTo(3, -21, 10, -12, 8, -9); g.stroke();
+      g.strokeStyle = '#1c1930'; g.lineWidth = 0.9; g.stroke();
+      shine(g, -8, -4, 3); gloomFace(g, 0, 2, 12, 'scared');
+      g.strokeStyle = 'rgba(200,180,255,.6)'; g.lineWidth = 1.4; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 17, -4); g.lineTo(sx * 20, -1); g.lineTo(sx * 17, 2); g.lineTo(sx * 20, 5); g.stroke(); }   // 떨림
     },
   };
 
@@ -906,6 +907,8 @@
     const toScreen = (q) => [x + dir * K_KID * s * q[0], y + K_KID * (2 + 17 * (1 - s) + s * (q[1] + P_DROP))];
     return { L: toScreen(P.L), R: toScreen(P.R), feetY: y + K_KID * (2 + 17 * (1 - s) + s * 21.5) };
   }
+  /** 배경을 한 걸음 뒤로: 중간 톤을 얇게 덮어 대비·채도를 낮춘다 (밝은 곳은 살짝 가라앉고 진한 선은 옅어짐) → 주인공·적·선행 거리가 앞에 또렷 */
+  function recede(g, W, H) { g.fillStyle = 'rgba(74,66,88,.28)'; g.fillRect(0, 0, W, H); }
   function vignette(g, W, H) {
     const vg = g.createRadialGradient(W / 2, H * 0.48, H * 0.25, W / 2, H * 0.5, H * 0.75);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(5,6,16,.55)');
@@ -913,7 +916,7 @@
   }
   function background(W, H, worldId) {
     if (worldId && BG[worldId]) {   // art-bg.js 의 사실적인 배경 (학교 포함). 없으면 아래 기본 학교 배경
-      return sprite(`bg:${worldId}:${W}x${H}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); vignette(g, W, H); });
+      return sprite(`bg:${worldId}:${W}x${H}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); recede(g, W, H); vignette(g, W, H); });
     }
     return sprite(`bg:school:${W}x${H}`, W, H, (g) => {
       g.translate(-W / 2, -H / 2);
@@ -1119,7 +1122,7 @@
       return [p.x + f * K_KID * R[0], cy + sy * (R[1] - 1)];
     },
 
-    /** 에코 = 과거의 나: 주인공과 같은 모습의 반투명 회색 유령 (옷·머리·얼굴 색과 상관없이 모두 같은 회색 톤) */
+    /** (예전 그림: 주인공 모습의 회색 그림자. art-echoes.js가 고른 에코 모습으로 바꿔 그린다) */
     drawEcho(ctx, ec, emo, now, alpha) {
       const base = kidSprite(emo, 0);
       const ghost = tinted(`ghost:${kidLook}:${kidColor}:${kidSkin}:${kidHair}:${emo}:${outfit.key}`, base, ECHO_GRAY, 0.82);
