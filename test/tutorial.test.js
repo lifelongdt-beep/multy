@@ -166,3 +166,12 @@ test('튜토리얼 안내의 숫자는 실제 규칙과 같다 (작은 선행 �
   assert.ok(T.EVENT_TIPS.gaugeFull.includes(TUNING.deedGaugeNeed + '개'));
   assert.ok(T.EVENT_TIPS.rescued.includes('+' + Math.round(TUNING.cheerDmg * 100) + '%'));
 });
+
+test('튜토리얼 안내가 말하는 곳을 화면에서 가리킨다 (하트 숫자·에너지 막대·선생님 원 등)', () => {
+  assert.strictEqual(T.targetOf('spot'), 'gauge', '작은 선행 하트 숫자');
+  assert.strictEqual(T.targetOf('gaugeFull'), 'gauge');
+  assert.strictEqual(T.targetOf('shield'), 'helper');
+  assert.strictEqual(T.targetOf('up:rate'), 'items');
+  for (const k of ['drop', 'shot', 'helper', 'rescueStart', 'spotSeen', 'escortStart', 'boss', 'cards']) assert.ok(T.targetOf(k), '가리킬 곳 있음: ' + k);
+  assert.strictEqual(T.TIPS.find((x) => x.text.includes('에너지')).target, 'hp');
+});

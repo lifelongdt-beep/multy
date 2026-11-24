@@ -420,18 +420,18 @@
    *  안내마다 글 길이에 맞춰 게임을 잠깐 멈추고(최대 2.5초), 멈춘 뒤에도 조금 더 보여 준다(긴 글은 3초 넘게). 모두 실제 시간(ms) 기준 */
   let tipQueue = [], evQueue = [], tipCur = null, tipFreezeUntil = 0, tipShown = new Set(), bossTipDone = false, endTipDone = false;
   function resetTips() { tipQueue = []; evQueue = []; tipCur = null; tipFreezeUntil = 0; tipShown = new Set(); bossTipDone = false; endTipDone = false; }
-  function tipPush(text) { if (text) tipQueue.push(text); }
+  function tipPush(text, target) { if (text) tipQueue.push({ text, target: target || null }); }
   /** 게임에서 무언가 처음 일어났을 때 (튜토리얼에서만, 같은 안내는 한 번만) */
   function tipEvent(key) {
     if (!tutorial || tipShown.has(key)) return;
     const text = EchoTutorial.EVENT_TIPS[key]; if (!text) return;
-    tipShown.add(key); evQueue.push(text);   // 지금 화면에서 일어나는 일이라 일반 안내보다 먼저
+    tipShown.add(key); evQueue.push({ text, target: EchoTutorial.targetOf ? EchoTutorial.targetOf(key) : null });   // 지금 화면에서 일어나는 일이라 일반 안내보다 먼저
   }
   function tutorialTips() {
     const tips = EchoTutorial.TIPS;
-    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { tipPush(tips[tipIdx].text); tipIdx++; }
+    while (tipIdx < tips.length && sim.tick >= tips[tipIdx].sec * TICK) { tipPush(tips[tipIdx].text, tips[tipIdx].target); tipIdx++; }
     const bt = sim.world.boss.times[0];
-    if (!bossTipDone && sim.tick >= (bt - EchoTutorial.BOSS_SOON) * TICK) { bossTipDone = true; tipPush(EchoTutorial.BOSS_TIP); }
+    if (!bossTipDone && sim.tick >= (bt - EchoTutorial.BOSS_SOON) * TICK) { bossTipDone = true; tipPush(EchoTutorial.BOSS_TIP, 'timer'); }
     if (!endTipDone && sim.tick >= (bt + EchoTutorial.END_AFTER) * TICK) { endTipDone = true; EchoTutorial.END_TIPS.forEach(tipPush); }
     if (sim.choices) tipEvent('cards');
     // 상태로 알 수 있는 '처음': 탄이 날아옴 · 선생님 원 안에 들어감 · 바닥에 선행 거리가 생김
@@ -444,10 +444,54 @@
     if (!tutorial) return;
     if (tipCur && now >= tipCur.end) tipCur = null;
     if (!tipCur && (evQueue.length || tipQueue.length)) {
-      const text = evQueue.length ? evQueue.shift() : tipQueue.shift(), tm = EchoTutorial.tipTiming(text);
-      tipCur = { end: now + tm.show }; tipFreezeUntil = now + tm.freeze;
+      const it = evQueue.length ? evQueue.shift() : tipQueue.shift(), text = it.text, tm = EchoTutorial.tipTiming(text);
+      tipCur = { end: now + tm.show, target: it.target }; tipFreezeUntil = now + tm.freeze;
       toast = { text, t: tm.show / (1000 / 60) };
     }
+  }
+
+  /** 튜토리얼 안내가 말하는 것을 화면에서 가리킨다: 그 자리에 반짝이는 노란 고리(또는 테두리) + 통통 튀는 화살표 */
+  function tipTargetPos(key) {
+    const p = sim.player, near = (list) => { let b = null, bd = 1e9; for (const o of list) { const d = (o.x - p.x) ** 2 + (o.y - p.y) ** 2; if (d < bd) { bd = d; b = o; } } return b; };
+    switch (key) {
+      case 'player': return { x: p.x, y: p.y, r: 24 };
+      case 'hp': return { rect: [5, 5, 106, 14] };
+      case 'xp': return { rect: [5, 18, 106, 9] };
+      case 'gauge': return { rect: [W - 46, 20, 42, 15] };
+      case 'echoCount': return { rect: [W - 110, 4, 58, 15] };
+      case 'timer': return { rect: [W / 2 - 30, 2, 60, 21] };
+      case 'items': return { rect: [4, 31, 170, 20] };
+      case 'cards': return { rect: [6, PLAY_BOTTOM + 4, W - 12, H - PLAY_BOTTOM - 10] };
+      case 'echo': { const e = near(sim.echoes.filter((e) => e.alive && !e.down)); return e && { x: e.x, y: e.y, r: 20 }; }
+      case 'helper': return sim.helper && { x: sim.helper.x, y: sim.helper.y, r: sim.helper.r + 4 };
+      case 'rescue': { const r = sim.deeds && sim.deeds.rescue; return r && { x: r.x, y: r.y + 4, r: 30 }; }
+      case 'escort': { const e = sim.deeds && sim.deeds.escort; return e && { x: e.x, y: e.y + 4, r: 28 }; }
+      case 'spot': { const s = sim.deeds && near(sim.deeds.spots); return s && { x: s.x, y: s.y, r: 22 }; }
+      case 'shot': { const b = near(sim.ebullets); return b && { x: b.x, y: b.y, r: 14 }; }
+      case 'drop': { const h = sim.hazards.find((q) => q.kind === 'drop'); return h && { x: h.x, y: h.y, r: (h.r || 30) + 6 }; }
+      case 'boss': { const e = sim.enemies.find((q) => q.type === 'boss'); return e && { x: e.x, y: e.y, r: e.r * 1.3 + 8 }; }
+      default: return null;
+    }
+  }
+  function drawTipMarker(key, now) {
+    const t = tipTargetPos(key); if (!t) return;
+    const pul = 0.5 + 0.5 * Math.sin(now / 160), bounce = Math.abs(Math.sin(now / 220)) * 7;
+    ctx.save(); ctx.lineWidth = 3; ctx.strokeStyle = `rgba(255,216,77,${0.65 + 0.35 * pul})`; ctx.shadowColor = 'rgba(255,200,60,.9)'; ctx.shadowBlur = 10;
+    let ax, ay, up;   // 화살표 끝 위치와 방향 (위쪽 정보 줄은 아래에서 위로 가리킴)
+    if (t.rect) {
+      const [x, y, w, h] = t.rect, g = 2 + pul * 2;
+      ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - g, y - g, w + g * 2, h + g * 2, 7); else ctx.rect(x - g, y - g, w + g * 2, h + g * 2); ctx.stroke();
+      ax = x + w / 2; up = y < H / 2; ay = up ? y + h + 6 : y - 6;
+    } else {
+      const r = t.r + pul * 4; ctx.beginPath(); ctx.arc(t.x, t.y, r, 0, Math.PI * 2); ctx.stroke();
+      ax = t.x; up = t.y - r < 70; ay = up ? t.y + r + 4 : t.y - r - 4;
+    }
+    ctx.shadowBlur = 0;
+    const d = up ? 1 : -1, tip = ay + d * bounce;   // 화살표: 고리 쪽을 향해 통통
+    ctx.fillStyle = '#ffd84d'; ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(ax, tip); ctx.lineTo(ax - 9, tip + d * 12); ctx.lineTo(ax - 4, tip + d * 12); ctx.lineTo(ax - 4, tip + d * 24); ctx.lineTo(ax + 4, tip + d * 24); ctx.lineTo(ax + 4, tip + d * 12); ctx.lineTo(ax + 9, tip + d * 12); ctx.closePath();
+    ctx.stroke(); ctx.fill();
+    ctx.restore();
   }
 
   /* ---------- 일시정지 ---------- */
@@ -1043,6 +1087,7 @@
     if (sim.deeds) { ctx.font = '11px sans-serif'; ctx.fillStyle = '#ffb3d4'; const gt = `${sim.deeds.gauge}/${EchoSim.TUNING.deedGaugeNeed}`; ctx.fillText(gt, W - 8, 29); const ga = ctx.textAlign, gb = ctx.textBaseline; deedArt('heart', W - 16 - ctx.measureText(gt).width, 25, 11); ctx.textAlign = ga; ctx.textBaseline = gb; ctx.fillStyle = '#fff'; }
 
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    if (tutorial && tipCur && tipCur.target && toast.t > 0) drawTipMarker(tipCur.target, performance.now());
     // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림). 카드가 떠 있으면 안내는 숨김
     if (tutorial && !drag && !sim.choices) {
       ctx.globalAlpha = 0.35 + 0.2 * Math.sin(performance.now() / 350);
