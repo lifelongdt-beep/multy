@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Echo Rush</title>
+<!-- 게임 제목 글씨체: 통통 튀는 두꺼운 게임 글꼴 (Luckiest Guy · Black Han Sans, OFL). 못 불러오면 시스템 굵은 글꼴 -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Luckiest+Guy&display=swap" rel="stylesheet">
 <style>
   html,body{margin:0;height:100%;background:#0d0f1a;color:#fff;font-family:system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
   #wrap{position:relative;height:100%;display:flex;align-items:center;justify-content:center}
@@ -96,15 +99,22 @@
   .tiles4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;width:290px}
   .tiles4 .tile{height:62px;font-size:11.5px;border-radius:14px;padding:5px 2px 4px;letter-spacing:-.3px}
   /* 로고 */
-  .logo{display:flex;flex-direction:column;align-items:center;line-height:.86;transform:rotate(-3deg);margin:-4px 0 2px}
-  .logo .lg1,.logo .lg2{font-weight:900;letter-spacing:3px;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:2.2px #2a1608;filter:drop-shadow(0 4px 0 #2a1608) drop-shadow(0 8px 10px rgba(0,0,0,.45))}
-  .logo .lg1{font-size:42px;background-image:linear-gradient(#fffbe0,#ffd34d 48%,#ff9a3c)}
-  .logo .lg2{font-size:50px;background-image:linear-gradient(#f0fbff,#8fd8ff 48%,#5a7cff);margin-top:-2px}
-  .logo .lgk{font-size:12px;font-weight:800;letter-spacing:5px;color:#ffe58a;margin-top:6px;text-shadow:0 2px 0 #2a1608}
+  .logo{display:flex;flex-direction:column;align-items:center;line-height:.9;transform:rotate(-4deg);margin:-4px 0 2px;animation:logoBob 2.4s ease-in-out infinite}
+  @keyframes logoBob{0%,100%{transform:rotate(-4deg) translateY(0)}50%{transform:rotate(-2deg) translateY(-4px)}}
+  .logo .lg1,.logo .lg2{font-family:'Luckiest Guy','Arial Black','Apple SD Gothic Neo',sans-serif;font-weight:400;letter-spacing:4px;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:3px #2a1608;paint-order:stroke fill;
+    filter:drop-shadow(0 5px 0 #2a1608) drop-shadow(0 9px 12px rgba(0,0,0,.5))}
+  .logo .lg1{font-size:52px;background-image:linear-gradient(#fffbe0,#ffd34d 45%,#ff8a2c)}
+  .logo .lg2{font-size:62px;background-image:linear-gradient(#f0fbff,#8fd8ff 45%,#4f6cff);margin-top:-6px}
+  .logo .lgk{font-family:'Black Han Sans','Apple SD Gothic Neo',sans-serif;font-size:17px;font-weight:400;letter-spacing:6px;color:#ffe58a;margin-top:6px;text-shadow:2px 0 0 #2a1608,-2px 0 0 #2a1608,0 2px 0 #2a1608,0 -2px 0 #2a1608,0 4px 0 #2a1608}
   /* 학점 */
   .pill{display:flex;align-items:center;gap:6px;background:linear-gradient(rgba(44,50,92,.95),rgba(22,26,52,.95));border:2px solid #ffc83d;border-radius:22px;padding:3px 16px 3px 6px;box-shadow:0 3px 0 #0c0f22,inset 0 1px 0 rgba(255,255,255,.2);color:#ffe58a}
   .pill b{font-size:18px;color:#fff;text-shadow:0 1.5px 0 rgba(0,0,0,.4)}
   #start{gap:9px}
+  /* 게임 글꼴: 시작 버튼 · 메뉴 타일 · 패널 제목 */
+  .g-start,.tile,.panel h2,#pause h2,#end h2{font-family:'Black Han Sans','Apple SD Gothic Neo',sans-serif;font-weight:400}
+  .g-start{font-size:30px}
+  .tiles2 .tile{font-size:19px}
+  .tiles4 .tile{font-size:13px}
   /* 패널 위쪽 돌아가기: 스크롤해도 왼쪽 위에 붙어 있음 */
   #pbackTop{position:sticky;top:0;align-self:flex-start;z-index:5;font-size:13px;padding:7px 12px;margin:-6px 0 -38px;flex-shrink:0}
   .tabs button.on{background:linear-gradient(var(--c1),var(--c2))}
