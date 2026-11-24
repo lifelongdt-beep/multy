@@ -180,6 +180,11 @@
         case 'nova': shake = Math.max(shake, 3); Sfx.play('nova'); break;
         case 'echoDown': Sfx.play('echoDown'); break;
         case 'heal': Sfx.play('heal'); break;
+        case 'drink': {   // 회복 아이템을 마심: 꿀꺽 동작 + 초록 반짝이 + 체력 막대 반짝 + 마시는 소리
+          drinkAnim = { t: 0, max: 30 }; hpFlash = 36; Sfx.play('drink');
+          for (let i = 0; i < 9; i++) bubbles.push({ spark: true, x: ev.x + (i % 2 ? 1 : -1) * (9 + Math.random() * 9), y: ev.y + 10 - Math.random() * 8, vx: (Math.random() - 0.5) * 0.3, t: -i * 2, max: 40 });
+          break;
+        }
         case 'banner': if (!ev.hint) banner = { text: ev.text, t: 150 }; break;   // 설명성 안내는 튜토리얼 안내(tipEvent)가 실제 순간에 맞춰 대신 보여 줌   // 설명성 문구는 튜토리얼에서만
         case 'swarm': edgeFlash = 40; Sfx.play('boss'); break;
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 90 }; shake = 10; Sfx.play('boss'); break;
@@ -217,6 +222,8 @@
   const NEED_SHORT = { child: '무서워요', elder: '너무 무거워요', friend: '길을 잃었어요' };
   const NEED_POSE = { child: 'cower', elder: 'carry', friend: 'lost' };
   let escortTalk = null;   // 지켜 줄 친구의 짧은 말풍선 {text, t}
+  let drinkAnim = null;    // 회복 아이템을 마시는 동작 {t, max}
+  let hpFlash = 0, hpShown = null;   // 체력 막대: 회복하면 초록으로 반짝, 보이는 값은 부드럽게 따라감
   let pickAnim = null;     // 주인공이 선행 거리를 줍는 동작 {t, max, item}
   let cheerFx = null;      // 응원(공격력 업) 배지 연출 {x0, y0, t}
   let playerCheer = 0;     // 선생님께 배우고 난 뒤 주인공 만세 (프레임)
@@ -283,6 +290,7 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     if (escortTalk && --escortTalk.t <= 0) escortTalk = null;
     if (pickAnim && ++pickAnim.t >= pickAnim.max) pickAnim = null;
+    if (drinkAnim && ++drinkAnim.t >= drinkAnim.max) drinkAnim = null;
     if (playerCheer > 0) playerCheer -= 1;
     for (let i = bubbles.length - 1; i >= 0; i--) {
       const b = bubbles[i]; b.t += 1;
@@ -291,6 +299,11 @@
       const k = b.t / b.max, a = k < 0.06 ? k / 0.06 : k > 0.75 ? (1 - k) / 0.25 : 1;   // 바로 또렷하게 떴다가 천천히 사라짐
       ctx.globalAlpha = a;
       if (b.heart) { deedArt('heartPink', b.x + Math.sin(b.t / 6 + b.x) * 4, b.y - b.t * 0.7, 12); continue; }
+      if (b.spark) {   // 초록 회복 반짝이: 십자 빛이 위로 피어오름
+        const x = b.x + b.vx * b.t, y = b.y - b.t * 0.9, r = 2.6 * (1 - k * 0.5);
+        ctx.fillStyle = '#7dffb2'; ctx.fillRect(x - r, y - 0.8, r * 2, 1.6); ctx.fillRect(x - 0.8, y - r, 1.6, r * 2);
+        ctx.fillStyle = 'rgba(200,255,220,.9)'; ctx.beginPath(); ctx.arc(x, y, 0.9, 0, 7); ctx.fill(); continue;
+      }
       ctx.font = b.small ? 'bold 10px sans-serif' : 'bold 12px sans-serif';
       const tw = ctx.measureText(b.text).width + 14, y = b.y - b.t * 0.15;
       ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(b.x - tw / 2, y - 10, tw, 20, 9) : ctx.rect(b.x - tw / 2, y - 10, tw, 20); ctx.fill();
@@ -450,7 +463,7 @@
     playerEmoji = GameUI.emoji();
     if (window.Art) { if (Art.setLook) Art.setLook(GameUI.look()); if (Art.setColor) Art.setColor(GameUI.kidColor()); if (Art.setSkin) Art.setSkin(GameUI.kidSkin()); if (Art.setHair) Art.setHair(GameUI.kidHair()); if (Art.setEchoForm) Art.setEchoForm(GameUI.echoForm()); Art.setOutfit(GameUI.outfitCycle()); }   // 회차별 복장 (에코도 같은 옷)
     state = 'play'; acc = 0; last = performance.now();
-    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; deedHud = { filled: 0, fly: [], pop: [0, 0, 0, 0], party: 0 }; escortTalk = null; pickAnim = null; playerCheer = 0; resetTips(); cheerFx = null;
+    shake = 0; hurtFlash = 0; edgeFlash = 0; floats = []; headFlash = []; autoFlash = []; bossFx = null; slowmo = 0; whiteFlash = 0; bubbles = []; warmFx = []; deedHud = { filled: 0, fly: [], pop: [0, 0, 0, 0], party: 0 }; drinkAnim = null; hpFlash = 0; hpShown = null; escortTalk = null; pickAnim = null; playerCheer = 0; resetTips(); cheerFx = null;
     const needE = sim.world.boss.needEchoes;
     if (!tutorial && echoes.length < needE) toast = { text: `✨ 큰 도전엔 에코 ${needE}명 이상 권장 (지금 ${echoes.length}명)`, t: 240 };
     banner = { text: clearedEchoes ? `${sim.world.emoji} ${sim.world.name} · 에코는 새로 시작해요` : `${sim.world.emoji} ${sim.world.name}`, t: 140 }; banner.t = 0; toast.t = 0;
@@ -878,8 +891,8 @@
 
     for (const g of sim.gems) {
       if (g.kind === 'coffee') {
-        if (useArt) Art.drawDrop(ctx, g, sim.world.rules.dropEmoji || '☕', now);
-        else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(sim.world.rules.dropEmoji || '☕', g.x, g.y, 15); }
+        if (useArt) Art.drawDrop(ctx, g, sim.world.rules.dropEmoji || '🥛', now);
+        else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(sim.world.rules.dropEmoji || '🥛', g.x, g.y, 15); }
         continue;
       }
       if (useArt) { Art.drawGem(ctx, g, now); continue; }
@@ -1062,6 +1075,7 @@
     let act = null;
     const dd = sim.deeds, prs = dd && dd.rescue, pes = dd && dd.escort, php = sim.helper;
     if (pickAnim) act = { pose: 'pick', k: pickAnim.t / pickAnim.max };
+    else if (drinkAnim) act = { pose: 'drink' };
     else if (playerCheer > 0) act = { pose: 'cheer' };
     else if (prs && prs.state === 'wait' && Math.hypot(p.x - prs.x, p.y - prs.y) < 110) act = { pose: 'reach', tx: prs.x, ty: prs.y };
     else if (pes && pes.state === 'walk' && !pes.waiting && Math.hypot(p.x - pes.x, p.y - pes.y) < 75) act = { pose: 'reach', tx: pes.x, ty: pes.y };
@@ -1069,6 +1083,7 @@
     if (useArt) {
       const hand = Art.drawPlayer(ctx, p, playerEmoji, moving, faceDir, now, blink, act);
       if (pickAnim && hand) deedArt(pickAnim.item, hand[0], hand[1] - 4, 13);   // 주운 물건을 손에 들고
+      else if (drinkAnim && hand && Art.drawDropIcon) Art.drawDropIcon(ctx, sim.world.rules.dropEmoji || '🥛', hand[0] - faceDir * 1.5, hand[1] - 3.5, 0.62);   // 두 손으로 든 우유 (빨대가 입에)
     } else {
       if (blink) ctx.globalAlpha = 0.4;
       emoji(playerEmoji, p.x, p.y + 1, 22); ctx.globalAlpha = 1;
@@ -1134,7 +1149,11 @@
       pill(3, 3, 145, 27); pill(W / 2 - 30, 2, 60, sim.bossCount > 1 ? 33 : 21); pill(W - 112, 3, 109, 33); }
     ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#ff5d73'; ctx.fillRect(8, 8, 100 * Math.max(0, p.hp / p.maxhp), 8);
+    const hpF = Math.max(0, p.hp / p.maxhp);
+    if (hpShown === null || hpShown > hpF) hpShown = hpF; else hpShown += (hpF - hpShown) * 0.15;   // 회복은 부드럽게 차오름 (깎일 땐 바로)
+    if (hpShown < hpF - 0.001) { ctx.fillStyle = 'rgba(125,255,178,.85)'; ctx.fillRect(8 + 100 * hpShown, 8, 100 * (hpF - hpShown), 8); }   // 차오를 부분은 초록
+    ctx.fillStyle = '#ff5d73'; ctx.fillRect(8, 8, 100 * hpShown, 8);
+    if (hpFlash > 0) { hpFlash -= 1; ctx.save(); ctx.globalAlpha = Math.sin(hpFlash / 36 * Math.PI); ctx.strokeStyle = '#7dffb2'; ctx.lineWidth = 2.5; ctx.shadowColor = 'rgba(125,255,178,.9)'; ctx.shadowBlur = 8; ctx.strokeRect(7, 7, 102, 10); ctx.restore(); }   // 회복: 체력 막대가 초록으로 반짝
     ctx.strokeStyle = '#fff6'; ctx.lineWidth = 1; ctx.strokeRect(8, 8, 100, 8);
     ctx.fillStyle = '#7dffb2'; ctx.fillRect(8, 20, 100 * Math.min(1, p.xp / p.need), 5);
     ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif';

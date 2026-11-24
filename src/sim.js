@@ -945,7 +945,7 @@
           this._ev({ k: 'banner', text: `💛 한 고비 넘었어요! (${this.bossDefeated}/${this.bossCount}) 숨 돌리세요`, hint: true });
         }
       }
-      // 월드 규칙: 가끔 커피(체력 회복)
+      // 월드 규칙: 가끔 우유(체력 회복, 월드에 따라 초콜릿·비타민 모양)
       const cc = this.world.rules.coffeeChance;
       if (cc && e.type !== 'boss' && this.rng() < cc) this.gems.push({ x: e.x, y: e.y, v: TUNING.coffeeHeal, kind: 'coffee' });
       this.enemies[i] = this.enemies[this.enemies.length - 1]; this.enemies.pop();
@@ -1144,7 +1144,7 @@
         const dist = Math.hypot(ax, ay);
         if (dist < d.magnet) { g.x += (ax / (dist || 1)) * 4; g.y += (ay / (dist || 1)) * 4; }
         if (dist < p.r + 5) {
-          if (g.kind === 'coffee') { p.hp = Math.min(p.maxhp, p.hp + g.v); this._ev({ k: 'heal' }); }
+          if (g.kind === 'coffee') { p.hp = Math.min(p.maxhp, p.hp + g.v); this._ev({ k: 'drink', x: p.x, y: p.y }); }   // 회복 아이템(우유 등)을 마심
           else { p.xp += g.v * this.bonus.xpMul * (this.world.rules.xpMul || 1); this.gemCount += 1; this._ev({ k: 'gem' }); }
           this.gems[i] = this.gems[this.gems.length - 1]; this.gems.pop();
         }
