@@ -997,12 +997,14 @@
 
   /* ---------- 회복 아이템 ---------- */
   const DROP = {
-    coffee(g) {
-      for (const x of [-3, 2]) { g.beginPath(); g.moveTo(x, -6); g.quadraticCurveTo(x + 3, -9, x, -12); g.lineWidth = 1.3; g.strokeStyle = 'rgba(255,255,255,.8)'; g.stroke(); }
-      g.beginPath(); g.arc(7, 1, 3.5, -Math.PI / 2, Math.PI / 2); g.lineWidth = 2.2; g.strokeStyle = OL; g.stroke(); g.lineWidth = 1.2; g.strokeStyle = '#fff'; g.stroke();
-      g.beginPath(); g.moveTo(-7, -5); g.lineTo(7, -5); g.lineTo(5.5, 7); g.quadraticCurveTo(0, 9, -5.5, 7); g.closePath(); fillStroke(g, '#ffffff', 1.8);
-      g.fillStyle = '#8d5a3c'; g.fillRect(-6.3, -4.2, 12.6, 3);
-      g.fillStyle = '#ff7a59'; g.fillRect(-6, 0, 11.6, 3);
+    milk(g) {   // 학교 우유팩: 하얀 몸 + 파란 띠 + 뾰족 지붕, 빨대
+      g.beginPath(); g.moveTo(-6, -3); g.lineTo(0, -9); g.lineTo(6, -3); g.closePath(); fillStroke(g, '#e8f1ff', 1.6);   // 지붕
+      rrect(g, -6, -3, 12, 13, 1.5); fillStroke(g, '#ffffff', 1.8);                                                        // 몸
+      g.fillStyle = '#4a90e2'; g.fillRect(-5.2, 1.2, 10.4, 3.2);                                                            // 파란 띠
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(-1.5, 2.8, 1, 0, 7); g.arc(2, 2.8, 1, 0, 7); g.fill();                  // 띠 위 작은 점
+      g.strokeStyle = OL; g.lineWidth = 1.6; g.beginPath(); g.moveTo(2.5, -6); g.lineTo(5, -12); g.stroke();                // 빨대
+      g.strokeStyle = '#ff7a9a'; g.lineWidth = 1; g.stroke();
+      g.fillStyle = 'rgba(160,190,230,.35)'; g.fillRect(2.5, -2, 3, 11);                                                    // 그늘
     },
     choco(g) {
       g.save(); g.rotate(-0.25);
@@ -1288,9 +1290,9 @@
       for (let i = -1; i <= 1; i++) { const bx = h.x - h.dir * (90 + (now / 8 + i * 17) % 30); ctx.beginPath(); ctx.moveTo(bx, h.y + i * 11); ctx.lineTo(bx - h.dir * 22, h.y + i * 11); ctx.stroke(); }
       blit(ctx, c, h.x, h.y + shake, 1, 1, h.dir < 0);
     },
-    /** 회복 아이템: ☕ 커피 · 🍫 초콜릿 · 💊 비타민 (살짝 둥실거리며 반짝) */
+    /** 회복 아이템: 🥛 우유 · 🍫 초콜릿 · 💊 비타민 (살짝 둥실거리며 반짝) */
     drawDrop(ctx, g, kind, now) {
-      const key = kind === '🍫' ? 'choco' : kind === '💊' ? 'pill' : 'coffee';
+      const key = kind === '🍫' ? 'choco' : kind === '💊' ? 'pill' : 'milk';
       const c = sprite('drop:' + key, 22, 24, (q) => DROP[key](q));
       const bob = Math.sin(now / 260 + g.x * 0.1) * 1.6;
       ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(g.x, g.y + 8, 6, 2.2, 0, 0, Math.PI * 2); ctx.fill();

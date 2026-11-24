@@ -878,8 +878,8 @@
 
     for (const g of sim.gems) {
       if (g.kind === 'coffee') {
-        if (useArt) Art.drawDrop(ctx, g, sim.world.rules.dropEmoji || '☕', now);
-        else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(sim.world.rules.dropEmoji || '☕', g.x, g.y, 15); }
+        if (useArt) Art.drawDrop(ctx, g, sim.world.rules.dropEmoji || '🥛', now);
+        else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(sim.world.rules.dropEmoji || '🥛', g.x, g.y, 15); }
         continue;
       }
       if (useArt) { Art.drawGem(ctx, g, now); continue; }
