@@ -88,13 +88,22 @@
       ctx.globalAlpha = 1 - q.t / 0.45; ctx.strokeStyle = '#7dffb2'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(q.x, q.y, 4 + q.t * 40, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    // 과거의 나(에코)들: 주인공 뒤에서 둥실둥실 (반투명 회색)
+    // 과거의 나(에코)들: 저마다 다르게 움직인다 (반투명 회색). 각자 늦게 따라오는 정도·떠다니는 모양·빠르기가 다름
     const form = Art.echoForm || 'star', kx = runner.x;
-    for (let i = 0; i < 4; i++) {
-      const side = i % 2 ? 1 : -1, dist = 1 + Math.floor(i / 2);
-      const x = kx + side * (26 + dist * 22), y = fy - 24 - dist * 26 + Math.sin(t * 1.6 + i) * 3;
-      ctx.globalAlpha = 0.34 - dist * 0.06;
-      Art.drawEchoForm(ctx, form, x, y, 1.35 - dist * 0.18, t + i);
+    const ECHO_MOVES = [
+      { lag: 0.9, ox: -48, oy: -34, s: 1.2,  move: (t) => [Math.sin(t * 1.3) * 10, Math.sin(t * 2.6) * 5] },                 // 8자 그리며 천천히
+      { lag: 2.4, ox: 50,  oy: -40, s: 1.15, move: (t) => [Math.cos(t * 2.1) * 14, Math.sin(t * 2.1) * 9] },                 // 동그랗게 빙빙
+      { lag: 0.5, ox: -84, oy: -64, s: 0.95, move: (t) => [0, -Math.abs(Math.sin(t * 3.2)) * 14] },                         // 통통 튀기
+      { lag: 3.5, ox: 86,  oy: -70, s: 0.9,  move: (t) => [Math.sin(t * 0.8) * 22, Math.sin(t * 1.7) * 3] },                // 좌우로 느긋하게
+      { lag: 1.6, ox: 0,   oy: -98, s: 0.8,  move: (t) => [Math.sin(t * 3.4) * 6, Math.sin(t * 1.1) * 10] },                // 위에서 살랑살랑
+    ];
+    if (!runner.ex) runner.ex = ECHO_MOVES.map(() => kx);
+    for (let i = 0; i < ECHO_MOVES.length; i++) {
+      const m = ECHO_MOVES[i], [mx, my] = m.move(t + i * 1.7);
+      runner.ex[i] += (kx - runner.ex[i]) * Math.min(1, dt * m.lag);   // 주인공을 저마다 다른 빠르기로 따라옴
+      const x = runner.ex[i] + m.ox + mx, y = fy + m.oy + my;
+      ctx.globalAlpha = 0.32 - (m.oy < -60 ? 0.07 : 0);
+      Art.drawEchoForm(ctx, form, x, y, m.s, t * (0.8 + i * 0.13) + i);
     }
     ctx.globalAlpha = 1;
     // 주인공 (지금 모습·회차 복장): 춤 대신 게임 속처럼 걸어 다니며 구슬을 먹는다 (이기면 통통 뜀)

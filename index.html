@@ -115,9 +115,11 @@
   .pill b{font-size:18px;color:#fff;text-shadow:0 1.5px 0 rgba(0,0,0,.4)}
   #start{gap:7px;justify-content:flex-start;padding-top:22px}   /* 메뉴를 위로 모아, 아래 길 위 주인공 얼굴이 버튼에 가리지 않게 */
   /* 게임 글꼴: 시작 버튼 · 메뉴 타일 · 패널 제목 */
-  .g-start,.tile,.panel h2,#pause h2,#end h2{font-family:'Black Han Sans','Apple SD Gothic Neo',sans-serif;font-weight:400}
-  .g-start{font-size:30px}
-  .tiles2 .tile{font-size:19px}
+  .panel h2,#pause h2,#end h2{font-family:'Black Han Sans','Apple SD Gothic Neo',sans-serif;font-weight:400}
+  /* 메뉴 버튼 글씨: 너무 두껍지 않게 기본 글꼴의 굵은 글씨 */
+  .g-start,.tile{font-family:system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700}
+  .g-start{font-size:26px;letter-spacing:6px}
+  .tiles2 .tile{font-size:17px}
   .tiles4 .tile{font-family:system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:-.2px;text-shadow:0 1px 1px rgba(0,0,0,.45)}   /* 작은 타일은 또렷한 기본 글꼴 (굵은 게임 글꼴은 작으면 뭉개짐) */
   /* 패널 위쪽 돌아가기: 스크롤해도 왼쪽 위에 붙어 있음 */
   #pbackTop{position:sticky;top:0;align-self:flex-start;z-index:5;font-size:13px;padding:7px 12px;margin:-6px 0 -38px;flex-shrink:0}
