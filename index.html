@@ -95,9 +95,9 @@
   .tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;border-radius:18px;padding:8px 4px 6px;font-size:16px;font-weight:800;line-height:1.1}
   .tile .icn+span{margin-left:0}
   .tiles2{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:290px}
-  .tiles2 .tile{height:74px}
+  .tiles2 .tile{height:68px}
   .tiles4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;width:290px}
-  .tiles4 .tile{height:62px;font-size:11.5px;border-radius:14px;padding:5px 2px 4px;letter-spacing:-.3px}
+  .tiles4 .tile{height:58px;font-size:11.5px;border-radius:14px;padding:5px 2px 4px;letter-spacing:-.3px}
   /* 로고 */
   .logo{display:flex;flex-direction:column;align-items:center;line-height:.9;margin:-4px 0 2px;transform-origin:50% 55%;animation:logoBeat 1.3s ease-out infinite}
   /* 제자리에서 심장 뛰듯 '두둥 두둥': 짧게 두 번 커졌다가 쉼 */
@@ -113,7 +113,7 @@
   .capi.grow{animation:capiGrow .7s ease-out}
   @keyframes capiGrow{0%{transform:scale(1)}35%{transform:scale(1.6) rotate(-8deg)}70%{transform:scale(.9)}100%{transform:scale(1)}}
   .pill b{font-size:18px;color:#fff;text-shadow:0 1.5px 0 rgba(0,0,0,.4)}
-  #start{gap:9px}
+  #start{gap:7px;justify-content:flex-start;padding-top:22px}   /* 메뉴를 위로 모아, 아래 길 위 주인공 얼굴이 버튼에 가리지 않게 */
   /* 게임 글꼴: 시작 버튼 · 메뉴 타일 · 패널 제목 */
   .g-start,.tile,.panel h2,#pause h2,#end h2{font-family:'Black Han Sans','Apple SD Gothic Neo',sans-serif;font-weight:400}
   .g-start{font-size:30px}
@@ -206,7 +206,7 @@
 
   <div id="start" class="overlay">
     <div class="logo" aria-label="Echo Rush 에코 러시"><span class="lg1">ECHO</span><span class="lg2">RUSH</span><span class="lgk">✨ 에코 러시 ✨</span></div>
-    <div style="display:flex;align-items:center;gap:6px"><canvas id="outfitPv" width="168" height="200" style="width:84px;height:100px;background:transparent;border-radius:0;margin:-10px 0 -12px"></canvas><span id="outfitName" style="font-size:13px;color:#ffe58a"></span></div>
+    <div style="display:flex;align-items:center;gap:6px"><canvas id="outfitPv" width="168" height="176" style="width:84px;height:88px;background:transparent;border-radius:0;margin:-8px 0 -10px"></canvas><span id="outfitName" style="font-size:13px;color:#ffe58a"></span></div>
     <div id="titleLine" style="font-size:12px;color:#ffb3d4;margin-top:-6px"></div>
     <div id="coinbar" class="pill"><span class="capi"></span> <b id="coins">0</b> 학점</div>
     <button id="bWorld" class="gbtn g-glass">🗺️ 월드</button>

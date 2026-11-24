@@ -48,7 +48,7 @@
     const cv = $('outfitPv'); if (!cv || !pvState || !window.Art) return;
     const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
     c.setTransform(2, 0, 0, 2, 0, 0);
-    if (Art.drawKidDance) Art.drawKidDance(c, 42, 56, pvState.emo, pvState.cycle, 1.45, t); else Art.drawKidPreview(c, 42, 56, pvState.emo, pvState.cycle, 1.45);
+    if (Art.drawKidDance) Art.drawKidDance(c, 42, 50, pvState.emo, pvState.cycle, 1.45, t); else Art.drawKidPreview(c, 42, 50, pvState.emo, pvState.cycle, 1.45);
   }
   /** 시작 화면: 이번 회차 복장 미리보기 + 이름 (회차마다 장식이 늘고, 5회차마다 새 복장) */
   function drawOutfit() {

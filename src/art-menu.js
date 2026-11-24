@@ -66,7 +66,7 @@
     }
     ctx.globalAlpha = 1;
     // 길 위 반짝이는 구슬 (아래로 다가옴). 주인공이 좌우로 걸어가 먹는다
-    const fy = H * 0.905, kEat = Math.pow(Math.max(0, (fy - hy - 8) / (H - hy)), 1 / 1.6);
+    const fy = H * 0.962, kEat = Math.pow(Math.max(0, (fy - hy - 8) / (H - hy)), 1 / 1.6);
     const dt = runner.last ? Math.min(0.1, Math.max(0, t - runner.last)) : 0; runner.last = t;
     if (runner.x === null) runner.x = W / 2;
     let target = null, best = -1;
