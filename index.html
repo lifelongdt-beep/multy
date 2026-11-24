@@ -99,8 +99,9 @@
   .tiles4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;width:290px}
   .tiles4 .tile{height:62px;font-size:11.5px;border-radius:14px;padding:5px 2px 4px;letter-spacing:-.3px}
   /* 로고 */
-  .logo{display:flex;flex-direction:column;align-items:center;line-height:.9;transform:rotate(-4deg);margin:-4px 0 2px;animation:logoBob 2.4s ease-in-out infinite}
-  @keyframes logoBob{0%,100%{transform:rotate(-4deg) translateY(0)}50%{transform:rotate(-2deg) translateY(-4px)}}
+  .logo{display:flex;flex-direction:column;align-items:center;line-height:.9;margin:-4px 0 2px;transform-origin:50% 55%;animation:logoBeat 1.3s ease-out infinite}
+  /* 제자리에서 심장 뛰듯 '두둥 두둥': 짧게 두 번 커졌다가 쉼 */
+  @keyframes logoBeat{0%{transform:scale(1)}12%{transform:scale(1.09)}24%{transform:scale(.99)}36%{transform:scale(1.06)}52%,100%{transform:scale(1)}}
   .logo .lg1,.logo .lg2{font-family:'Luckiest Guy','Arial Black','Apple SD Gothic Neo',sans-serif;font-weight:400;letter-spacing:4px;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:3px #2a1608;paint-order:stroke fill;
     filter:drop-shadow(0 5px 0 #2a1608) drop-shadow(0 9px 12px rgba(0,0,0,.5))}
   .logo .lg1{font-size:52px;background-image:linear-gradient(#fffbe0,#ffd34d 45%,#ff8a2c)}
