@@ -67,6 +67,9 @@
     dmgPer: 0.5,             // 공격력 +50% (이전 35%)
     speedPer: 0.15,          // 이동속도 +15% (이전 12%)
     magnetPer: 30,           // 구슬 흡수 범위 +30 (이전 22)
+    deedMagBase: 36,         // 마음 자석: 선행 물건을 끌어오는 거리 = 36 + 18×레벨 (Lv1 54 · Lv5 126 — 구슬 자석보다 짧게, 근처만)
+    deedMagPer: 18,
+    deedMagSpeed: 2.6,       //   끌려오는 속도 (틱당 px)
     critPer: 0.14,           // 치명타 확률 +14% (이전 10%)
     critMul: 2.5,            // 치명타 피해 x2.5 (이전 x2)
     regenPer: 1.0,           // 급식 시간 1레벨당 체력 재생 +1.0/초
@@ -130,6 +133,7 @@
     { id: 'regen',  icon: '🍱', name: '급식 시간',     desc: '체력 재생 +1.0/초' },
     { id: 'echo',   icon: '✨', name: '에코 응원',     desc: '모든 에코의 공격력·속도 +25%' },
     { id: 'heal',   icon: '🩹', name: '보건실',        desc: '체력 35 즉시 회복', instant: true },
+    { id: 'deedmag', icon: '💞', name: '마음 자석',    desc: '가까운 선행 물건을 끌어와요 (멀리 있는 건 직접)', deedOnly: true },   // 선행 선물 카드에서만
   ];
 
   const SYNERGIES = {
@@ -200,7 +204,7 @@
   }
 
   function newStats() {
-    return { rate: 0, multi: 0, dmg: 0, speed: 0, magnet: 0, pierce: 0, crit: 0, nova: 0, orbit: 0, regen: 0, echo: 0, heal: 0 };
+    return { rate: 0, multi: 0, dmg: 0, speed: 0, magnet: 0, pierce: 0, crit: 0, nova: 0, orbit: 0, regen: 0, echo: 0, heal: 0, deedmag: 0 };
   }
 
   class Sim {
@@ -342,6 +346,7 @@
       const p = this.player;
       const pool = UPGRADES.filter((u) => {
         if (u.instant) return p.hp <= p.maxhp * 0.9;
+        if (u.deedOnly) return false;   // 선행 선물 전용 (레벨업 카드엔 안 나옴)
         return p.stats[u.id] < MAX_LEVEL;
       });
       const picks = [];
@@ -759,7 +764,10 @@
         const bonus = this._rollPicks()[0];
         if (bonus) { this._applyUpgrade(bonus.id); this._ev({ k: 'autoPick', id: bonus.id, icon: bonus.icon, name: bonus.name }); }
       }
-      this._offer(this._rollPicks().map((u) => Object.assign({}, u, { deed: true })), 'deed');
+      const picks = this._rollPicks();
+      const dm = UPGRADES.find((u) => u.id === 'deedmag');   // 선행 선물엔 마음 자석이 늘 한 장 (다 올리기 전까지, 세 번째 자리)
+      if (this.player.stats.deedmag < MAX_LEVEL) { if (picks.length >= 3) picks[2] = dm; else picks.push(dm); }
+      this._offer(picks.map((u) => Object.assign({}, u, { deed: true })), 'deed');
     }
     /** 따뜻한 빛: 주변 방해 요소가 잠시 순해진다 (느려지고, 닿아도 아프지 않음) */
     _warm(x, y) {
@@ -845,6 +853,11 @@
       }
       for (let i = d.spots.length - 1; i >= 0; i--) {
         const sp = d.spots[i];
+        const mlv = p.stats.deedmag || 0;
+        if (mlv) {   // 마음 자석: 가까이 있는 선행 물건만 내 쪽으로 끌려옴
+          const dx = p.x - sp.x, dy = p.y - sp.y, dist = Math.hypot(dx, dy);
+          if (dist < T.deedMagBase + T.deedMagPer * mlv && dist > 1) { const v = Math.min(dist, T.deedMagSpeed); sp.x += dx / dist * v; sp.y += dy / dist * v; sp.pulled = true; }
+        }
         if (Math.hypot(p.x - sp.x, p.y - sp.y) < p.r + 12) {
           d.spots.splice(i, 1); d.gauge += 1; d.spotCount += 1; this.fx.push({ x: sp.x, y: sp.y, t: 20, kind: 'deed' });
           this._ev({ k: 'deed', what: 'spot', x: sp.x, y: sp.y, kind: sp.kind });

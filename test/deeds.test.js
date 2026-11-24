@@ -124,3 +124,24 @@ test('선생님 구역 안에 있으면 적 탄은 막아 주지만, 몸으로 �
   s.player.x = h.x + h.r + 60;
   assert.ok(!s.helperShield(), '구역 밖: 보호 없음');
 });
+
+test('마음 자석: 가까운 선행 물건만 끌어오고(멀리 있는 건 그대로), 선행 선물 카드에서만 나온다', () => {
+  const { Sim, UPGRADES, TUNING } = require('../src/sim.js');
+  const s = new Sim({ seed: 3, world: 'school' });
+  for (let i = 0; i < 60 * 9; i++) { s.player.hp = 1e9; if (s.choices) s.choose(s.choices[0].id); s.step({ dx: 0, dy: 0 }); }
+  const p = s.player, near = TUNING.deedMagBase + TUNING.deedMagPer - 10;
+  s.deeds.spots.length = 0;
+  s.deeds.spots.push({ x: p.x + near, y: p.y, kind: 'cup', t: 9999 }, { x: p.x, y: p.y + 200, kind: 'pot', t: 9999 });
+  p.stats.deedmag = 0; s.step({ dx: 0, dy: 0 });
+  assert.strictEqual(s.deeds.spots[0].x, p.x + near, '자석이 없으면 안 끌려옴');
+  p.stats.deedmag = 1;
+  const far0 = s.deeds.spots[1].y;
+  for (let i = 0; i < 30; i++) { s.player.hp = 1e9; s.step({ dx: 0, dy: 0 }); }
+  assert.ok(!s.deeds.spots.some((sp) => sp.kind === 'cup'), '가까운 물건은 끌려와 주워짐');
+  const far = s.deeds.spots.find((sp) => sp.kind === 'pot');
+  assert.ok(far && far.y === far0, '멀리 있는 물건은 그대로');
+  assert.ok(UPGRADES.find((u) => u.id === 'deedmag').deedOnly);
+  for (let i = 0; i < 40; i++) assert.ok(!s._rollPicks().some((u) => u.id === 'deedmag'), '레벨업 카드엔 안 나옴');
+  s.choices = null; s._deedReward(false);
+  assert.ok(s.choices.some((u) => u.id === 'deedmag'), '선행 선물 카드엔 나옴');
+});
