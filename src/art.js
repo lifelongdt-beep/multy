@@ -908,15 +908,16 @@
     return { L: toScreen(P.L), R: toScreen(P.R), feetY: y + K_KID * (2 + 17 * (1 - s) + s * 21.5) };
   }
   /** 배경을 한 걸음 뒤로: 중간 톤을 얇게 덮어 대비·채도를 낮춘다 (밝은 곳은 살짝 가라앉고 진한 선은 옅어짐) → 주인공·적·선행 거리가 앞에 또렷 */
-  function recede(g, W, H) { g.fillStyle = 'rgba(74,66,88,.28)'; g.fillRect(0, 0, W, H); }
+  function recede(g, W, H, wash) { g.fillStyle = wash || 'rgba(74,66,88,.28)'; g.fillRect(0, 0, W, H); }
   function vignette(g, W, H) {
     const vg = g.createRadialGradient(W / 2, H * 0.48, H * 0.25, W / 2, H * 0.5, H * 0.75);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(5,6,16,.55)');
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
   }
-  function background(W, H, worldId) {
+  function background(W, H, worldId, cycle) {
     if (worldId && BG[worldId]) {   // art-bg.js 의 사실적인 배경 (학교 포함). 없으면 아래 기본 학교 배경
-      return sprite(`bg:${worldId}:${W}x${H}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); recede(g, W, H); vignette(g, W, H); });
+      const Wd = root.EchoWorlds, ti = Wd && Wd.bgToneOf ? Wd.bgToneOf(cycle) : 0, wash = Wd && Wd.BG_TONES ? Wd.BG_TONES[ti].wash : null;   // 회차마다 톤이 살짝 바뀜 (10가지, 돌아가며)
+      return sprite(`bg:${worldId}:${W}x${H}:t${ti}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); recede(g, W, H, wash); vignette(g, W, H); });
     }
     return sprite(`bg:school:${W}x${H}`, W, H, (g) => {
       g.translate(-W / 2, -H / 2);
@@ -1028,7 +1029,7 @@
     hasEnemy(e) { return e.type === 'boss' ? !!BOSS[e.name] || !!BOSS[e.def && e.def.name] : !!ENEMY[e.type]; },
     enemyColor(type, name) { return type === 'boss' ? ((BOSS[name] || {}).color || '#ffffff') : ((ENEMY[type] || {}).color || '#ffffff'); },
 
-    drawBackground(ctx, W, H, worldId) { blit(ctx, background(W, H, worldId), W / 2, H / 2); },
+    drawBackground(ctx, W, H, worldId, cycle) { blit(ctx, background(W, H, worldId, cycle), W / 2, H / 2); },
 
     drawGem(ctx, g, now) {
       const bob = Math.sin(now / 220 + g.x * 0.1) * 1.2;

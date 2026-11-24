@@ -588,9 +588,24 @@
     team:  { icon: '🤝', desc: '에코 응원 Lv +1' },
   };
 
+  /** 회차마다 배경 톤이 살짝 바뀐다: 10가지 톤을 차례로, 다 쓰면 처음으로 (배경 위에 얇게 덮는 색) */
+  const BG_TONES = [
+    { name: '보랏빛 저녁', wash: 'rgba(74,66,88,.28)' },
+    { name: '새벽 하늘',   wash: 'rgba(58,84,122,.28)' },
+    { name: '아침 햇살',   wash: 'rgba(122,102,62,.26)' },
+    { name: '봄 연두',     wash: 'rgba(78,106,72,.26)' },
+    { name: '바다 청록',   wash: 'rgba(46,100,104,.28)' },
+    { name: '노을 살구',   wash: 'rgba(128,84,70,.26)' },
+    { name: '라벤더',      wash: 'rgba(100,78,126,.28)' },
+    { name: '가을 호박',   wash: 'rgba(120,88,48,.26)' },
+    { name: '별밤 남색',   wash: 'rgba(40,50,98,.30)' },
+    { name: '벚꽃 분홍',   wash: 'rgba(122,80,106,.26)' },
+  ];
+  /** 회차(0부터) → 배경 톤 번호 (0~9, 10회차마다 처음으로) */
+  const bgToneOf = (cycle) => ((Math.max(0, cycle | 0) % BG_TONES.length) + BG_TONES.length) % BG_TONES.length;
   /** 화면을 가로질러 지나가는 위험물의 모양: 월드의 주기 위험물 → 월드가 정한 모양 → 열차(지하철) */
   const hazardKind = (w) => (w.rules.trains && w.rules.trains.emoji) || w.rules.lane || '🚆';
-  const api = { hazardKind, TIME_SCALE, WORLDS, ORDER, BOONS, GEAR, worldIndex, stageOf, stageMul, recommendedGear, gearMaxLevel, gearCost, rewardMul, OUTFITS, outfitOf };
+  const api = { BG_TONES, bgToneOf, hazardKind, TIME_SCALE, WORLDS, ORDER, BOONS, GEAR, worldIndex, stageOf, stageMul, recommendedGear, gearMaxLevel, gearCost, rewardMul, OUTFITS, outfitOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoWorlds = api;
 })(typeof window !== 'undefined' ? window : globalThis);

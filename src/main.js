@@ -727,7 +727,7 @@
       Art.drawMenuScene(ctx, W, H, performance.now(), { emo: GameUI.emoji(), cycle: GameUI.outfitCycle(), win: state === 'end' ? !!(sim && sim.result === 'clear') : undefined });
       return;
     }
-    if (useArt) Art.drawBackground(ctx, W, H, (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).id); else {
+    if (useArt) Art.drawBackground(ctx, W, H, (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).id, sim ? sim.cycle : GameUI.cycle()); else {
     ctx.fillStyle = th.bg; ctx.fillRect(-20, -20, W + 40, H + 40);
     ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
     if (th.deco === 'ruled') {            // 학원: 공책 줄무늬
