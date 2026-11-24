@@ -525,3 +525,17 @@ test('학점 아이콘은 학점이 쌓일수록 자란다: 동전 → 동전 �
   assert.strictEqual(ic(100000), 'pouch'); assert.strictEqual(ic(1e6), 'gold'); assert.strictEqual(ic(99999999), 'gold');
   assert.strictEqual(ic(1e8), 'chest'); assert.strictEqual(ic(1e15), 'chest');
 });
+
+test('상점 따뜻한 마음: 선행 물건을 끌어오는 거리가 레벨마다 늘고, 마음 자석 카드 없이도 아주 가까운 것은 끌려온다', () => {
+  const s = M.defaultSave(); s.coins = 1e9;
+  assert.strictEqual(M.bonusFor(s).deedMag, 0);
+  assert.ok(M.SHOP.find((x) => x.id === 'deedmag'));
+  M.buyUpgrade(s, 'deedmag'); const b1 = M.bonusFor(s).deedMag; assert.ok(b1 > 0);
+  for (let i = 0; i < 4; i++) M.buyUpgrade(s, 'deedmag');
+  assert.ok(M.bonusFor(s).deedMag > b1);
+  const sim = new E.Sim({ seed: 2, world: 'school', bonus: M.bonusFor(s) }), p = sim.player;
+  sim.deeds.spots.length = 0; sim.deeds.spots.push({ x: p.x + 30, y: p.y, kind: 'cup', t: 9999 }, { x: p.x + 150, y: p.y, kind: 'pot', t: 9999 });
+  for (let i = 0; i < 25; i++) { p.hp = 1e9; sim.step({ dx: 0, dy: 0 }); }
+  assert.ok(!sim.deeds.spots.some((x) => x.kind === 'cup'), '가까운 것은 끌려와 주워짐');
+  assert.ok(sim.deeds.spots.some((x) => x.kind === 'pot' && x.x === p.x + 150), '먼 것은 그대로');
+});
