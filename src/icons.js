@@ -35,8 +35,37 @@
       if (el.dataset.iconDone) continue;
       el.dataset.iconDone = '1';
       const label = el.textContent.trim();
-      el.innerHTML = svg(el.dataset.icon, +el.dataset.iconSize || 18) + (label ? `<span>${label}</span>` : '');
+      const sz = +el.dataset.iconSize || 18, ic = el.dataset.iconColor !== undefined ? color(el.dataset.icon, sz) : svg(el.dataset.icon, sz);
+      el.innerHTML = ic + (label ? `<span>${label}</span>` : '');
     }
   }
-  root.Icons = { svg, apply, names: Object.keys(P) };
+  /* ---------- 컬러 아이콘 (게임 메뉴용): 색을 채운 그림 + 진한 외곽선 + 윗면 빛 ---------- */
+  const O = 'stroke="#1c1930" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"';
+  const HI = (d) => `<path d="${d}" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.4" stroke-linecap="round"/>`;
+  const C = {
+    shop: `<path d="M4.5 10.5h15v9a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z" fill="#ffd36b" ${O}/><path d="M9.5 20.5v-5h5v5" fill="#8a5a3c" ${O}/>`
+        + `<path d="M3 10.5 5 4.5h14l2 6z" fill="#fff" ${O}/><path d="M5 4.5 3 10.5h3.6l1.2-6zM10.6 4.5l-.6 6h4l-.6-6zM16.2 4.5l1.2 6H21l-2-6z" fill="#ff5d6c"/>`
+        + `<path d="M3 10.5 5 4.5h14l2 6z" fill="none" ${O}/><path d="M3 10.5c0 1.5 1.3 2.4 2.7 2.4s2.6-.9 2.6-2.4c0 1.5 1.3 2.4 2.7 2.4h2c1.4 0 2.7-.9 2.7-2.4 0 1.5 1.2 2.4 2.6 2.4s2.7-.9 2.7-2.4" fill="none" ${O}/>`,
+    shirt: `<path d="M8.4 3.8 3.5 6.6l1.9 4.3 2.4-.9v10.5h8.4V10l2.4.9 1.9-4.3-4.9-2.8c-.6 1.7-1.9 2.6-3.6 2.6S9 5.5 8.4 3.8z" fill="#5b8cff" ${O}/>`
+        + `<path d="M10 4.3c.5 1 1.1 1.4 2 1.4s1.5-.4 2-1.4" fill="none" stroke="#ffd36b" stroke-width="1.6" stroke-linecap="round"/>` + HI('M8.6 11v4'),
+    heart: `<path d="M12 20.5s-8-4.8-8-10.6A4.4 4.4 0 0 1 12 7.2a4.4 4.4 0 0 1 8 2.7c0 5.8-8 10.6-8 10.6z" fill="#ff6fa3" ${O}/>` + HI('M6.8 9.2a2.3 2.3 0 0 1 2.4-2')
+        + `<path d="M19.5 2.6l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6z" fill="#ffe66b" ${O.replace('1.5', '0.8')}/>`,
+    trophy: `<path d="M7.5 6H4.3a3 3 0 0 0 3.5 4.6M16.5 6h3.2a3 3 0 0 1-3.5 4.6" fill="none" ${O}/><path d="M7 3.5h10v5.5a5 5 0 0 1-10 0z" fill="#ffc83d" ${O}/>`
+        + `<path d="M10.5 13.6h3v3h-3z" fill="#e0a12a" ${O}/><path d="M7.5 16.6h9l.8 3.9H6.7z" fill="#9a6a3c" ${O}/>` + HI('M9.3 5.3v3.4') + `<path d="M12 6l.7 1.4 1.5.2-1.1 1 .3 1.5-1.4-.7-1.4.7.3-1.5-1.1-1 1.5-.2z" fill="#fff6c8"/>`,
+    save: `<path d="M4 4.5h12.5l3.5 3.5v12a.5.5 0 0 1-.5.5H4.5a.5.5 0 0 1-.5-.5z" fill="#7b6cf0" ${O}/><path d="M7.5 4.5h8v5h-8z" fill="#dfe4ff" ${O}/><path d="M13 5.8v2.4" stroke="#1c1930" stroke-width="1.5"/>`
+        + `<path d="M6.5 13h11v7.5h-11z" fill="#fff" ${O}/><path d="M8.5 15.5h7M8.5 18h5" stroke="#9aa3c8" stroke-width="1.2" stroke-linecap="round"/>`,
+    book: `<path d="M12 6.4C10 4.9 7.3 4.4 3.8 4.8v13.6c3.5-.4 6.2.1 8.2 1.6z" fill="#7fd6a0" ${O}/><path d="M12 6.4c2-1.5 4.7-2 8.2-1.6v13.6c-3.5-.4-6.2.1-8.2 1.6z" fill="#6fb8ff" ${O}/>`
+        + `<path d="M6 8.3c1.6-.1 3 .2 4.2.8M6 11.3c1.6-.1 3 .2 4.2.8M13.8 9.1c1.2-.6 2.6-.9 4.2-.8M13.8 12.1c1.2-.6 2.6-.9 4.2-.8" stroke="rgba(28,25,48,.45)" stroke-width="1.1" stroke-linecap="round" fill="none"/>`,
+    map: `<path d="M3.5 6.2 8.7 4l6.6 2.4 5.2-2.2v13.6l-5.2 2.2-6.6-2.4-5.2 2.2z" fill="#f3e3b5" ${O}/><path d="M8.7 4v13.6M15.3 6.4V20" stroke="#1c1930" stroke-width="1.2" fill="none" stroke-dasharray="1.6 1.4"/>`
+        + `<path d="M16.5 4.6a2.7 2.7 0 0 1 2.7 2.7c0 2-2.7 4.6-2.7 4.6s-2.7-2.6-2.7-4.6a2.7 2.7 0 0 1 2.7-2.7z" fill="#ff5d6c" ${O}/><circle cx="16.5" cy="7.3" r="1" fill="#fff"/>`,
+    play: `<path d="M8 4.8v14.4a1 1 0 0 0 1.5.86l11.2-7.2a1 1 0 0 0 0-1.72L9.5 3.94A1 1 0 0 0 8 4.8z" fill="#fff" ${O}/>`,
+    home: `<path d="M5.5 10.5v9.5h13v-9.5" fill="#ffe0a8" ${O}/><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="#ff7a45" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11.5 12 4l9 7.5" fill="none" ${O}/><path d="M10 20v-5h4v5" fill="#8a5a3c" ${O}/>`,
+    coin: `<circle cx="12" cy="12" r="8.6" fill="#ffc83d" ${O}/><circle cx="12" cy="12" r="6.2" fill="none" stroke="#e09a1f" stroke-width="1.4"/><path d="M12 8.2 7 10.6l5 2.4 5-2.4zM9 11.8v2c.8.8 1.8 1.2 3 1.2s2.2-.4 3-1.2v-2" fill="#5a3d1c"/>` + HI('M7.4 8.6a5.8 5.8 0 0 1 3-2.2'),
+  };
+  /** 컬러 아이콘 (메뉴·상점 버튼용). 없는 이름이면 선 아이콘 */
+  function color(name, size) {
+    const s = size || 22; if (!C[name]) return svg(name, s);
+    return `<svg class="icn cicn" width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true">${C[name]}</svg>`;
+  }
+  root.Icons = { svg, color, apply, names: Object.keys(P), colorNames: Object.keys(C) };
 })(typeof window !== 'undefined' ? window : globalThis);

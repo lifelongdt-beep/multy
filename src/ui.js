@@ -513,7 +513,7 @@
   $('bQuest').onclick = () => { Sfx.unlock(); Sfx.play('click'); seen.ach = M.ACHIEVEMENTS.filter((a) => save.ach[a.id]).length; saveSeen(); openPanel('🏆 과제 · 미션', renderQuests); };
   $('bBackup').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💾 백업', renderBackup); };
   $('pback').onclick = () => { Sfx.play('click'); closePanel(); };
-  for (const e of document.querySelectorAll('.capi')) e.innerHTML = Icons.svg('cap', 18);   // 학점 표시: 이모지 대신 그린 학사모
+  for (const e of document.querySelectorAll('.capi')) e.innerHTML = Icons.color ? Icons.color('coin', 24) : Icons.svg('cap', 18);   // 학점 표시: 이모지 대신 그린 학사모
   refresh();
 
   window.GameUI = {
