@@ -4,6 +4,10 @@
 
 목표: 모바일 앱 출시 / 수익화 / AI 활용 아트.
 
+## 플레이
+
+**https://lifelongdt-beep.github.io/multy/** (GitHub Pages: main 브랜치가 바뀌면 1~2분 뒤 자동 반영)
+
 ## 실행
 
 ```bash
