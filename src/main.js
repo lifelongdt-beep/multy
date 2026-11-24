@@ -595,6 +595,14 @@
     $('pause').classList.add('hidden'); $('start').classList.remove('hidden'); GameUI.refresh();
   }
   $('pauseBtn').onclick = () => { Sfx.play('click'); pauseGame(); };
+  // 튜토리얼 나가기: 일시정지 옆 버튼, 한 번 누르면 바로 메인 화면 (튜토리얼은 기록이 없으니 확인 없이)
+  function exitTutorial() {
+    if (!tutorial || (state !== 'play' && state !== 'paused')) return;
+    GameUI.finishTutorial();
+    tutorial = false; sim = null; state = 'menu'; Music.stop(); Music.play('menu');
+    $('pause').classList.add('hidden'); $('cards').innerHTML = ''; shownChoices = null; $('start').classList.remove('hidden'); GameUI.refresh();
+  }
+  $('exitBtn').onclick = () => { Sfx.play('click'); exitTutorial(); };
   $('resume').onclick = () => { Sfx.play('click'); quitArmed = false; resumeGame(); };
   $('quit').onclick = () => { Sfx.play('click'); quitRun(); };
   // 앱을 내리거나 다른 창으로 가면 자동으로 일시정지 (전화·알림 등)
@@ -1276,7 +1284,7 @@
   }
 
   /* ---------- 메인 루프 (고정 60Hz) ---------- */
-  let pauseShown = true;
+  let exitShown = false, pauseShown = true;
   function frame(now) {
     if (state === 'play') {
       acc += Math.min(100, now - last) * (slowmo > 0 ? 0.3 : 1); last = now;   // 보스 극복 순간은 슬로모션
@@ -1304,6 +1312,8 @@
     if (whiteFlash > 0) whiteFlash = Math.max(0, whiteFlash - 0.05);
     const showPause = state === 'play';
     if (showPause !== pauseShown) { pauseShown = showPause; $('pauseBtn').style.display = showPause ? '' : 'none'; }
+    const showExit = showPause && tutorial;
+    if (showExit !== exitShown) { exitShown = showExit; $('exitBtn').style.display = showExit ? '' : 'none'; }
     if (state === 'paused') { render(); requestAnimationFrame(frame); return; }   // 멈춘 동안 연출도 멈춘다
     if (shake > 0) shake = Math.max(0, shake - 0.4);
     if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - 0.06);
