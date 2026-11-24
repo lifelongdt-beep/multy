@@ -14,9 +14,22 @@
     if (save.daily.date !== t) save.daily = { date: t, missions: M.dailyMissions(t) };
     if (M.refillMissions(save)) M.persist(window.localStorage, save);   // 예전에 끝난 미션이 남아 있으면 새 미션으로
   }
+  /** 학점 아이콘: 학점이 쌓일수록 동전 → 동전 더미 → 금화 주머니 → 금괴 → 보물상자로 자란다. 단계가 오르면 톡 커지는 연출 */
+  let coinTierShown = -1;
+  function coinIcon() {
+    if (!window.Icons) return;
+    const t = M.coinTier(save.coins), name = M.COIN_TIERS[t].icon;
+    if (t === coinTierShown) return;
+    const grew = coinTierShown >= 0 && t > coinTierShown; coinTierShown = t;
+    for (const e of document.querySelectorAll('.capi')) {
+      e.innerHTML = Icons.color ? Icons.color(name, 26) : Icons.svg('cap', 18); e.title = M.COIN_TIERS[t].name;
+      if (grew) { e.classList.remove('grow'); void e.offsetWidth; e.classList.add('grow'); }
+    }
+  }
   function commit() { M.persist(window.localStorage, save); refresh(); }
   function refresh() {
       $('coins').textContent = M.fmtNum(save.coins); $('pcoins').textContent = M.fmtNum(save.coins);
+      coinIcon();
       const w = M.WORLDS[save.worlds.selected] || M.WORLDS.school;
       $('bWorld').textContent = `🗺️ 월드: ${w.emoji} ${w.name}` + (save.cycle > 0 ? ` · 🔁 ${save.cycle + 1}회차` : '');
       drawOutfit();
@@ -514,7 +527,7 @@
   $('bBackup').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💾 백업', renderBackup); };
   $('pback').onclick = () => { Sfx.play('click'); closePanel(); };
   $('pbackTop').onclick = () => { Sfx.play('click'); closePanel(); };   // 위쪽 돌아가기 (긴 목록을 끝까지 내리지 않아도 되게)
-  for (const e of document.querySelectorAll('.capi')) e.innerHTML = Icons.color ? Icons.color('coin', 24) : Icons.svg('cap', 18);   // 학점 표시: 이모지 대신 그린 학사모
+  coinIcon();   // 학점 표시: 이모지 대신 그린 학사모
   refresh();
 
   window.GameUI = {

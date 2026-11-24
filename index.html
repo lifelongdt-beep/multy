@@ -109,6 +109,9 @@
   .logo .lgk{font-family:'Black Han Sans','Apple SD Gothic Neo',sans-serif;font-size:17px;font-weight:400;letter-spacing:6px;color:#ffe58a;margin-top:6px;text-shadow:2px 0 0 #2a1608,-2px 0 0 #2a1608,0 2px 0 #2a1608,0 -2px 0 #2a1608,0 4px 0 #2a1608}
   /* 학점 */
   .pill{display:flex;align-items:center;gap:6px;background:linear-gradient(rgba(44,50,92,.95),rgba(22,26,52,.95));border:2px solid #ffc83d;border-radius:22px;padding:3px 16px 3px 6px;box-shadow:0 3px 0 #0c0f22,inset 0 1px 0 rgba(255,255,255,.2);color:#ffe58a}
+  .capi{display:inline-flex}
+  .capi.grow{animation:capiGrow .7s ease-out}
+  @keyframes capiGrow{0%{transform:scale(1)}35%{transform:scale(1.6) rotate(-8deg)}70%{transform:scale(.9)}100%{transform:scale(1)}}
   .pill b{font-size:18px;color:#fff;text-shadow:0 1.5px 0 rgba(0,0,0,.4)}
   #start{gap:9px}
   /* 게임 글꼴: 시작 버튼 · 메뉴 타일 · 패널 제목 */

@@ -62,6 +62,19 @@
     home: `<path d="M5.5 10.5v9.5h13v-9.5" fill="#ffe0a8" ${O}/><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="#ff7a45" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11.5 12 4l9 7.5" fill="none" ${O}/><path d="M10 20v-5h4v5" fill="#8a5a3c" ${O}/>`,
     coin: `<circle cx="12" cy="12" r="8.6" fill="#ffc83d" ${O}/><circle cx="12" cy="12" r="6.2" fill="none" stroke="#e09a1f" stroke-width="1.4"/><path d="M12 8.2 7 10.6l5 2.4 5-2.4zM9 11.8v2c.8.8 1.8 1.2 3 1.2s2.2-.4 3-1.2v-2" fill="#5a3d1c"/>` + HI('M7.4 8.6a5.8 5.8 0 0 1 3-2.2'),
   };
+  // 학점이 쌓일수록 자라는 아이콘: 동전 더미 · 금화 주머니 · 금괴 · 보물상자
+  const COIN1 = (x, y, r) => `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.42}" fill="#ffc83d" ${O}/><ellipse cx="${x}" cy="${y - 0.4}" rx="${r * 0.62}" ry="${r * 0.24}" fill="none" stroke="#e09a1f" stroke-width="1"/>`;
+  C.coins = `<path d="M4 18.2v-2.6M13 18.2v-2.6" stroke="#1c1930" stroke-width="1.5"/><rect x="4" y="15.6" width="9" height="2.6" fill="#f0a92b"/>` + COIN1(8.5, 18.3, 4.5) + COIN1(8.5, 15.6, 4.5) + COIN1(8.5, 12.9, 4.5)
+    + COIN1(15.6, 18.3, 4.5) + COIN1(15.6, 15.6, 4.5) + `<circle cx="16.5" cy="8" r="4.4" fill="#ffc83d" ${O}/><path d="M16.5 5.6v4.8M15 7h2.6a1 1 0 0 1 0 2H15" fill="none" stroke="#b5741a" stroke-width="1.1" stroke-linecap="round"/>`;
+  C.pouch = `<path d="M8.5 7.5c-3.6 2-5 5.6-4.4 9 .5 2.6 3.2 4 7.9 4s7.4-1.4 7.9-4c.6-3.4-.8-7-4.4-9z" fill="#c98a4b" ${O}/><path d="M8.2 7.6 7 4.6c1.6.6 3.3.4 5-.4 1.7.8 3.4 1 5 .4l-1.2 3z" fill="#e2a868" ${O}/>`
+    + `<path d="M8 7.8h8" stroke="#7a4a22" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="14.5" r="3.6" fill="#ffc83d" ${O}/><path d="M12 12.4v4.2M10.7 13.6h2.3a.9.9 0 0 1 0 1.8h-2.3" fill="none" stroke="#b5741a" stroke-width="1" stroke-linecap="round"/>` + HI('M7 12.5a5 5 0 0 1 1.6-2.6');
+  const BAR = (x, y) => `<path d="M${x} ${y}h7.6l1.6 3.6H${x - 1.6}z" fill="#ffcf4a" ${O}/><path d="M${x + 0.6} ${y + 0.9}h6.2" stroke="rgba(255,255,255,.75)" stroke-width="1" stroke-linecap="round"/>`;
+  C.gold = BAR(4.4, 15.4) + BAR(13.6, 15.4) + BAR(9, 11.6) + BAR(9, 7.8).replace('#ffcf4a', '#ffe07a')
+    + `<path d="M20.2 3.4l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6z" fill="#fff6c8"/>`;
+  C.chest = `<path d="M3.5 11h17v9a.8.8 0 0 1-.8.8H4.3a.8.8 0 0 1-.8-.8z" fill="#b0652e" ${O}/><path d="M3.5 11c0-3.6 2.6-6 8.5-6s8.5 2.4 8.5 6z" fill="#c8793a" ${O}/>`
+    + `<path d="M5.2 7.3c1.6-1 3.7-1.4 6.8-1.4s5.2.4 6.8 1.4" fill="none" stroke="#ffc83d" stroke-width="1.4"/><path d="M3.5 11h17M8 5.6V20.8M16 5.6V20.8" stroke="#ffc83d" stroke-width="1.6" fill="none"/>`
+    + `<path d="M3.5 11h17" stroke="#1c1930" stroke-width="1"/><rect x="10.3" y="10" width="3.4" height="4.2" rx=".8" fill="#ffe07a" ${O}/><circle cx="12" cy="11.8" r=".7" fill="#1c1930"/>`
+    + `<path d="M5 4.2l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5zM19.4 2.6l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z" fill="#fff6c8"/>`;
   /** 컬러 아이콘 (메뉴·상점 버튼용). 없는 이름이면 선 아이콘 */
   function color(name, size) {
     const s = size || 22; if (!C[name]) return svg(name, s);
