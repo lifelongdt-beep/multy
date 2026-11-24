@@ -223,6 +223,9 @@
   /** 다음 1레벨 가격 (같은 종류는 어느 월드 장비든 같은 값, 많이 살수록 비싸짐) */
   function gearCost(save, id) { const k = GEAR_BY_ID[id].kind; return Worlds.gearCost(k, gearTotals(save)[k]); }
   /** 큰 숫자를 짧게: 12,345 → 1.2만, 3억 … (끝없는 회차에서 학점이 커지므로) */
+  /** 학점이 쌓일수록 자라는 아이콘: 동전(1만 미만) → 동전 더미(1만) → 금화 주머니(10만) → 금괴(100만) → 보물상자(1억) */
+  const COIN_TIERS = [{ min: 0, icon: 'coin', name: '동전' }, { min: 1e4, icon: 'coins', name: '동전 더미' }, { min: 1e5, icon: 'pouch', name: '금화 주머니' }, { min: 1e6, icon: 'gold', name: '금괴' }, { min: 1e8, icon: 'chest', name: '보물상자' }];
+  function coinTier(n) { let t = 0; for (let i = 0; i < COIN_TIERS.length; i++) if ((n || 0) >= COIN_TIERS[i].min) t = i; return t; }
   function fmtNum(n) {
     n = Math.floor(n || 0);
     if (n < 10000) return String(n);
@@ -747,7 +750,7 @@
 
   const api = {
     SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld, echoesForWorld,
-    GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
+    COIN_TIERS, coinTier, GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
     shopCost, shopMax, shopEffect, shopLevel, dailyMissions, refillMissions, missionText, defaultSave, sanitize, load, persist,
     RARITY, CHAR_MAX_LV, KID_COLORS, kidColor, KID_SKINS, kidSkin, KID_HAIRS, kidHair, ECHO_FORMS, echoFormCost, echoFormPower, echoFormIndex, nextEchoForm, buyEchoForm, pickEchoForm, echoForm, charMods, charLevel, charLevelCost, charReqMet, levelUpCharacter,

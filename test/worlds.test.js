@@ -740,3 +740,21 @@ test('지나가는 위험물은 그 장소에 맞게: 열차는 지하철에서�
   }
   assert.strictEqual(W.hazardKind(W.WORLDS.mountain), '❄');
 });
+
+test('회차마다 배경 톤이 바뀌고, 10가지를 다 쓰면 처음 톤으로 돌아간다', () => {
+  const Wd = require('../src/worlds.js');
+  assert.strictEqual(Wd.BG_TONES.length, 10);
+  assert.strictEqual(new Set(Wd.BG_TONES.map((t) => t.wash)).size, 10, '10가지 모두 다른 톤');
+  for (let c = 0; c < 10; c++) assert.strictEqual(Wd.bgToneOf(c), c);
+  assert.strictEqual(Wd.bgToneOf(10), 0, '11회차는 다시 처음');
+  assert.strictEqual(Wd.bgToneOf(23), 3);
+  assert.strictEqual(Wd.bgToneOf(-1), 0);
+});
+
+test('회차 배경: 1회차는 원래 색감, 나머지 9가지는 서로 다른 색감(tint)', () => {
+  const Wd = require('../src/worlds.js');
+  assert.strictEqual(Wd.BG_TONES[0].tint, null);
+  const t = Wd.BG_TONES.slice(1).map((x) => x.tint);
+  assert.ok(t.every((c) => /^#[0-9a-f]{6}$/i.test(c)));
+  assert.strictEqual(new Set(t).size, 9);
+});

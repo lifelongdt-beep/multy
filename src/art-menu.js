@@ -43,6 +43,7 @@
   /**
    * 메뉴 배경 그리기. o: { emo, cycle, win(결과 화면에서 이겼으면 true/졌으면 false/메뉴는 undefined) }
    */
+  const runner = { x: null, dir: 1, moving: false, last: 0, eaten: new Set(), pops: [] };   // 메뉴 배경의 주인공: 구슬을 먹으러 좌우로 걷는다
   Art.drawMenuScene = function (ctx, W, H, now, o) {
     o = o || {};
     const key = W + 'x' + H;
@@ -64,28 +65,53 @@
       Art.drawWorld(ctx, WORLDS[i], x, hy - 14 - Math.sin(t * 1.2 + i) * 1.5, 30 + 6 * near);
     }
     ctx.globalAlpha = 1;
-    // 길 위 반짝이는 구슬 (아래로 다가옴)
+    // 길 위 반짝이는 구슬 (아래로 다가옴). 주인공이 좌우로 걸어가 먹는다
+    const fy = H * 0.962, kEat = Math.pow(Math.max(0, (fy - hy - 8) / (H - hy)), 1 / 1.6);
+    const dt = runner.last ? Math.min(0.1, Math.max(0, t - runner.last)) : 0; runner.last = t;
+    if (runner.x === null) runner.x = W / 2;
+    let target = null, best = -1;
     for (let i = 0; i < 9; i++) {
-      const k = ((t * 0.08 + i / 9) % 1), y = hy + 8 + Math.pow(k, 1.6) * (H - hy), x = W / 2 + Math.sin(i * 2.1) * (10 + 60 * k);
-      const s = 1.5 + 4 * k; ctx.globalAlpha = Math.min(1, k * 3) * 0.9;
-      ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.7, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.7, y); ctx.closePath(); ctx.fill();
+      const cyc = t * 0.08 + i / 9, k = cyc % 1, id = i + 9 * Math.floor(cyc), y = hy + 8 + Math.pow(k, 1.6) * (H - hy), x = W / 2 + Math.sin(i * 2.1) * (10 + 60 * k);
+      if (runner.eaten.has(id)) continue;
+      if (k < kEat && k > best && k > kEat - 0.45) { best = k; target = W / 2 + Math.sin(i * 2.1) * (10 + 60 * kEat); }   // 곧 발 앞에 올 구슬
+      if (Math.abs(k - kEat) < 0.025 && Math.abs(x - runner.x) < 18) {   // 먹었다! 반짝 + 사라짐
+        runner.eaten.add(id); runner.pops.push({ x, y, t: 0 }); if (runner.eaten.size > 60) runner.eaten = new Set([...runner.eaten].slice(-30)); continue;
+      }
+      const sz = 1.5 + 4 * k; ctx.globalAlpha = Math.min(1, k * 3) * 0.9;
+      ctx.fillStyle = '#7dffb2'; ctx.beginPath(); ctx.moveTo(x, y - sz); ctx.lineTo(x + sz * 0.7, y); ctx.lineTo(x, y + sz); ctx.lineTo(x - sz * 0.7, y); ctx.closePath(); ctx.fill();
+    }
+    // 주인공 걸음: 다음 구슬 쪽으로 좌우로 걸어감 (게임 속 걷기 모습 그대로)
+    const goal = target === null ? W / 2 : target, diff = goal - runner.x, spd = 70 * dt;
+    runner.moving = Math.abs(diff) > 1.5; if (runner.moving) { runner.x += Math.sign(diff) * Math.min(Math.abs(diff), spd); runner.dir = diff < 0 ? -1 : 1; }
+    for (let i = runner.pops.length - 1; i >= 0; i--) {   // 먹은 구슬 반짝임
+      const q = runner.pops[i]; q.t += dt; if (q.t > 0.45) { runner.pops.splice(i, 1); continue; }
+      ctx.globalAlpha = 1 - q.t / 0.45; ctx.strokeStyle = '#7dffb2'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(q.x, q.y, 4 + q.t * 40, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    // 과거의 나(에코)들: 주인공 뒤에서 둥실둥실 (반투명 회색)
-    const fy = H * 0.905, form = Art.echoForm || 'star';
-    for (let i = 0; i < 4; i++) {
-      const side = i % 2 ? 1 : -1, dist = 1 + Math.floor(i / 2);
-      const x = W / 2 + side * (26 + dist * 22), y = fy - 24 - dist * 26 + Math.sin(t * 1.6 + i) * 3;
-      ctx.globalAlpha = 0.34 - dist * 0.06;
-      Art.drawEchoForm(ctx, form, x, y, 1.35 - dist * 0.18, t + i);
+    // 과거의 나(에코)들: 저마다 다르게 움직인다 (반투명 회색). 각자 늦게 따라오는 정도·떠다니는 모양·빠르기가 다름
+    const form = Art.echoForm || 'star', kx = runner.x;
+    const ECHO_MOVES = [
+      { lag: 0.9, ox: -48, oy: -34, s: 1.2,  move: (t) => [Math.sin(t * 1.3) * 10, Math.sin(t * 2.6) * 5] },                 // 8자 그리며 천천히
+      { lag: 2.4, ox: 50,  oy: -40, s: 1.15, move: (t) => [Math.cos(t * 2.1) * 14, Math.sin(t * 2.1) * 9] },                 // 동그랗게 빙빙
+      { lag: 0.5, ox: -84, oy: -64, s: 0.95, move: (t) => [0, -Math.abs(Math.sin(t * 3.2)) * 14] },                         // 통통 튀기
+      { lag: 3.5, ox: 86,  oy: -70, s: 0.9,  move: (t) => [Math.sin(t * 0.8) * 22, Math.sin(t * 1.7) * 3] },                // 좌우로 느긋하게
+      { lag: 1.6, ox: 0,   oy: -98, s: 0.8,  move: (t) => [Math.sin(t * 3.4) * 6, Math.sin(t * 1.1) * 10] },                // 위에서 살랑살랑
+    ];
+    if (!runner.ex) runner.ex = ECHO_MOVES.map(() => kx);
+    for (let i = 0; i < ECHO_MOVES.length; i++) {
+      const m = ECHO_MOVES[i], [mx, my] = m.move(t + i * 1.7);
+      runner.ex[i] += (kx - runner.ex[i]) * Math.min(1, dt * m.lag);   // 주인공을 저마다 다른 빠르기로 따라옴
+      const x = runner.ex[i] + m.ox + mx, y = fy + m.oy + my;
+      ctx.globalAlpha = 0.32 - (m.oy < -60 ? 0.07 : 0);
+      Art.drawEchoForm(ctx, form, x, y, m.s, t * (0.8 + i * 0.13) + i);
     }
     ctx.globalAlpha = 1;
-    // 주인공 (지금 모습·회차 복장)
-    const bob = Math.sin(t * 2) * 1.2, hop = o.win ? Math.abs(Math.sin(t * 5)) * 6 : 0;
-    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(W / 2, fy + 18, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
-    const gl = ctx.createRadialGradient(W / 2, fy, 4, W / 2, fy, 48); gl.addColorStop(0, 'rgba(255,230,170,.35)'); gl.addColorStop(1, 'rgba(255,230,170,0)');
-    ctx.fillStyle = gl; ctx.fillRect(W / 2 - 50, fy - 50, 100, 100);
-    if (Art.drawKidPreview) Art.drawKidPreview(ctx, W / 2, fy - 4 + bob - hop, o.emo || '🧑‍🎓', o.cycle || 0, 1.5);
+    // 주인공 (지금 모습·회차 복장): 춤 대신 게임 속처럼 걸어 다니며 구슬을 먹는다 (이기면 통통 뜀)
+    const hop = o.win ? Math.abs(Math.sin(t * 5)) * 6 : 0;
+    const gl = ctx.createRadialGradient(kx, fy, 4, kx, fy, 48); gl.addColorStop(0, 'rgba(255,230,170,.35)'); gl.addColorStop(1, 'rgba(255,230,170,0)');
+    ctx.fillStyle = gl; ctx.fillRect(kx - 50, fy - 50, 100, 100);
+    if (Art.drawPlayer && Art.setOutfit) { Art.setOutfit(o.cycle || 0); Art.drawPlayer(ctx, { x: kx, y: fy - 4 - hop }, o.emo || '🧑‍🎓', runner.moving, runner.dir, now, false, o.win ? { pose: 'cheer' } : null); }
+    else if (Art.drawKidPreview) Art.drawKidPreview(ctx, kx, fy - 4 - hop, o.emo || '🧑‍🎓', o.cycle || 0, 1.5);
     // 떠다니는 작은 빛
     for (let i = 0; i < 14; i++) { const k = (t * 0.05 + i / 14) % 1, x = (i * 71 + Math.sin(t * 0.7 + i) * 18) % W, y = H - k * H * 0.9; ctx.globalAlpha = Math.sin(k * Math.PI) * 0.5; ctx.fillStyle = i % 3 ? '#ffe8a8' : '#bfe6ff'; ctx.beginPath(); ctx.arc(x, y, 1.2 + (i % 3) * 0.5, 0, Math.PI * 2); ctx.fill(); }
     ctx.globalAlpha = 1;

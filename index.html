@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Echo Rush</title>
+<!-- 게임 제목 글씨체: 통통 튀는 두꺼운 게임 글꼴 (Luckiest Guy · Black Han Sans, OFL). 못 불러오면 시스템 굵은 글꼴 -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Luckiest+Guy&display=swap" rel="stylesheet">
 <style>
   html,body{margin:0;height:100%;background:#0d0f1a;color:#fff;font-family:system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
   #wrap{position:relative;height:100%;display:flex;align-items:center;justify-content:center}
@@ -51,7 +54,7 @@
   #stats{font-size:15px;line-height:1.7}
   .big{font-size:40px;font-weight:800;color:#8fe3ff}
   .row{display:flex;gap:8px}
-  #coinbar{font-size:16px;background:#222845;border:2px solid #3a4272;border-radius:20px;padding:4px 14px}
+  #coinbar{font-size:15px}
   .panel{justify-content:flex-start;overflow-y:auto;touch-action:pan-y;gap:8px;padding-top:16px;padding-bottom:16px}
   #pbody{width:100%;display:flex;flex-direction:column;gap:8px}
   .item{background:#222845;border:2px solid #3a4272;border-radius:12px;padding:10px;text-align:left;display:flex;align-items:center;gap:10px;font-size:14px}
@@ -68,6 +71,67 @@
   .book .cell.head{background:none}
   .sm{font-size:12px;opacity:.85;display:flex;align-items:center;gap:3px;margin-top:2px}
   .deedline{display:flex;align-items:center;justify-content:center;gap:2px}
+  /* ---------- 게임 버튼: 입체(아래 두께) · 광택 · 누르면 쑥 들어감 ---------- */
+  button{--c1:#86a3ff;--c2:#5576ea;--edge:#2e43a3;position:relative;background:linear-gradient(var(--c1),var(--c2));border:2px solid rgba(10,12,30,.45);
+    box-shadow:0 4px 0 var(--edge),0 7px 12px rgba(0,0,0,.35),inset 0 1.5px 0 rgba(255,255,255,.38);text-shadow:0 1.5px 0 rgba(0,0,0,.35);transition:transform .06s,box-shadow .06s}
+  button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--edge),0 3px 6px rgba(0,0,0,.3),inset 0 1.5px 0 rgba(255,255,255,.38)}
+  button:disabled{filter:grayscale(.65) brightness(.8);cursor:default}
+  button.sub{--c1:#3d4572;--c2:#272c4f;--edge:#141831}
+  .tabs button{--c1:#3d4572;--c2:#272c4f;--edge:#141831;background:linear-gradient(var(--c1),var(--c2));border:2px solid rgba(10,12,30,.45)}
+  .tabs button.on{--c1:#ffd76a;--c2:#f0a92b;--edge:#a8650f;color:#3a2108;text-shadow:0 1px 0 rgba(255,255,255,.5);border-color:rgba(10,12,30,.45)}
+  .gloss::before{content:'';position:absolute;left:7%;right:7%;top:3px;height:40%;border-radius:12px 12px 50% 50%/12px 12px 30% 30%;background:linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,0));pointer-events:none}
+  .cicn{filter:drop-shadow(0 2px 0 rgba(0,0,0,.28))}
+  .g-gold{--c1:#ffd96e;--c2:#f2a62a;--edge:#a8650f;color:#3a2108;text-shadow:0 1px 0 rgba(255,255,255,.55)}
+  .g-blue{--c1:#86b6ff;--c2:#4b78e8;--edge:#2a4aa8}
+  .g-pink{--c1:#ffa2c8;--c2:#ec5f97;--edge:#a83565}
+  .g-purple{--c1:#bba2ff;--c2:#7d5ae6;--edge:#4c32a0}
+  .g-slate{--c1:#97a2c0;--c2:#5d6888;--edge:#353d58}
+  .g-teal{--c1:#76e6cf;--c2:#2bab93;--edge:#16705f}
+  .g-start{--c1:#8cf5a8;--c2:#26c063;--edge:#147a3a;font-size:26px;font-weight:900;letter-spacing:4px;min-width:250px;padding:12px 22px;border-radius:22px;display:flex;align-items:center;justify-content:center;gap:10px;
+    animation:goGlow 1.6s ease-in-out infinite}
+  @keyframes goGlow{0%,100%{box-shadow:0 5px 0 var(--edge),0 8px 14px rgba(0,0,0,.35),0 0 0 rgba(140,245,168,0),inset 0 1.5px 0 rgba(255,255,255,.45)}50%{box-shadow:0 5px 0 var(--edge),0 8px 14px rgba(0,0,0,.35),0 0 22px rgba(140,245,168,.65),inset 0 1.5px 0 rgba(255,255,255,.45)}}
+  .g-start:active{animation:none}
+  .g-glass{--c1:rgba(44,50,92,.94);--c2:rgba(24,28,56,.94);--edge:#0c0f22;border:2px solid rgba(255,211,77,.6);min-width:250px;font-size:15px;padding:9px 14px;border-radius:14px}
+  .tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;border-radius:18px;padding:8px 4px 6px;font-size:16px;font-weight:800;line-height:1.1}
+  .tile .icn+span{margin-left:0}
+  .tiles2{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:290px}
+  .tiles2 .tile{height:68px}
+  .tiles4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;width:290px}
+  .tiles4 .tile{height:58px;font-size:11.5px;border-radius:14px;padding:5px 2px 4px;letter-spacing:-.3px}
+  /* 로고 */
+  .logo{display:flex;flex-direction:column;align-items:center;line-height:.86;margin:-8px 0 0;transform-origin:50% 55%;animation:logoBeat 1.3s ease-out infinite}
+  /* 제자리에서 심장 뛰듯 '두둥 두둥': 짧게 두 번 커졌다가 쉼 */
+  @keyframes logoBeat{0%{transform:scale(1)}12%{transform:scale(1.09)}24%{transform:scale(.99)}36%{transform:scale(1.06)}52%,100%{transform:scale(1)}}
+  .logo .lg1,.logo .lg2{font-family:'Luckiest Guy','Arial Black','Apple SD Gothic Neo',sans-serif;font-weight:400;letter-spacing:4px;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:3px #2a1608;paint-order:stroke fill;
+    filter:drop-shadow(0 5px 0 #2a1608) drop-shadow(0 9px 12px rgba(0,0,0,.5))}
+  .logo .lg1{font-size:64px;background-image:linear-gradient(#fffbe0,#ffd34d 45%,#ff8a2c)}
+  .logo .lg2{font-size:78px;background-image:linear-gradient(#f0fbff,#8fd8ff 45%,#4f6cff);margin-top:-6px}
+  .logo .lgk{font-family:'Black Han Sans','Apple SD Gothic Neo',sans-serif;font-size:17px;font-weight:400;letter-spacing:6px;color:#ffe58a;margin-top:6px;text-shadow:2px 0 0 #2a1608,-2px 0 0 #2a1608,0 2px 0 #2a1608,0 -2px 0 #2a1608,0 4px 0 #2a1608}
+  /* 학점 */
+  .pill{display:flex;align-items:center;gap:6px;background:linear-gradient(rgba(44,50,92,.95),rgba(22,26,52,.95));border:2px solid #ffc83d;border-radius:22px;padding:3px 16px 3px 6px;box-shadow:0 3px 0 #0c0f22,inset 0 1px 0 rgba(255,255,255,.2);color:#ffe58a}
+  .capi{display:inline-flex}
+  .capi.grow{animation:capiGrow .7s ease-out}
+  @keyframes capiGrow{0%{transform:scale(1)}35%{transform:scale(1.6) rotate(-8deg)}70%{transform:scale(.9)}100%{transform:scale(1)}}
+  .pill b{font-size:18px;color:#fff;text-shadow:0 1.5px 0 rgba(0,0,0,.4)}
+  #start{gap:7px;justify-content:flex-start;padding-top:22px}   /* 메뉴를 위로 모아, 아래 길 위 주인공 얼굴이 버튼에 가리지 않게 */
+  /* 게임 글꼴: 시작 버튼 · 메뉴 타일 · 패널 제목 */
+
+  /* 메뉴 버튼 글씨: 너무 두껍지 않게 기본 글꼴의 굵은 글씨 */
+  .g-start,.tile{font-family:system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700}
+  .g-start{font-size:26px;letter-spacing:6px}
+  .tiles2 .tile{font-size:17px}
+  .tiles4 .tile{font-family:system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:-.2px;text-shadow:0 1px 1px rgba(0,0,0,.45)}   /* 작은 타일은 또렷한 기본 글꼴 (굵은 게임 글꼴은 작으면 뭉개짐) */
+  /* 패널 위쪽 돌아가기: 스크롤해도 왼쪽 위에 붙어 있음 */
+  #pbackTop{position:sticky;top:0;align-self:flex-start;z-index:5;font-size:13px;padding:7px 12px;margin:-6px 0 -38px;flex-shrink:0}
+  .tabs button.on{background:linear-gradient(var(--c1),var(--c2))}
+  /* 패널(상점·내 캐릭터·선행·과제 등) */
+  .panel h2,#pause h2,#end h2{font-family:system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:23px;font-weight:800;letter-spacing:.5px;color:#ffe58a;text-shadow:0 2px 0 #2a1608,0 0 1px #2a1608,0 4px 8px rgba(0,0,0,.45)}
+  #coinline{display:flex;align-items:center;gap:6px;background:linear-gradient(rgba(44,50,92,.95),rgba(22,26,52,.95));border:2px solid #ffc83d;border-radius:22px;padding:2px 14px 2px 5px;box-shadow:0 3px 0 #0c0f22;color:#ffe58a}
+  #coinline b{color:#fff;font-size:17px}
+  .item{background:linear-gradient(rgba(48,55,100,.96),rgba(30,35,68,.96));border:2px solid #4a5390;box-shadow:0 3px 0 #11142a,inset 0 1px 0 rgba(255,255,255,.12)}
+  .item .icon{flex:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:26px;background:radial-gradient(circle at 50% 35%,#5a6ab8,#2a3166);border:2px solid rgba(10,12,30,.5);box-shadow:inset 0 2px 0 rgba(255,255,255,.18)}
+  .item button:not(:disabled){--c1:#ffd96e;--c2:#f2a62a;--edge:#a8650f;color:#3a2108;text-shadow:0 1px 0 rgba(255,255,255,.55)}
+  .item.done .icon{background:radial-gradient(circle at 50% 35%,#4fd18b,#1f7a4a)}
   img.pic{vertical-align:middle}
   .item .lk{color:#8a92b8;display:inline-flex}
   .cyc{display:flex;align-items:center;gap:6px;background:#222845;border:2px solid #ffd34d;border-radius:12px;padding:8px;width:100%;box-sizing:border-box}
@@ -114,6 +178,8 @@
   #cards .ctime{height:3px;background:#0006;border-radius:2px;overflow:hidden}
   #cards .ctime>i{display:block;height:100%;background:#ffd34d}
   #pauseBtn{position:absolute;right:44px;top:5.4%;z-index:5;background:#0004;font-size:13px;padding:3px 7px;min-width:0;border-radius:8px}
+  .bar{background:#0f1228;box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
+  .bar i{background:linear-gradient(90deg,#7dffb2,#3fd37a)}
 </style>
 </head>
 <body>
@@ -141,22 +207,22 @@
   </div>
 
   <div id="start" class="overlay">
-    <h1>✨ Echo Rush</h1>
-    <div style="display:flex;align-items:center;gap:6px"><canvas id="outfitPv" width="112" height="140" style="width:56px;height:70px;background:transparent;border-radius:0"></canvas><span id="outfitName" style="font-size:13px;color:#ffe58a"></span></div>
+    <div class="logo" aria-label="Echo Rush 에코 러시"><span class="lg1">ECHO</span><span class="lg2">RUSH</span><span class="lgk">✨ 에코 러시 ✨</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><canvas id="outfitPv" width="168" height="176" style="width:84px;height:88px;background:transparent;border-radius:0;margin:-8px 0 -10px"></canvas><span id="outfitName" style="font-size:13px;color:#ffe58a"></span></div>
     <div id="titleLine" style="font-size:12px;color:#ffb3d4;margin-top:-6px"></div>
-    <div id="coinbar"><span class="capi"></span> <b id="coins">0</b> 학점</div>
-    <button id="bWorld" class="sub" style="min-width:200px;font-size:15px;padding:10px 14px">🗺️ 월드</button>
-    <button id="go">시작</button>
+    <div id="coinbar" class="pill"><span class="capi"></span> <b id="coins">0</b> 학점</div>
+    <button id="bWorld" class="gbtn g-glass">🗺️ 월드</button>
+    <button id="go" class="gbtn g-start gloss" data-icon="play" data-icon-color data-icon-size="26">시작</button>
     <div id="echoLine" style="font-size:13px;margin-top:-6px"></div>
-    <div class="row"><button id="bShop" class="sub" style="font-size:15px;padding:10px 18px" data-icon="shop">상점</button><button id="bLook" class="sub" style="font-size:15px;padding:10px 18px" data-icon="shirt">내 캐릭터</button></div>
+    <div class="tiles2"><button id="bShop" class="tile g-gold gloss" data-icon="shop" data-icon-color data-icon-size="34">상점</button><button id="bLook" class="tile g-blue gloss" data-icon="shirt" data-icon-color data-icon-size="34">내 캐릭터</button></div>
     <div id="more" style="display:flex;flex-direction:column;gap:8px;align-items:center">
-      <div class="row"><button id="bDeed" class="sub" data-icon="heart">선행</button><button id="bQuest" class="sub" data-icon="trophy">과제·미션</button><button id="bBackup" class="sub" data-icon="save">백업</button></div>
-      <div class="row"><button id="bTutorial" class="sub" data-icon="book">튜토리얼</button></div>
+      <div class="tiles4"><button id="bDeed" class="tile sm g-pink gloss" data-icon="heart" data-icon-color data-icon-size="26">선행</button><button id="bQuest" class="tile sm g-purple gloss" data-icon="trophy" data-icon-color data-icon-size="26">과제·미션</button><button id="bBackup" class="tile sm g-slate gloss" data-icon="save" data-icon-color data-icon-size="26">백업</button><button id="bTutorial" class="tile sm g-teal gloss" data-icon="book" data-icon-color data-icon-size="26">튜토리얼</button></div>
       <div id="dangerHold" hidden><button id="reset" class="sub danger">에코 기록 초기화</button></div>
     </div>
   </div>
 
   <div id="panel" class="overlay panel hidden">
+    <button id="pbackTop" class="sub" aria-label="돌아가기">← 돌아가기</button>
     <h2 id="ptitle"></h2>
     <div id="coinline"><span class="capi"></span> <b id="pcoins">0</b> 학점</div>
     <div id="pbody"></div>

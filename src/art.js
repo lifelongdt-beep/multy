@@ -908,15 +908,30 @@
     return { L: toScreen(P.L), R: toScreen(P.R), feetY: y + K_KID * (2 + 17 * (1 - s) + s * 21.5) };
   }
   /** 배경을 한 걸음 뒤로: 중간 톤을 얇게 덮어 대비·채도를 낮춘다 (밝은 곳은 살짝 가라앉고 진한 선은 옅어짐) → 주인공·적·선행 거리가 앞에 또렷 */
-  function recede(g, W, H) { g.fillStyle = 'rgba(74,66,88,.28)'; g.fillRect(0, 0, W, H); }
+  function recede(g, W, H, wash) { g.fillStyle = wash || 'rgba(74,66,88,.28)'; g.fillRect(0, 0, W, H); }
   function vignette(g, W, H) {
     const vg = g.createRadialGradient(W / 2, H * 0.48, H * 0.25, W / 2, H * 0.5, H * 0.75);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(5,6,16,.55)');
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
   }
-  function background(W, H, worldId) {
+  function background(W, H, worldId, cycle) {
     if (worldId && BG[worldId]) {   // art-bg.js 의 사실적인 배경 (학교 포함). 없으면 아래 기본 학교 배경
-      return sprite(`bg:${worldId}:${W}x${H}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); recede(g, W, H); vignette(g, W, H); });
+      const Wd = root.EchoWorlds, ti = Wd && Wd.bgToneOf ? Wd.bgToneOf(cycle) : 0, wash = Wd && Wd.BG_TONES ? Wd.BG_TONES[ti].wash : null;   // 회차마다 톤이 살짝 바뀜 (10가지, 돌아가며)
+      return sprite(`bg:${worldId}:${W}x${H}:t${ti}`, W, H, (g) => {
+        g.translate(-W / 2, -H / 2);
+        const KIT = (root.Art && root.Art._kit) || {};
+        if (KIT.setBgVariant) KIT.setBgVariant(ti);   // 회차마다 소품 배치·종류가 달라짐
+        if (ti % 2) { g.save(); g.translate(W, 0); g.scale(-1, 1); BG[worldId](g, W, H); g.restore(); }   // 짝수 회차는 좌우를 뒤집어 소품 자리가 바뀜
+        else BG[worldId](g, W, H);
+        if (KIT.setBgVariant) KIT.setBgVariant(0);
+        const tint = Wd && Wd.BG_TONES ? Wd.BG_TONES[ti].tint : null;
+        if (tint) {   // 배경 그림 자체의 색감 바꾸기: 밝기는 그대로 두고 색만 회차의 색 쪽으로 (바닥·벽·소품 색이 달라짐)
+          g.save(); g.globalCompositeOperation = 'color'; g.globalAlpha = 0.42; g.fillStyle = tint; g.fillRect(0, 0, W, H); g.restore();
+        }
+        if (KIT.drawPattern) KIT.drawPattern(g, W, H, ti);   // 회차 바닥 무늬 (아주 옅게)
+        if (KIT.drawDecor) KIT.drawDecor(g, W, H, ti);   // 회차 장식 (화분·별 줄·등·풍선·낙엽·벚꽃 등)
+        recede(g, W, H, wash); vignette(g, W, H);
+      });
     }
     return sprite(`bg:school:${W}x${H}`, W, H, (g) => {
       g.translate(-W / 2, -H / 2);
@@ -1028,7 +1043,7 @@
     hasEnemy(e) { return e.type === 'boss' ? !!BOSS[e.name] || !!BOSS[e.def && e.def.name] : !!ENEMY[e.type]; },
     enemyColor(type, name) { return type === 'boss' ? ((BOSS[name] || {}).color || '#ffffff') : ((ENEMY[type] || {}).color || '#ffffff'); },
 
-    drawBackground(ctx, W, H, worldId) { blit(ctx, background(W, H, worldId), W / 2, H / 2); },
+    drawBackground(ctx, W, H, worldId, cycle) { blit(ctx, background(W, H, worldId, cycle), W / 2, H / 2); },
 
     drawGem(ctx, g, now) {
       const bob = Math.sin(now / 220 + g.x * 0.1) * 1.2;
@@ -1150,6 +1165,40 @@
     setColor(hex) { kidColor = typeof hex === 'string' && /^#[0-9a-f]{6}$/i.test(hex) ? hex : null; return kidColor; },
     setOutfit(cycle) { const W = root.EchoWorlds; outfit = W && W.outfitOf ? W.outfitOf(cycle) : outfit; return outfit; },
     /** 메뉴 미리보기 등: 원하는 회차 복장으로 주인공을 그린다 */
+    /** 메뉴의 주인공이 춤을 춘다: 4초마다 춤이 바뀜 (박수 콩콩 · 두 팔 번쩍 · 옆걸음 · 플로스 · 별 점프 · 디스코 · 흔들흔들). t = 초 (빙글 도는 춤은 몸이 좁아 보여 뺐다) */
+    drawKidDance(ctx, x, y, emo, cycle, scale, t) {
+      const W = root.EchoWorlds, of = W.outfitOf(cycle), k = scale || 1.5;
+      const DANCES = 7, move = [0, 1, 2, 4, 5, 6, 7][Math.floor(t / 4) % DANCES], b = t * 2.2 * Math.PI;   // 박자 약 1.1Hz (두 박에 한 번 들썩)
+      const s = Math.sin(b), c = Math.cos(b), beat = Math.abs(s);
+      let L = [-7.4, 9], R = [7.4, 9], dx = 0, hop = 0, tilt = 0, sx = 1, sy = 1, flip = false, step = s > 0 ? 1 : -1;
+      if (move === 0) {          // 박수 콩콩: 앞에서 손뼉, 박자마다 콩
+        hop = beat * 4; const cl = Math.max(0, s); L = [-6 + cl * 5.5, 6]; R = [6 - cl * 5.5, 6];
+      } else if (move === 1) {   // 두 팔 번쩍 펌프: 손을 위로 쭉쭉
+        hop = beat * 2.5; L = [-7, -9 + beat * 4]; R = [7, -9 + beat * 4];
+      } else if (move === 2) {   // 옆걸음: 좌우로 스텝, 팔은 반대로 흔들
+        dx = s * 9; tilt = -s * 0.12; L = [-7.5 - s * 2, 7 - s * 3]; R = [7.5 - s * 2, 7 + s * 3];
+      } else if (move === 3) {   // 한 바퀴 빙글: 몸을 돌리며 콩 뛰기, 두 팔 펼침
+        const ph = (t % 4) / 4 * Math.PI * 2; sx = Math.cos(ph * 2); flip = sx < 0; sx = Math.max(0.4, Math.abs(sx)); hop = beat * 3; L = [-9, 2]; R = [9, 2];
+      } else if (move === 4) {   // 플로스: 엉덩이는 한쪽, 두 팔은 반대쪽으로 휙휙
+        dx = s * 3; tilt = s * 0.08; L = [-7 - s * 6, 10]; R = [7 - s * 6, 10];
+      } else if (move === 5) {   // 별 점프: 크게 뛰어 팔 벌리고, 착지하면 납작
+        const j = Math.max(0, s); hop = j * 9; sy = j > 0.05 ? 1 + j * 0.05 : 1 - Math.min(0.12, -s * 0.12); L = [-8 - j * 2, 3 - j * 10]; R = [8 + j * 2, 3 - j * 10];
+      } else if (move === 6) {   // 디스코: 한 손은 하늘 찌르고 한 손은 허리, 박자마다 반대로
+        const up = s > 0; L = up ? [-9, -9] : [-5, 8.5]; R = up ? [5, 8.5] : [9, -9]; tilt = up ? -0.1 : 0.1; hop = beat * 1.5;
+      } else {                   // 흔들흔들: 몸을 좌우로 까딱, 팔은 옆으로
+        tilt = s * 0.22; L = [-9.5, 4 + c * 2]; R = [9.5, 4 - c * 2]; hop = beat * 1.2;
+      }
+      const bodyY = y - hop, f = flip ? -1 : 1;
+      ctx.save(); ctx.translate(x + dx, bodyY + 13 * k); ctx.rotate(tilt); ctx.scale(sx, sy); ctx.translate(-(x + dx), -(bodyY + 13 * k));   // 발 기준으로 기울이고 눌림
+      blit(ctx, kidSprite(emo, step, of, true), x + dx, bodyY, k, k, flip);
+      const sleeve = outfitOpts(emo, of).body;
+      L = shortArm([-5.4, 2.6], L); R = shortArm([5.4, 2.6], R);
+      ctx.translate(x + dx, bodyY); ctx.scale(k * f, k); ctx.translate(0, -1 + KID_DROP * KID_S);
+      limb(ctx, -5.4, 2.6, L[0], L[1], sleeve, 2.8); limb(ctx, 5.4, 2.6, R[0], R[1], sleeve, 2.8);
+      palm(ctx, L[0], L[1], 1.8, kidSkin); palm(ctx, R[0], R[1], 1.8, kidSkin);
+      ctx.restore();
+      return { hop, dx };
+    },
     drawKidPreview(ctx, x, y, emo, cycle, scale) {
       const W = root.EchoWorlds, of = W.outfitOf(cycle);
       blit(ctx, kidSprite(emo, 0, of), x, y, scale || 2, scale || 2);

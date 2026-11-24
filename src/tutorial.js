@@ -85,12 +85,21 @@
 
   /** 시간에 맞춰 보여줄 안내 (일반 설명만). 화면에 무언가 나타나는 설명은 아래 EVENT_TIPS로, 실제로 나타날 때 띄운다. ' · ' 에서 줄이 나뉜다 */
   const TIPS = [
-    { sec: 1,   text: '👆 화면을 드래그해서 움직여요 · 공격은 자동! · 아래 빈 곳에서 드래그하면 손가락이 안 가려요' },
-    { sec: 6,   text: '❤️ 왼쪽 위 빨간 막대 = 내 에너지 · 방해 요소에 부딪히거나 탄에 맞으면 줄어요' },
-    { sec: 11,  text: '✨ 반투명한 회색 동료 = 에코(과거의 나, 내 편) · 나처럼 자동으로 싸워 줘요 · 🔴 빨간 원 = 방해 요소' },
-    { sec: 17,  text: '💎 방해 요소를 물리치면 초록 구슬이 나와요 · 모으면 위쪽 초록 막대가 차고 레벨업!' },
-    { sec: 116, text: '✨ 진짜 게임에선 한 판이 끝날 때마다 · 그 판의 내가 에코가 되어 1명씩 늘어요' },
+    { sec: 1,   target: 'player', text: '👆 화면을 드래그해서 움직여요 · 공격은 자동! · 아래 빈 곳에서 드래그하면 손가락이 안 가려요' },
+    { sec: 6,   target: 'hp', text: '❤️ 왼쪽 위 빨간 막대 = 내 에너지 · 방해 요소에 부딪히거나 탄에 맞으면 줄어요' },
+    { sec: 11,  target: 'echo', text: '✨ 반투명한 회색 동료 = 에코(과거의 나, 내 편) · 나처럼 자동으로 싸워 줘요 · 🔴 빨간 원 = 방해 요소' },
+    { sec: 17,  target: 'xp', text: '💎 방해 요소를 물리치면 초록 구슬이 나와요 · 모으면 위쪽 초록 막대가 차고 레벨업!' },
+    { sec: 116, target: 'echoCount', text: '✨ 진짜 게임에선 한 판이 끝날 때마다 · 그 판의 내가 에코가 되어 1명씩 늘어요' },
   ];
+  /** 상황 안내가 가리키는 곳 (화면에서 실제로 그 자리를 반짝이는 고리 + 화살표로 표시). 없으면 표시 안 함 */
+  const EVENT_TARGET = {
+    cards: 'cards', helped: 'cards', item: 'items', synergy: 'items',
+    drop: 'drop', shot: 'shot', helper: 'helper', shield: 'helper',
+    rescueStart: 'rescue', rescued: 'player', escortDone: 'player',
+    spotSeen: 'spot', spot: 'gauge', gaugeFull: 'gauge',
+    escortStart: 'escort', friendHurt: 'escort', boss: 'boss',
+  };
+  const targetOf = (key) => EVENT_TARGET[key] || (String(key).startsWith('up:') ? 'items' : null);
   /** 왕이 나오기 이만큼(초) 전에 왕 안내, 왕이 나오고 이만큼 뒤에 마무리 안내 */
   const BOSS_SOON = 10, END_AFTER = 18;
   const BOSS_TIP = '😱 곧 큰 도전(왕)! · 왕은 에코가 충분히 모여야 넘을 수 있어요 · 왕의 공격은 계속 움직이며 피해요';
@@ -138,7 +147,7 @@
     return { freeze, show: freeze + 1800 };
   }
 
-  const api = { makeTutorialEchoes, TIPS, EVENT_TIPS, BOSS_SOON, BOSS_TIP, END_AFTER, END_TIPS, EXTRA_SEC, tipTiming, TUTORIAL_ECHOES, TUTORIAL_WORLD };
+  const api = { makeTutorialEchoes, TIPS, EVENT_TIPS, EVENT_TARGET, targetOf, BOSS_SOON, BOSS_TIP, END_AFTER, END_TIPS, EXTRA_SEC, tipTiming, TUTORIAL_ECHOES, TUTORIAL_WORLD };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EchoTutorial = api;
 })(typeof window !== 'undefined' ? window : globalThis);

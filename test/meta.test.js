@@ -517,3 +517,11 @@ test('에코 모습: 뒤에 연 모습일수록 에코 공격력이 조금씩 �
   s.echo.pick = 'star';
   assert.strictEqual(M.bonusFor(s).echoPower, base, '첫 모습은 추가 힘 없음');
 });
+
+test('학점 아이콘은 학점이 쌓일수록 자란다: 동전 → 동전 더미(1만) → 금화 주머니(10만) → 금괴(100만) → 보물상자(1억)', () => {
+  const ic = (n) => M.COIN_TIERS[M.coinTier(n)].icon;
+  assert.strictEqual(ic(0), 'coin'); assert.strictEqual(ic(9999), 'coin');
+  assert.strictEqual(ic(10000), 'coins'); assert.strictEqual(ic(99999), 'coins');
+  assert.strictEqual(ic(100000), 'pouch'); assert.strictEqual(ic(1e6), 'gold'); assert.strictEqual(ic(99999999), 'gold');
+  assert.strictEqual(ic(1e8), 'chest'); assert.strictEqual(ic(1e15), 'chest');
+});
