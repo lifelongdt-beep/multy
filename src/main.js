@@ -103,7 +103,7 @@
   let warmFx = [];      // 선행 순간 퍼지는 따뜻한 빛 {x, y, r, t}
   const THANKS = ['고마워!', '덕분이야 💛', '정말 고마워요', '너 최고야!', '살았다~', '고마워, 친구야', '복 받을 거야', '힘이 났어!'];
   const VISIT = ['지난번엔 고마웠어!', '은혜 갚으러 왔어 💛', '이거 받아!', '또 만났네!'];
-  function thanks(x, y, list, delay) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: -(delay || 0), max: 80 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
+  function thanks(x, y, list, delay) { bubbles.push({ text: list[Math.floor(Math.random() * list.length)], x, y: y - 34, t: -(delay || 0), max: 100 }); for (let i = 0; i < 5; i++) bubbles.push({ heart: true, x: x + (Math.random() - 0.5) * 30, y: y - 10, t: -i * 6, max: 60 }); }
   let headFlash = [];   // 새로 얻은 아이템: 주인공 머리 위에서 잠깐 반짝 {icon, t}
   // 보스 극복 연출: 슬로모션 → 부풀며 빛남 → 폭발·충격파·색종이 → 화면 번쩍
   let bossFx = null, slowmo = 0, whiteFlash = 0;
@@ -149,13 +149,13 @@
         case 'swarm': edgeFlash = 40; Sfx.play('boss'); break;
         case 'boss': banner = { text: ev.text || '보스 등장!', t: 90 }; shake = 10; Sfx.play('boss'); break;
         case 'helper': Sfx.play('heal'); break;
-        case 'helped': playerCheer = 40; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 34 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
+        case 'helped': playerCheer = 40; Sfx.play('levelup'); if (ev.x !== undefined) { for (let i = 0; i < 8; i++) bubbles.push({ heart: true, x: ev.x + (Math.random() - 0.5) * 36, y: ev.y - 4 + (Math.random() - 0.5) * 12, t: -i * 2, max: 45 }); if (artOn()) Art.burst(ev.x, ev.y, '#ffd84d', 10, false); } break;
         case 'warm': warmFx.push({ x: ev.x, y: ev.y, r: ev.r, t: 0 }); break;
         case 'deed':   // 선행: 소리·반짝임만 (설명은 튜토리얼 안내에서)
           if (ev.what === 'spot') { pickAnim = { t: 0, max: 26, item: ev.kind === 'pot' ? 'pot' : ev.kind === 'toy' ? 'teddy' : 'cup' }; Sfx.play('gem'); if (artOn()) Art.burst(ev.x, ev.y, '#ff8cc0', 6, false); bubbles.push({ heart: true, x: ev.x, y: ev.y - 6, t: 0, max: 45 }); }
           else if (ev.what === 'rescued' || ev.what === 'escortDone' || ev.what === 'gaugeFull') {
             Sfx.play('levelup'); if (artOn() && ev.x !== undefined) Art.burst(ev.x, ev.y, '#ff8cc0', 12, false);
-            if (ev.x !== undefined && ev.what !== 'gaugeFull') { bubbles.push({ text: '만세!', x: ev.x, y: ev.y - 40, t: 0, max: 45 }); thanks(ev.x, ev.y, THANKS, 45); }   // 도와주면: 만세! → 고맙다는 말
+            if (ev.x !== undefined && ev.what !== 'gaugeFull') thanks(ev.x, ev.y, THANKS);   // 도와주면 바로 고맙다는 말 (만세는 몸짓으로)
             else if (ev.x !== undefined) thanks(ev.x, ev.y, THANKS);
           }
           else if (ev.what === 'cheer') cheerFx = { x0: ev.x, y0: ev.y - 20, t: 0 };   // 글자 대신 '공격력 업' 배지가 도와준 사람에게서 주인공에게 날아감
@@ -187,6 +187,15 @@
   let playerCheer = 0;     // 선생님께 배우고 난 뒤 주인공 만세 (프레임)
   /** 뻗는 팔의 각도(바라보는 쪽 기준, 위아래로 너무 꺾이지 않게) */
   function reachAng(fx, fy, tx, ty) { return Math.max(-1.1, Math.min(1.1, Math.atan2(ty - fy, Math.abs(tx - fx) || 1))); }
+  /** 도와주는 선생님(도우미)의 말: 부르기 → 곁에서 차근차근(게이지 단계별) → 다 배우면 칭찬 · 시간이 없으면 재촉 · 떠날 때 인사 */
+  const HELPER_STEPS = ['천천히, 숨 한 번 쉬고', '하나씩 같이 해 보자', '좋아, 거의 다 됐어!'];
+  function helperLine(hp, inZone) {
+    if (hp.state === 'done') return '잘했어! 이거 가져가렴';
+    if (hp.state === 'gone') return '다음에 또 올게';
+    const left = hp.stay - hp.t;
+    if (!inZone) return hp.prog > 0 ? '조금만 더 있어 줄래?' : left < 2 * TICK ? '곧 가야 해, 서둘러!' : '이리 와, 도와줄게';
+    return HELPER_STEPS[Math.min(2, Math.floor(hp.prog / hp.need * 3))];
+  }
   /** 작은 말풍선: (x, y)는 꼬리 끝(말하는 사람 머리 위). 화면 밖으로 나가지 않게 좌우 보정 */
   function talkBubble(text, x, y, alpha, warn) {
     ctx.save(); ctx.globalAlpha = alpha === undefined ? 1 : alpha;
@@ -244,7 +253,7 @@
       const b = bubbles[i]; b.t += 1;
       if (b.t < 0) continue;
       if (b.t >= b.max) { bubbles.splice(i, 1); continue; }
-      const k = b.t / b.max, a = k < 0.15 ? k / 0.15 : k > 0.7 ? (1 - k) / 0.3 : 1;
+      const k = b.t / b.max, a = k < 0.06 ? k / 0.06 : k > 0.75 ? (1 - k) / 0.25 : 1;   // 바로 또렷하게 떴다가 천천히 사라짐
       ctx.globalAlpha = a;
       if (b.heart) { deedArt('heartPink', b.x + Math.sin(b.t / 6 + b.x) * 4, b.y - b.t * 0.7, 12); continue; }
       ctx.font = b.small ? 'bold 10px sans-serif' : 'bold 12px sans-serif';
@@ -917,8 +926,10 @@
         : { name: 'wave', dir: tface };   // 배운 뒤(또는 떠날 때): 웃으며 손을 흔들어 "안녕"
       if (useArt && Art.drawPerson) Art.drawPerson(ctx, sim.world.id, hp.x, hp.y + bob, tpose, performance.now()); else emoji(hp.emoji, hp.x, hp.y + bob, 34);
       if (hp.state === 'done') emoji('💛', hp.x + 20, hp.y - 22 + bob, 18);
+      const say = helperLine(hp, inZone);
+      if (say) talkBubble(say, hp.x, hp.y - 28 + bob, fadeA);   // 선생님 말풍선: 지금 무엇을 하는지 단계별로
       ctx.fillStyle = '#ffe58a'; ctx.font = 'bold 11px sans-serif';
-      if (tutorial) ctx.fillText(hp.name, hp.x, hp.y - hp.r - 10);
+      if (tutorial) ctx.fillText(hp.name, hp.x, hp.y - hp.r - 24);
       if (tutorial && hp.state === 'wait') { ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; const ht = hp.prog > 0 ? '조언을 듣는 중…' : '곁에 가서 잠시 머물러 보세요', hw = ctx.measureText(ht).width / 2; ctx.fillText(ht, Math.max(hw + 4, Math.min(W - hw - 4, hp.x)), hp.y + hp.r + 12); }   // 화면 밖으로 잘리지 않게
       ctx.globalAlpha = 1;
     }
