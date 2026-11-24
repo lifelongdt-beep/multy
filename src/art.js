@@ -917,7 +917,16 @@
   function background(W, H, worldId, cycle) {
     if (worldId && BG[worldId]) {   // art-bg.js 의 사실적인 배경 (학교 포함). 없으면 아래 기본 학교 배경
       const Wd = root.EchoWorlds, ti = Wd && Wd.bgToneOf ? Wd.bgToneOf(cycle) : 0, wash = Wd && Wd.BG_TONES ? Wd.BG_TONES[ti].wash : null;   // 회차마다 톤이 살짝 바뀜 (10가지, 돌아가며)
-      return sprite(`bg:${worldId}:${W}x${H}:t${ti}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); recede(g, W, H, wash); vignette(g, W, H); });
+      return sprite(`bg:${worldId}:${W}x${H}:t${ti}`, W, H, (g) => {
+        g.translate(-W / 2, -H / 2);
+        const KIT = (root.Art && root.Art._kit) || {};
+        if (KIT.setBgVariant) KIT.setBgVariant(ti);   // 회차마다 소품 배치·종류가 달라짐
+        if (ti % 2) { g.save(); g.translate(W, 0); g.scale(-1, 1); BG[worldId](g, W, H); g.restore(); }   // 짝수 회차는 좌우를 뒤집어 소품 자리가 바뀜
+        else BG[worldId](g, W, H);
+        if (KIT.setBgVariant) KIT.setBgVariant(0);
+        if (KIT.drawDecor) KIT.drawDecor(g, W, H, ti);   // 회차 장식 (화분·별 줄·등·풍선·낙엽·벚꽃 등)
+        recede(g, W, H, wash); vignette(g, W, H);
+      });
     }
     return sprite(`bg:school:${W}x${H}`, W, H, (g) => {
       g.translate(-W / 2, -H / 2);

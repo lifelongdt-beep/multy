@@ -11,7 +11,48 @@
   /* ---------- 공통 도우미 ---------- */
   // 배경 소품은 '뒤로 물러나게': 캐릭터(진한 남색 테두리)와 달리 옅은 반투명 갈색 선으로 그린다
   const PROP_LINE = 'rgba(43,33,25,.38)';
-  const rng = (seed) => { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; };
+
+  /* ---------- 회차 장식: 10가지 톤마다 다른 소품을 양옆·위쪽에 더한다 (가운데 싸우는 곳은 비움) ---------- */
+  const SIDE = (W, r) => (r() < 0.5 ? 8 + r() * 50 : W - 58 + r() * 50);   // 양옆 띠의 x
+  function pot(g, x, y, leaf, flower) {   // 화분
+    g.fillStyle = '#c0703f'; g.beginPath(); g.moveTo(x - 9, y); g.lineTo(x + 9, y); g.lineTo(x + 6.5, y + 13); g.lineTo(x - 6.5, y + 13); g.closePath(); g.fill(); g.strokeStyle = PROP_LINE; g.lineWidth = 1.2; g.stroke();
+    g.fillStyle = '#a65a2e'; g.fillRect(x - 10, y - 2, 20, 4);
+    for (const [dx, dy, a] of [[-6, -9, -0.6], [0, -13, 0], [6, -9, 0.6]]) { g.save(); g.translate(x + dx * 0.6, y - 2); g.rotate(a); g.fillStyle = leaf; g.beginPath(); g.ellipse(0, dy * 0.55, 3.6, 7.5, 0, 0, Math.PI * 2); g.fill(); g.restore(); }
+    if (flower) for (const [dx, dy] of [[-5, -15], [5, -14], [0, -19]]) { g.fillStyle = flower; circle(g, x + dx, y + dy, 3.2); g.fill(); g.fillStyle = '#ffe08a'; circle(g, x + dx, y + dy, 1.2); g.fill(); }
+  }
+  function garland(g, W, y, n, draw) {   // 위쪽에 늘어진 줄 + 매달린 장식
+    g.strokeStyle = 'rgba(60,45,35,.55)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, y);
+    for (let i = 1; i <= n; i++) g.quadraticCurveTo((i - 0.5) * W / n, y + 14, i * W / n, y); g.stroke();
+    for (let i = 0; i < n; i++) for (const k of [0.3, 0.7]) { const x = (i + k) * W / n, yy = y + 14 * 4 * k * (1 - k) * 0.95; draw(x, yy + 2, i * 2 + (k > 0.5 ? 1 : 0)); }
+  }
+  function star(g, x, y, r1, col) { g.fillStyle = col; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r1 * 0.45 : r1; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); g.strokeStyle = PROP_LINE; g.lineWidth = 0.9; g.stroke(); }
+  const DECOR = [
+    null,                                                                          // 1 보랏빛 저녁: 원래 그대로
+    (g, W, H, r) => { garland(g, W, 96, 5, (x, y) => star(g, x, y + 6, 6, '#f3e6a0')); },                      // 2 새벽 하늘: 종이별 줄
+    (g, W, H, r) => { for (let i = 0; i < 6; i++) pot(g, i % 2 ? W - 22 - r() * 26 : 22 + r() * 26, 150 + i * 80 + r() * 30, '#5c9a4a'); },   // 3 아침 햇살: 초록 화분
+    (g, W, H, r) => { for (let i = 0; i < 6; i++) pot(g, i % 2 ? W - 22 - r() * 26 : 22 + r() * 26, 150 + i * 80 + r() * 30, '#6aa85a', ['#f28aa8', '#f6d04d', '#b48ae8'][i % 3]); },   // 4 봄 연두: 꽃 화분
+    (g, W, H, r) => { for (let i = 0; i < 5; i++) { const x = i % 2 ? W - 30 : 30, y = 170 + i * 95 + r() * 20;                          // 5 바다 청록: 어항
+        g.fillStyle = 'rgba(150,215,240,.55)'; circle(g, x, y, 13); g.fill(); g.strokeStyle = PROP_LINE; g.lineWidth = 1.2; g.stroke();
+        g.fillStyle = '#f08a3c'; g.beginPath(); g.ellipse(x - 2, y + 2, 4.5, 2.6, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.moveTo(x + 2, y + 2); g.lineTo(x + 6, y - 1); g.lineTo(x + 6, y + 5); g.closePath(); g.fill();
+        g.fillStyle = '#e8d9a8'; g.fillRect(x - 10, y + 9, 20, 3); } },
+    (g, W, H, r) => { garland(g, W, 94, 4, (x, y, k) => { g.fillStyle = ['#e8603c', '#f2a23a'][k % 2]; g.beginPath(); g.ellipse(x, y + 9, 6, 8, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = PROP_LINE; g.lineWidth = 1; g.stroke(); g.fillStyle = '#6a3a28'; g.fillRect(x - 3, y, 6, 2); g.fillRect(x - 3, y + 16, 6, 2); }); },   // 6 노을 살구: 종이 등
+    (g, W, H, r) => { for (let i = 0; i < 6; i++) { const x = i % 2 ? W - 24 - r() * 22 : 24 + r() * 22, y = 140 + i * 82 + r() * 20, col = ['#b48ae8', '#8ec8f0', '#f2a6c8'][i % 3];   // 7 라벤더: 풍선
+        g.strokeStyle = 'rgba(60,45,35,.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y + 11); g.quadraticCurveTo(x + 4, y + 22, x, y + 32); g.stroke();
+        g.fillStyle = col; g.beginPath(); g.ellipse(x, y, 8, 10, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = PROP_LINE; g.stroke(); g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.ellipse(x - 3, y - 4, 2, 3, -0.4, 0, Math.PI * 2); g.fill(); } },
+    (g, W, H, r) => { for (let i = 0; i < 40; i++) { const x = SIDE(W, r), y = 100 + r() * (H - 120);                                  // 8 가을 호박: 낙엽 + 호박
+        g.save(); g.translate(x, y); g.rotate(r() * 6.3); g.fillStyle = ['#d9822b', '#c9502e', '#e3b23c'][i % 3]; g.beginPath(); g.ellipse(0, 0, 4.5, 2.6, 0, 0, Math.PI * 2); g.fill(); g.restore(); }
+        for (const [x, y] of [[26, H - 70], [W - 26, 200]]) { g.fillStyle = '#e07a2c'; g.beginPath(); g.ellipse(x, y, 13, 10, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = PROP_LINE; g.lineWidth = 1.2; g.stroke(); g.strokeStyle = 'rgba(120,60,20,.5)'; g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x, y + 9); g.stroke(); g.fillStyle = '#5c8a3a'; g.fillRect(x - 1.5, y - 14, 3, 5); } },
+    (g, W, H, r) => { garland(g, W, 96, 6, (x, y, k) => { g.fillStyle = 'rgba(255,220,130,.35)'; circle(g, x, y + 4, 7); g.fill(); g.fillStyle = ['#ffe08a', '#ffb3c8', '#a8e0ff'][k % 3]; circle(g, x, y + 4, 3); g.fill(); });   // 9 별밤 남색: 꼬마전구 + 야광별
+        for (let i = 0; i < 8; i++) star(g, SIDE(W, r), 160 + r() * (H - 220), 3.5 + r() * 2, 'rgba(255,240,170,.8)'); },
+    (g, W, H, r) => { for (const [x, sx] of [[0, 1], [W, -1]]) { g.strokeStyle = '#6a4632'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, 100); g.quadraticCurveTo(x + sx * 40, 108, x + sx * 70, 128); g.stroke();   // 10 벚꽃 분홍: 벚꽃 가지 + 꽃잎
+        for (let i = 0; i < 9; i++) { const t = i / 8; g.fillStyle = i % 2 ? '#f6b8cf' : '#fbd3e1'; circle(g, x + sx * (6 + t * 64), 100 + t * 26 + (r() - 0.5) * 10, 4.5); g.fill(); } }
+        for (let i = 0; i < 45; i++) { g.save(); g.translate(SIDE(W, r), 110 + r() * (H - 130)); g.rotate(r() * 6.3); g.fillStyle = 'rgba(250,190,215,.85)'; g.beginPath(); g.ellipse(0, 0, 3.2, 2, 0, 0, Math.PI * 2); g.fill(); g.restore(); } },
+  ];
+  /** 회차(톤 번호 v)에 맞춰: 소품 배치가 달라지게 하고, 그 회차의 장식을 더한다. art.js 의 배경 만들기가 부른다 */
+  Art._kit.setBgVariant = (v) => { SALT = v | 0; };
+  Art._kit.drawDecor = (g, W, H, v) => { const fn = DECOR[(v | 0) % DECOR.length]; if (fn) fn(g, W, H, rng(500 + (v | 0))); };
+  let SALT = 0;   // 회차(톤 번호)마다 바뀌는 값: 같은 월드라도 소품 배치·종류가 달라진다
+  const rng = (seed) => { let s = (seed + SALT * 7919) >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; };
   const lerp = (a, b, t) => a + (b - a) * t;
   function shade(hex, k) {   // k<0 어둡게, k>0 밝게
     const n = parseInt(hex.slice(1), 16), f = (c) => Math.max(0, Math.min(255, Math.round(k < 0 ? c * (1 + k) : c + (255 - c) * k)));
@@ -116,7 +157,8 @@
       if (item === 'note') { g.fillStyle = '#f1e9d6'; rrect(g, x + 16, y + 11, 20, 26, 1); g.fill(); g.strokeStyle = OLc; g.lineWidth = 1; g.stroke(); g.fillStyle = '#9a9a9a'; for (let k = 0; k < 6; k++) g.fillRect(x + 15, y + 13 + k * 4, 2.2, 1.6); }
       if (item === 'pencil') { g.save(); g.translate(x + 38, y + 26); g.rotate(1.25); g.fillStyle = '#2c3550'; g.fillRect(-11, -1.4, 20, 2.8); g.fillStyle = '#e9cfa0'; g.beginPath(); g.moveTo(9, -1.4); g.lineTo(13, 0); g.lineTo(9, 1.4); g.fill(); g.restore(); }
     };
-    const leftItems = ['book', 'case', null, 'note', null], rightItems = [null, null, null, 'note', 'pencil'];
+    const ITEMS = ['book', 'case', null, 'note', null, 'pencil', null, 'note', 'book', null];   // 회차마다 책상 위 물건이 달라짐
+    const leftItems = [0, 1, 2, 3, 4].map((k) => ITEMS[(k + SALT * 3) % ITEMS.length]), rightItems = [0, 1, 2, 3, 4].map((k) => ITEMS[(k + 5 + SALT * 7) % ITEMS.length]);
     rows.forEach((y, i) => { desk(-2, y, leftItems[i]); desk(W - DW + 2, y, rightItems[i]); });
     // 4) 살짝 차분하게: 밝은 나무색이 캐릭터·적·구슬보다 튀지 않도록
     g.fillStyle = 'rgba(14,12,30,.22)'; g.fillRect(0, 0, W, H);
