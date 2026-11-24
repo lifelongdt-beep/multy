@@ -42,7 +42,7 @@
       }
     }
 
-  /** 시작 화면의 주인공: 제자리에서 신나게 춤 (박수·만세·옆걸음·빙글·플로스·별 점프·디스코·흔들흔들이 4초마다 바뀜) */
+  /** 시작 화면의 주인공: 제자리에서 신나게 춤 (박수·만세·옆걸음·플로스·별 점프·디스코·흔들흔들이 4초마다 바뀜) */
   let pvState = null, pvLoop = 0;
   function paintDance(t) {
     const cv = $('outfitPv'); if (!cv || !pvState || !window.Art) return;

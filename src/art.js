@@ -1165,10 +1165,10 @@
     setColor(hex) { kidColor = typeof hex === 'string' && /^#[0-9a-f]{6}$/i.test(hex) ? hex : null; return kidColor; },
     setOutfit(cycle) { const W = root.EchoWorlds; outfit = W && W.outfitOf ? W.outfitOf(cycle) : outfit; return outfit; },
     /** 메뉴 미리보기 등: 원하는 회차 복장으로 주인공을 그린다 */
-    /** 메뉴의 주인공이 춤을 춘다: 4초마다 춤이 바뀜 (박수 콩콩 · 두 팔 번쩍 · 옆걸음 · 한 바퀴 · 플로스 · 별 점프 · 디스코 · 흔들흔들). t = 초 */
+    /** 메뉴의 주인공이 춤을 춘다: 4초마다 춤이 바뀜 (박수 콩콩 · 두 팔 번쩍 · 옆걸음 · 플로스 · 별 점프 · 디스코 · 흔들흔들). t = 초 (빙글 도는 춤은 몸이 좁아 보여 뺐다) */
     drawKidDance(ctx, x, y, emo, cycle, scale, t) {
       const W = root.EchoWorlds, of = W.outfitOf(cycle), k = scale || 1.5;
-      const DANCES = 8, move = Math.floor(t / 4) % DANCES, b = t * 2.2 * Math.PI;   // 박자 약 1.1Hz (두 박에 한 번 들썩)
+      const DANCES = 7, move = [0, 1, 2, 4, 5, 6, 7][Math.floor(t / 4) % DANCES], b = t * 2.2 * Math.PI;   // 박자 약 1.1Hz (두 박에 한 번 들썩)
       const s = Math.sin(b), c = Math.cos(b), beat = Math.abs(s);
       let L = [-7.4, 9], R = [7.4, 9], dx = 0, hop = 0, tilt = 0, sx = 1, sy = 1, flip = false, step = s > 0 ? 1 : -1;
       if (move === 0) {          // 박수 콩콩: 앞에서 손뼉, 박자마다 콩
