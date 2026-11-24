@@ -85,7 +85,15 @@
     ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(W / 2, fy + 18, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
     const gl = ctx.createRadialGradient(W / 2, fy, 4, W / 2, fy, 48); gl.addColorStop(0, 'rgba(255,230,170,.35)'); gl.addColorStop(1, 'rgba(255,230,170,0)');
     ctx.fillStyle = gl; ctx.fillRect(W / 2 - 50, fy - 50, 100, 100);
-    if (Art.drawKidPreview) Art.drawKidPreview(ctx, W / 2, fy - 4 + bob - hop, o.emo || '🧑‍🎓', o.cycle || 0, 1.5);
+    if (Art.drawKidDance) Art.drawKidDance(ctx, W / 2, fy - 4 + bob - hop, o.emo || '🧑‍🎓', o.cycle || 0, 1.5, t);   // 메뉴에서는 신나게 춤 (여러 가지 춤이 차례로)
+    else if (Art.drawKidPreview) Art.drawKidPreview(ctx, W / 2, fy - 4 + bob - hop, o.emo || '🧑‍🎓', o.cycle || 0, 1.5);
+    // 춤추는 주인공 주위로 떠오르는 음표 ♪
+    if (Art.drawKidDance) for (let i = 0; i < 3; i++) {
+      const k = (t * 0.45 + i / 3) % 1, side = i % 2 ? 1 : -1, nx = W / 2 + side * (22 + k * 14) + Math.sin(t * 3 + i) * 4, ny = fy - 30 - k * 46;
+      ctx.globalAlpha = Math.sin(k * Math.PI) * 0.9; ctx.fillStyle = ['#ffe58a', '#ffb3d4', '#a8e6ff'][i];
+      ctx.beginPath(); ctx.ellipse(nx, ny, 3.4, 2.6, -0.4, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(nx + 2.4, ny - 11, 1.6, 11); ctx.fillRect(nx + 2.4, ny - 11, 5, 1.8);
+    }
+    ctx.globalAlpha = 1;
     // 떠다니는 작은 빛
     for (let i = 0; i < 14; i++) { const k = (t * 0.05 + i / 14) % 1, x = (i * 71 + Math.sin(t * 0.7 + i) * 18) % W, y = H - k * H * 0.9; ctx.globalAlpha = Math.sin(k * Math.PI) * 0.5; ctx.fillStyle = i % 3 ? '#ffe8a8' : '#bfe6ff'; ctx.beginPath(); ctx.arc(x, y, 1.2 + (i % 3) * 0.5, 0, Math.PI * 2); ctx.fill(); }
     ctx.globalAlpha = 1;

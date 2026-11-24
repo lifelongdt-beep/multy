@@ -42,6 +42,14 @@
       }
     }
 
+  /** 시작 화면의 주인공: 제자리에서 신나게 춤 (박수·만세·옆걸음·빙글·플로스·별 점프·디스코·흔들흔들이 4초마다 바뀜) */
+  let pvState = null, pvLoop = 0;
+  function paintDance(t) {
+    const cv = $('outfitPv'); if (!cv || !pvState || !window.Art) return;
+    const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
+    c.setTransform(2, 0, 0, 2, 0, 0);
+    if (Art.drawKidDance) Art.drawKidDance(c, 42, 56, pvState.emo, pvState.cycle, 1.45, t); else Art.drawKidPreview(c, 42, 56, pvState.emo, pvState.cycle, 1.45);
+  }
   /** 시작 화면: 이번 회차 복장 미리보기 + 이름 (회차마다 장식이 늘고, 5회차마다 새 복장) */
   function drawOutfit() {
     const cv = $('outfitPv'); if (!cv || !window.Art || !window.EchoWorlds) return;
@@ -52,7 +60,9 @@
     if (Art.setColor) Art.setColor(M.kidColor(save));
     if (Art.setSkin) Art.setSkin(M.kidSkin(save));
     if (Art.setHair) Art.setHair(M.kidHair(save));
-    c.setTransform(2, 0, 0, 2, 0, 0); Art.drawKidPreview(c, 28, 38, emo, M.outfitCycle(save), 1.15);
+    pvState = { emo, cycle: M.outfitCycle(save) };
+    paintDance(performance.now() / 1000);
+    if (!pvLoop) { const loop = () => { pvLoop = requestAnimationFrame(loop); const st = $('start'); if (st && !st.classList.contains('hidden')) paintDance(performance.now() / 1000); }; pvLoop = requestAnimationFrame(loop); }
     $('outfitName').textContent = `${of.name} ${'★'.repeat(of.stars)}${of.variant ? ` · 색 ${of.variant + 1}` : ''}`;
     const t = M.titleOf(M.deedScore(save)).title;
     $('titleLine').textContent = M.deedScore(save) > 0 ? `${t.icon} ${t.name}` : '';

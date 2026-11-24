@@ -1165,6 +1165,40 @@
     setColor(hex) { kidColor = typeof hex === 'string' && /^#[0-9a-f]{6}$/i.test(hex) ? hex : null; return kidColor; },
     setOutfit(cycle) { const W = root.EchoWorlds; outfit = W && W.outfitOf ? W.outfitOf(cycle) : outfit; return outfit; },
     /** 메뉴 미리보기 등: 원하는 회차 복장으로 주인공을 그린다 */
+    /** 메뉴의 주인공이 춤을 춘다: 4초마다 춤이 바뀜 (박수 콩콩 · 두 팔 번쩍 · 옆걸음 · 한 바퀴 · 플로스 · 별 점프 · 디스코 · 흔들흔들). t = 초 */
+    drawKidDance(ctx, x, y, emo, cycle, scale, t) {
+      const W = root.EchoWorlds, of = W.outfitOf(cycle), k = scale || 1.5;
+      const DANCES = 8, move = Math.floor(t / 4) % DANCES, b = t * 2.2 * Math.PI;   // 박자 약 1.1Hz (두 박에 한 번 들썩)
+      const s = Math.sin(b), c = Math.cos(b), beat = Math.abs(s);
+      let L = [-7.4, 9], R = [7.4, 9], dx = 0, hop = 0, tilt = 0, sx = 1, sy = 1, flip = false, step = s > 0 ? 1 : -1;
+      if (move === 0) {          // 박수 콩콩: 앞에서 손뼉, 박자마다 콩
+        hop = beat * 4; const cl = Math.max(0, s); L = [-6 + cl * 5.5, 6]; R = [6 - cl * 5.5, 6];
+      } else if (move === 1) {   // 두 팔 번쩍 펌프: 손을 위로 쭉쭉
+        hop = beat * 2.5; L = [-7, -9 + beat * 4]; R = [7, -9 + beat * 4];
+      } else if (move === 2) {   // 옆걸음: 좌우로 스텝, 팔은 반대로 흔들
+        dx = s * 9; tilt = -s * 0.12; L = [-7.5 - s * 2, 7 - s * 3]; R = [7.5 - s * 2, 7 + s * 3];
+      } else if (move === 3) {   // 한 바퀴 빙글: 몸을 돌리며 콩 뛰기, 두 팔 펼침
+        const ph = (t % 4) / 4 * Math.PI * 2; sx = Math.cos(ph * 2); flip = sx < 0; sx = Math.max(0.4, Math.abs(sx)); hop = beat * 3; L = [-9, 2]; R = [9, 2];
+      } else if (move === 4) {   // 플로스: 엉덩이는 한쪽, 두 팔은 반대쪽으로 휙휙
+        dx = s * 3; tilt = s * 0.08; L = [-7 - s * 6, 10]; R = [7 - s * 6, 10];
+      } else if (move === 5) {   // 별 점프: 크게 뛰어 팔 벌리고, 착지하면 납작
+        const j = Math.max(0, s); hop = j * 9; sy = j > 0.05 ? 1 + j * 0.05 : 1 - Math.min(0.12, -s * 0.12); L = [-8 - j * 2, 3 - j * 10]; R = [8 + j * 2, 3 - j * 10];
+      } else if (move === 6) {   // 디스코: 한 손은 하늘 찌르고 한 손은 허리, 박자마다 반대로
+        const up = s > 0; L = up ? [-9, -9] : [-5, 8.5]; R = up ? [5, 8.5] : [9, -9]; tilt = up ? -0.1 : 0.1; hop = beat * 1.5;
+      } else {                   // 흔들흔들: 몸을 좌우로 까딱, 팔은 옆으로
+        tilt = s * 0.22; L = [-9.5, 4 + c * 2]; R = [9.5, 4 - c * 2]; hop = beat * 1.2;
+      }
+      const bodyY = y - hop, f = flip ? -1 : 1;
+      ctx.save(); ctx.translate(x + dx, bodyY + 13 * k); ctx.rotate(tilt); ctx.scale(sx, sy); ctx.translate(-(x + dx), -(bodyY + 13 * k));   // 발 기준으로 기울이고 눌림
+      blit(ctx, kidSprite(emo, step, of, true), x + dx, bodyY, k, k, flip);
+      const sleeve = outfitOpts(emo, of).body;
+      L = shortArm([-5.4, 2.6], L); R = shortArm([5.4, 2.6], R);
+      ctx.translate(x + dx, bodyY); ctx.scale(k * f, k); ctx.translate(0, -1 + KID_DROP * KID_S);
+      limb(ctx, -5.4, 2.6, L[0], L[1], sleeve, 2.8); limb(ctx, 5.4, 2.6, R[0], R[1], sleeve, 2.8);
+      palm(ctx, L[0], L[1], 1.8, kidSkin); palm(ctx, R[0], R[1], 1.8, kidSkin);
+      ctx.restore();
+      return { hop, dx };
+    },
     drawKidPreview(ctx, x, y, emo, cycle, scale) {
       const W = root.EchoWorlds, of = W.outfitOf(cycle);
       blit(ctx, kidSprite(emo, 0, of), x, y, scale || 2, scale || 2);
