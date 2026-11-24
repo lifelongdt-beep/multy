@@ -184,6 +184,7 @@
     { id: 'dmg',    icon: '💪', name: '단련된 필기',   max: 5, grow: true, base: 300, per: 0.06, fmt: (v) => `공격력 +${Math.round(v * 100)}%` },
     { id: 'speed',  icon: '👟', name: '가벼운 발걸음', max: 5, base: 240, per: 0.04, fmt: (v) => `이동속도 +${Math.round(v * 100)}%` },
     { id: 'magnet', icon: '🧲', name: '넓은 자석',     max: 5, base: 180, per: 8,    fmt: (v) => `구슬 흡수 범위 +${v}` },
+    { id: 'deedmag', icon: '💞', name: '따뜻한 마음',  max: 5, base: 200, per: 8,    fmt: (v) => `선행 물건 끌어오기 +${v}` },   // 마음 자석 카드 없이도 아주 가까운 선행 물건이 끌려옴 (카드와 더해짐)
     { id: 'xp',     icon: '📚', name: '빠른 습득',     max: 5, base: 360, per: 0.08, fmt: (v) => `경험치 +${Math.round(v * 100)}%` },
     { id: 'regen',  icon: '🍱', name: '든든한 도시락', max: 5, grow: true, base: 420, per: 0.25,  fmt: (v) => `체력 재생 +${v.toFixed(1)}/초` },
     { id: 'echo',   icon: '✨', name: '에코 단련',     max: 5, grow: true, base: 480, per: 0.05, fmt: (v) => `에코 공격력 +${Math.round(v * 100)}%` },
@@ -492,6 +493,7 @@
       speedMul: (1 + lv('speed')) * (mods.speedMul || 1),
       cooldownMul: mods.cooldownMul || 1,
       magnet: lv('magnet') + (mods.magnet || 0),
+      deedMag: lv('deedmag'),                     // 선행 물건을 끌어오는 거리 (상점 '따뜻한 마음')
       xpMul: (1 + lv('xp')) * (mods.xpMul || 1),
       regen: lv('regen') + (mods.regen || 0),
       echoPower: lv('echo') + (mods.echoPower || 0) + echoFormPower(echoFormIndex(echoForm(save))),   // 고른 에코 모습의 힘 포함

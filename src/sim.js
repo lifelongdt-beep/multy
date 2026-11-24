@@ -151,7 +151,7 @@
 
   /** 영구 강화·캐릭터 보너스(meta.js가 계산해서 전달). 기본값은 보너스 없음 */
   // teamMul: 매점 장비의 팀 공격력(에코에게도 적용, 플레이어 몫은 dmgMul에 이미 포함) · takenMul: 매점 장비의 받는 피해 배율
-  const NO_BONUS = { maxhp: 0, dmgMul: 1, speedMul: 1, cooldownMul: 1, magnet: 0, xpMul: 1, regen: 0, echoPower: 0, teamMul: 1, takenMul: 1, startStats: {} };
+  const NO_BONUS = { maxhp: 0, dmgMul: 1, speedMul: 1, cooldownMul: 1, magnet: 0, deedMag: 0, xpMul: 1, regen: 0, echoPower: 0, teamMul: 1, takenMul: 1, startStats: {} };
 
   /** 총알 단계: 기본 위력(1) 대비 12% 강해질 때마다 1단계. 모양은 단계 % 30, 30단계마다 한 바퀴 */
   function bulletTier(dmg) { return Math.max(0, Math.floor(Math.log(Math.max(1, dmg)) / Math.log(1.12) + 1e-9)); }
@@ -853,10 +853,10 @@
       }
       for (let i = d.spots.length - 1; i >= 0; i--) {
         const sp = d.spots[i];
-        const mlv = p.stats.deedmag || 0;
-        if (mlv) {   // 마음 자석: 가까이 있는 선행 물건만 내 쪽으로 끌려옴
+        const mlv = p.stats.deedmag || 0, reach = (mlv ? T.deedMagBase + T.deedMagPer * mlv : 0) + (this.bonus.deedMag || 0);   // 마음 자석 카드 + 상점 '따뜻한 마음'
+        if (reach > 0) {   // 가까이 있는 선행 물건만 내 쪽으로 끌려옴
           const dx = p.x - sp.x, dy = p.y - sp.y, dist = Math.hypot(dx, dy);
-          if (dist < T.deedMagBase + T.deedMagPer * mlv && dist > 1) { const v = Math.min(dist, T.deedMagSpeed); sp.x += dx / dist * v; sp.y += dy / dist * v; sp.pulled = true; }
+          if (dist < reach && dist > 1) { const v = Math.min(dist, T.deedMagSpeed); sp.x += dx / dist * v; sp.y += dy / dist * v; sp.pulled = true; }
         }
         if (Math.hypot(p.x - sp.x, p.y - sp.y) < p.r + 12) {
           d.spots.splice(i, 1); d.gauge += 1; d.spotCount += 1; this.fx.push({ x: sp.x, y: sp.y, t: 20, kind: 'deed' });
