@@ -9,6 +9,8 @@
   const { BG, rrect, circle, oval } = Art._kit;
 
   /* ---------- 공통 도우미 ---------- */
+  // 배경 소품은 '뒤로 물러나게': 캐릭터(진한 남색 테두리)와 달리 옅은 반투명 갈색 선으로 그린다
+  const PROP_LINE = 'rgba(43,33,25,.38)';
   const rng = (seed) => { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; };
   const lerp = (a, b, t) => a + (b - a) * t;
   function shade(hex, k) {   // k<0 어둡게, k>0 밝게
@@ -67,7 +69,7 @@
   /* ---------- 학교: 저녁 교실 ---------- */
   BG.school = (g, W, H) => {
     // 만화풍 교실 (캔바 시안을 코드로): 세로 판자 마루 · 양옆 책상과 의자 · 위쪽 칠판. 가운데는 비워 싸우기 좋게
-    const OLc = '#2b2119', r = rng(11), TOP = 88;
+    const OLc = PROP_LINE, r = rng(11), TOP = 88;
     // 1) 세로 판자 마루: 판자마다 갈색·회갈색이 번갈아, 이음매는 엇갈리게
     const PL = 15, tones = ['#7b5a3e', '#8d6b4a', '#6f5846', '#8b7a64', '#80603f', '#76685a'];
     for (let x = 0, i = 0; x < W; x += PL, i++) {
@@ -121,7 +123,7 @@
   };
 
   /* ---------- 만화풍 공통 도구 (학교와 같은 그림체: 굵지 않은 갈색 외곽선 · 평평한 색 · 윗면 빛) ---------- */
-  const OLC = '#2b2119';
+  const OLC = PROP_LINE;
   function obox(g, x, y, w, h, rad, fill, lw, hi) {
     g.fillStyle = fill; rrect(g, x, y, w, h, rad); g.fill(); g.strokeStyle = OLC; g.lineWidth = lw || 1.4; g.stroke();
     if (hi !== false) { g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(x + 2, y + 2, w - 4, Math.min(4, h / 4)); }

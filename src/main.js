@@ -263,15 +263,16 @@
     if (!people) for (const sp of d.spots) {
       const a = Math.min(1, sp.t / 60), pul = 0.5 + 0.5 * Math.sin(now / 260 + sp.x);
       // 줍는 물건 표시: 빨간 원(적) 대신 하늘색 빛 + 반짝이 4개가 천천히 돈다 (적·친구·에코와 다른 색)
-      const gl = ctx.createRadialGradient(sp.x, sp.y, 2, sp.x, sp.y, 17);
-      gl.addColorStop(0, 'rgba(190,240,255,.55)'); gl.addColorStop(1, 'rgba(190,240,255,0)');
-      ctx.globalAlpha = a * (0.6 + 0.4 * pul); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(sp.x, sp.y, 17, 0, 7); ctx.fill();
+      const gl = ctx.createRadialGradient(sp.x, sp.y, 2, sp.x, sp.y, 23);   // 빛을 더 크고 밝게 (복잡한 화면에서도 눈에 띄게)
+      gl.addColorStop(0, 'rgba(200,245,255,.8)'); gl.addColorStop(0.55, 'rgba(190,240,255,.35)'); gl.addColorStop(1, 'rgba(190,240,255,0)');
+      ctx.globalAlpha = a * (0.7 + 0.3 * pul); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(sp.x, sp.y, 23, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(220,250,255,.75)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(sp.x, sp.y, 15 + 3 * pul, 0, 7); ctx.stroke();   // 숨 쉬듯 커졌다 작아지는 빛 고리
       ctx.fillStyle = '#e8fbff';
       for (let k = 0; k < 4; k++) {
-        const ang = now / 700 + k * Math.PI / 2 + sp.x, rx = sp.x + Math.cos(ang) * 14, ry = sp.y + Math.sin(ang) * 9, r = 2.6 + 1.2 * Math.sin(now / 180 + k);
+        const ang = now / 700 + k * Math.PI / 2 + sp.x, rx = sp.x + Math.cos(ang) * 18, ry = sp.y + Math.sin(ang) * 11, r = 3 + 1.4 * Math.sin(now / 180 + k);
         ctx.beginPath(); ctx.moveTo(rx, ry - r); ctx.quadraticCurveTo(rx, ry, rx + r, ry); ctx.quadraticCurveTo(rx, ry, rx, ry + r); ctx.quadraticCurveTo(rx, ry, rx - r, ry); ctx.quadraticCurveTo(rx, ry, rx, ry - r); ctx.fill();
       }
-      ctx.globalAlpha = a; deedArt(sp.kind === 'litter' ? 'cup' : sp.kind === 'pot' ? 'pot' : 'teddy', sp.x, sp.y, 20);
+      ctx.globalAlpha = a; deedArt(sp.kind === 'litter' ? 'cup' : sp.kind === 'pot' ? 'pot' : 'teddy', sp.x, sp.y, 23);
       // 지나가며 주워 달라는 표시: 위에서 통통 튀는 작은 화살표
       const ay = sp.y - 20 - Math.abs(Math.sin(now / 220 + sp.x)) * 5;
       ctx.fillStyle = '#ffd84d'; ctx.beginPath(); ctx.moveTo(sp.x - 5, ay - 4); ctx.lineTo(sp.x + 5, ay - 4); ctx.lineTo(sp.x, ay + 2); ctx.closePath(); ctx.fill();
@@ -911,11 +912,12 @@
     // 내 위치 표시: 몸 아래 초록 링(숨쉬듯 깜빡임) + 머리 위 ▼ (에코의 시안색과 구분)
     {
       const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 200);
-      const pr = 13 + 11 * pulse;                  // 반지름 13 ↔ 24 로 눈에 띄게 커졌다 작아졌다
+      const pr = 18 + 8 * pulse;                   // 반지름 18 ↔ 26: 가장 작을 때도 몸 밖으로 보이게
       ctx.fillStyle = `rgba(125,255,178,${0.20 - 0.12 * pulse})`;
       ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7); ctx.fill();
-      ctx.strokeStyle = `rgba(125,255,178,${0.95 - 0.45 * pulse})`; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y + 1, pr, 0, 7);
+      ctx.strokeStyle = 'rgba(10,20,30,.35)'; ctx.lineWidth = 7; ctx.stroke();                     // 바깥 어두운 테: 밝은 바닥에서도 초록 고리가 또렷하게
+      ctx.strokeStyle = `rgba(125,255,178,${1 - 0.3 * pulse})`; ctx.lineWidth = 4.5; ctx.stroke();   // 두꺼운 초록 고리
       const ay = p.y - 30 - 2 * pulse;
       ctx.fillStyle = '#7dffb2';
       ctx.beginPath(); ctx.moveTo(p.x - 5, ay - 5); ctx.lineTo(p.x + 5, ay - 5); ctx.lineTo(p.x, ay + 2); ctx.closePath(); ctx.fill();

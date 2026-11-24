@@ -907,6 +907,8 @@
     const toScreen = (q) => [x + dir * K_KID * s * q[0], y + K_KID * (2 + 17 * (1 - s) + s * (q[1] + P_DROP))];
     return { L: toScreen(P.L), R: toScreen(P.R), feetY: y + K_KID * (2 + 17 * (1 - s) + s * 21.5) };
   }
+  /** 배경을 한 걸음 뒤로: 중간 톤을 얇게 덮어 대비·채도를 낮춘다 (밝은 곳은 살짝 가라앉고 진한 선은 옅어짐) → 주인공·적·선행 거리가 앞에 또렷 */
+  function recede(g, W, H) { g.fillStyle = 'rgba(74,66,88,.28)'; g.fillRect(0, 0, W, H); }
   function vignette(g, W, H) {
     const vg = g.createRadialGradient(W / 2, H * 0.48, H * 0.25, W / 2, H * 0.5, H * 0.75);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(5,6,16,.55)');
@@ -914,7 +916,7 @@
   }
   function background(W, H, worldId) {
     if (worldId && BG[worldId]) {   // art-bg.js 의 사실적인 배경 (학교 포함). 없으면 아래 기본 학교 배경
-      return sprite(`bg:${worldId}:${W}x${H}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); vignette(g, W, H); });
+      return sprite(`bg:${worldId}:${W}x${H}`, W, H, (g) => { g.translate(-W / 2, -H / 2); BG[worldId](g, W, H); recede(g, W, H); vignette(g, W, H); });
     }
     return sprite(`bg:school:${W}x${H}`, W, H, (g) => {
       g.translate(-W / 2, -H / 2);
