@@ -82,6 +82,12 @@
   }
   function shine(g, x, y, r) { g.fillStyle = 'rgba(255,255,255,.35)'; oval(g, x, y, r, r * 0.6); g.fill(); }
   const GLOOM = {
+    '❄'(g) {   // 눈사태: 바위가 박힌 채 굴러 내려오는 성난 눈덩이
+      circle(g, 0, 0, 17); fillStroke(g, '#eef4ff', 2.2);
+      g.save(); circle(g, 0, 0, 17); g.clip(); g.fillStyle = 'rgba(110,140,190,.35)'; oval(g, 6, 8, 16, 12); g.fill(); g.restore();
+      for (const [x, y, r] of [[-11, 6, 3.2], [9, -10, 2.6], [12, 7, 2.2], [-6, -12, 2]]) { circle(g, x, y, r); fillStroke(g, '#7d8590', 1.2); }
+      shine(g, -6, -8, 5); gloomFace(g, 0, -1, 15, 'angry');
+    },
     '💢'(g) {   // 짜증 폭탄: 빨간 가시 공
       g.beginPath(); for (let i = 0; i < 20; i++) { const a = i * Math.PI / 10, r = i % 2 ? 11 : 15; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); fillStroke(g, '#ff5a4a', 2);
       shine(g, -5, -6, 4); gloomFace(g, 0, -1, 14, 'angry');
@@ -614,6 +620,7 @@
    * 새 몸은 'N 좌표'(머리 중심 0,-11 반지름 10.4 · 몸 -6.4..6.4 × 0..10.5 · 발 21)로 그리고 전체를 KID_S배로 줄인다.
    * 모자·안경·목도리·망토 같은 기존 장식(옛 좌표: 머리 0,-6.5 r7.6 · 몸 11.6×11.5)은 새 머리·몸 위치로 옮겨 그린다 */
   const KID_S = 0.75, KSK = '#ffdcbf';
+  const KID_DROP = 8.5;   // 다리 없이 발만: 머리·몸을 이만큼 내려서 발이 늘 같은 땅을 딛게 (N 좌표)
   const onHead = (g, fn) => { g.save(); g.translate(0, -11); g.scale(1.37, 1.37); g.translate(0, 6.5); fn(); g.restore(); };
   const onBody = (g, fn) => { g.save(); g.scale(1.1, 0.91); fn(); g.restore(); };
   function drawKid(g, o, step) {
@@ -622,7 +629,7 @@
       g.fillStyle = gl; g.fillRect(-17, -22, 34, 38);
     }
     if (o.stars) { const gl = g.createRadialGradient(0, -4, 2, 0, -4, 18); gl.addColorStop(0, 'rgba(255,170,230,.35)'); gl.addColorStop(1, 'rgba(255,170,230,0)'); g.fillStyle = gl; g.fillRect(-18, -24, 36, 38); }
-    g.save(); g.scale(KID_S, KID_S);
+    g.save(); g.scale(KID_S, KID_S); g.translate(0, KID_DROP);
     const skin = o.skin || KSK, hair = o.hair || '#2a2220', st = step || 0;
     const fsN = (fill, lw) => fillStroke(g, fill, lw);
     // 뒤: 망토 등 · 백팩 · 여자 주인공 뒷머리
@@ -631,15 +638,14 @@
     const backpack = !o.outer || o.outer === 'apron' || o.outer === 'jacket';
     if (backpack) { rrect(g, -9.6, -0.5, 19.2, 14, 5); fsN(o.pack, 1.4); }
     if (o.girl && o.head !== 'hood') { rrect(g, -11.4, -15, 22.8, 16, 7); fsN(hair, 1.4); }
-    // 다리 (바지) + 운동화
+    // 발 (다리 없이 몸 바로 아래 운동화만: 짧고 귀엽게)
     for (const sx of [-1, 1]) {
-      const k = sx * st;
-      rrect(g, sx * 3.3 - 2.3, 10.5 + k * 0.4, 4.6, 9.2, 1.6); fsN(o.pants || '#3c4560', 1.2);
-      oval(g, sx * 3.6, 21 + k * 0.8, 3.4, 2.1); fsN(o.shoe || '#eeeeee', 1.3);
-      oval(g, sx * 3.6 - 0.9, 20.4 + k * 0.8, 1.2, 0.5); g.fillStyle = 'rgba(255,255,255,.55)'; g.fill();
+      const k = sx * st, fy = 21 - KID_DROP - Math.max(0, k) * 1.4;
+      oval(g, sx * 3.8 + k * 0.6, fy, 3.6, 2.3); fsN(o.shoe || '#eeeeee', 1.3);
+      oval(g, sx * 3.8 + k * 0.6 - 0.9, fy - 0.6, 1.2, 0.5); g.fillStyle = 'rgba(255,255,255,.55)'; g.fill();
     }
     // 팔 (소매 = 옷 색) + 손
-    if (!o.noArms) for (const sx of [-1, 1]) { g.save(); g.translate(sx * 6.8, 1.5); g.rotate(sx * (0.3 - st * 0.12 * sx)); rrect(g, -2, -1, 4, 8.3, 2); fsN(o.body, 1.3); circle(g, 0, 8.4, 2); fsN(skin, 1.1); g.restore(); }
+    if (!o.noArms) for (const sx of [-1, 1]) { g.save(); g.translate(sx * 6.8, 1.5); g.rotate(sx * (0.3 - st * 0.12 * sx)); rrect(g, -2, -1, 4, 6, 2); fsN(o.body, 1.3); circle(g, 0, 6, 2); fsN(skin, 1.1); g.restore(); }
     // 몸통
     rrect(g, -6.4, 0, 12.8, 10.5, 4); fsN(o.body, 1.5);
     g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-5.2, 1.4, 2.6, 7.5);
@@ -772,11 +778,11 @@
       }
       case 'carry': {     // 무거운 짐을 양손에 들고 힘겨워한다 (팔이 아래로 축 처짐)
         const k = Math.sin(t * 3) * 0.8;
-        P.L = [-8.2, 17.5 + k]; P.R = [8.2, 17.5 - k]; P.prop = 'bags';
+        P.L = [-8.2, 13.8 + k]; P.R = [8.2, 13.8 - k]; P.prop = 'bags';
         P.lf = [-4.6, 20.5]; P.rf = [4.6, 20.5]; break;
       }
       case 'lost':        // 길을 잃음: 한 손으로 머리를 긁적이고 한 손엔 지도
-        P.R = [9.6 + Math.sin(t * 14) * 1.2, -14]; P.L = [-9, 8]; P.prop = 'map'; break;
+        P.R = [8.4 + Math.sin(t * 14) * 1, -8.5]; P.L = [-9, 8]; P.prop = 'map'; break;
       case 'reach':       // 손을 뻗는다 (ang 방향: 도움을 청하거나 도와준다)
         P.R = at(SR, ang || 0, 11.5); break;
       case 'teach': {     // 가르치기: 한 손엔 펼친 책, 다른 손으로 책을 짚었다가 위로 들어 설명
@@ -872,16 +878,23 @@
     else if (expr === 'scared') { ctx.beginPath(); ctx.moveTo(-1.6, my + 0.6); for (let i = 1; i <= 4; i++) ctx.lineTo(-1.6 + i * 0.8, my + (i % 2 ? 0 : 0.6)); ctx.stroke(); }
     else { ctx.beginPath(); ctx.arc(0, my - 0.2, 1.8, 0.12 * Math.PI, 0.88 * Math.PI); ctx.stroke(); }   // 미소
   }
+  const ARM_K = 0.7;   // 팔 길이 배율 (다리 없는 짧은 몸에 맞게)
+  const shortArm = (S, H) => [S[0] + (H[0] - S[0]) * ARM_K, S[1] + (H[1] - S[1]) * ARM_K];
+  const P_DROP = 4.6;   // 사람: 다리를 없앤 만큼 몸을 내림 (발은 몸 아래 15.9에 → 화면에선 원래 발자리 20.5)
   const seedOf = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 997; return h / 97; };
   function drawPersonPosed(ctx, c, look, x, y, pose, t) {
     const s = look.s || 1, dir = pose.dir < 0 ? -1 : 1;
     const P = personPose(pose.name, t, pose.ang);
-    const enter = () => { ctx.save(); ctx.translate(x, y); ctx.scale(K_KID * dir, K_KID); ctx.translate(0, 2 + 17 * (1 - s)); ctx.scale(s, s); };
-    enter();
-    limb(ctx, -3.3, 15, P.lf[0], P.lf[1] - 1, PANTS, 3.2); limb(ctx, 3.3, 15, P.rf[0], P.rf[1] - 1, PANTS, 3.2);
-    oval(ctx, P.lf[0] - 0.6, P.lf[1], 2.6, 1.6); fillStroke(ctx, '#2a2440', 1.2); oval(ctx, P.rf[0] + 0.6, P.rf[1], 2.6, 1.6); fillStroke(ctx, '#2a2440', 1.2);
+    // 다리가 없어진 만큼 팔도 짧게: 어깨→손 길이를 줄인다 (손이 머리·책에 닿아야 하는 몸짓은 그대로)
+    const keep = { cower: 'LR', hurt: 'LR', lost: 'R', teach: 'L' }[pose.name] || '';
+    if (!keep.includes('L')) P.L = shortArm([-6.3, 4.5], P.L);
+    if (!keep.includes('R')) P.R = shortArm([6.3, 4.5], P.R);
+    const enter = () => { ctx.save(); ctx.translate(x, y); ctx.scale(K_KID * dir, K_KID); ctx.translate(0, 2 + 17 * (1 - s)); ctx.scale(s, s); ctx.translate(0, P_DROP); };
+    enter();   // 다리 없이 발만: 몸 바로 아래 신발 (발 위치는 그대로, 몸이 내려옴)
+    const fy = (q) => q[1] - P_DROP;
+    oval(ctx, P.lf[0] - 0.6, fy(P.lf), 3, 1.9); fillStroke(ctx, '#2a2440', 1.2); oval(ctx, P.rf[0] + 0.6, fy(P.rf), 3, 1.9); fillStroke(ctx, '#2a2440', 1.2);
     ctx.restore();
-    blit(ctx, c, x, y, K_KID, K_KID, dir < 0);
+    blit(ctx, c, x, y + K_KID * s * P_DROP, K_KID, K_KID, dir < 0);
     enter(); ctx.translate(0, -8); ctx.scale(1.3, 1.3); ctx.translate(0, 6); personFace(ctx, personExpr(pose, look.sad || pose.sad), t, look.face, look.seed || 0); ctx.restore();   // 실시간 표정 (팔보다 먼저: 무서워 얼굴을 가리면 손이 위에)
     enter();
     limb(ctx, -6.3, 4.5, P.L[0], P.L[1], look.sleeve, 3); limb(ctx, 6.3, 4.5, P.R[0], P.R[1], look.sleeve, 3);
@@ -890,7 +903,7 @@
     if (P.prop === 'openbook') { drawPersonProp(ctx, P, t); palm(ctx, P.L[0], P.L[1]); }   // 책을 든 손은 책 위에
     if (P.prop === 'map' || P.prop === 'teach') drawPersonProp(ctx, P, t);
     ctx.restore();
-    const toScreen = (q) => [x + dir * K_KID * s * q[0], y + K_KID * (2 + 17 * (1 - s) + s * q[1])];
+    const toScreen = (q) => [x + dir * K_KID * s * q[0], y + K_KID * (2 + 17 * (1 - s) + s * (q[1] + P_DROP))];
     return { L: toScreen(P.L), R: toScreen(P.R), feetY: y + K_KID * (2 + 17 * (1 - s) + s * 21.5) };
   }
   function vignette(g, W, H) {
@@ -1092,7 +1105,8 @@
       } else if (pose === 'cheer') {                                       // 만세!
         const k = Math.sin(t * 10) * 1.4; L = [-8, -9.5 + k]; R = [8, -9.5 - k];
       }
-      ctx.save(); ctx.translate(p.x, cy); ctx.scale(K_KID * f, sy); ctx.translate(0, -1);
+      if (pose !== 'learn') { L = shortArm([-5.4, 2.6], L); R = shortArm([5.4, 2.6], R); }   // 다리 없는 몸에 맞게 짧은 팔 (공책 쓰기는 손이 공책에 닿게)
+      ctx.save(); ctx.translate(p.x, cy); ctx.scale(K_KID * f, sy); ctx.translate(0, -1 + KID_DROP * KID_S);
       limb(ctx, -5.4, 2.6, L[0], L[1], sleeve, 2.8); limb(ctx, 5.4, 2.6, R[0], R[1], sleeve, 2.8);
       if (pose === 'learn') {   // 작은 공책 + 연필
         rrect(ctx, -5.6, 5.2, 7.4, 6.4, 1); fillStroke(ctx, '#fffdf2', 1.1);
@@ -1200,8 +1214,12 @@
         ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 2;
         for (let i = -1; i <= 1; i++) { const bx = h.x - h.dir * (60 + (now / 8 + i * 17) % 30); ctx.beginPath(); ctx.moveTo(bx, h.y + i * 12); ctx.lineTo(bx - h.dir * 26, h.y + i * 12); ctx.stroke(); }
         ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(h.x, h.y + 20, 60, 6, 0, 0, Math.PI * 2); ctx.fill();
+        if (kind === '❄') {   // 눈사태: 뒤로 흩날리는 눈보라
+          ctx.fillStyle = 'rgba(235,242,255,.75)';
+          for (let i = 0; i < 9; i++) { const ph = (now / 6 + i * 23) % 90, bx = h.x - h.dir * (50 + ph), by = h.y + Math.sin(i * 2.1 + now / 200) * 22; ctx.beginPath(); ctx.arc(bx, by, 7 - ph / 15, 0, Math.PI * 2); ctx.fill(); }
+        }
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '40px sans-serif';
-        const spin = kind === '😩' ? now / 60 * h.dir : 0;   // 지친 마음은 데굴데굴 굴러옴
+        const spin = kind === '😩' || kind === '❄' ? now / 60 * h.dir : 0;   // 지친 마음·눈사태는 데굴데굴 굴러옴
         for (let k = -1; k <= 1; k++) {
           const hx = h.x + k * 42, hy = h.y + Math.sin(now / 90 + k) * 2 + (kind === '😨' ? Math.sin(now / 30 + k) * 1.5 : 0);
           if (GLOOM[kind]) { this.drawGloom(ctx, kind, hx, hy, 44, spin); continue; }

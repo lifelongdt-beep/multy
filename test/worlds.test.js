@@ -731,3 +731,12 @@ test('열차가 출발할 때 지나가는 소리용 이벤트(방향 포함)가
   for (let i = 0; i < 20 && !pass; i++) { s.step({ dx: 0, dy: 0 }); pass = s.drainEvents().find((v) => v.k === 'trainPass'); }
   assert.ok(pass); assert.strictEqual(pass.dir, -1);
 });
+
+test('지나가는 위험물은 그 장소에 맞게: 열차는 지하철에서만, 산은 눈사태', () => {
+  const W = require('../src/worlds.js');
+  for (const id of W.ORDER) {
+    const k = W.hazardKind(W.WORLDS[id]);
+    if (id === 'subway') assert.strictEqual(k, '🚆'); else assert.notStrictEqual(k, '🚆', `${id}: 열차가 지나가면 안 됨`);
+  }
+  assert.strictEqual(W.hazardKind(W.WORLDS.mountain), '❄');
+});
