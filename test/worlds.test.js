@@ -750,3 +750,11 @@ test('회차마다 배경 톤이 바뀌고, 10가지를 다 쓰면 처음 톤으
   assert.strictEqual(Wd.bgToneOf(23), 3);
   assert.strictEqual(Wd.bgToneOf(-1), 0);
 });
+
+test('회차 배경: 1회차는 원래 색감, 나머지 9가지는 서로 다른 색감(tint)', () => {
+  const Wd = require('../src/worlds.js');
+  assert.strictEqual(Wd.BG_TONES[0].tint, null);
+  const t = Wd.BG_TONES.slice(1).map((x) => x.tint);
+  assert.ok(t.every((c) => /^#[0-9a-f]{6}$/i.test(c)));
+  assert.strictEqual(new Set(t).size, 9);
+});

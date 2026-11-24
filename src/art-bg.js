@@ -48,6 +48,20 @@
         for (let i = 0; i < 9; i++) { const t = i / 8; g.fillStyle = i % 2 ? '#f6b8cf' : '#fbd3e1'; circle(g, x + sx * (6 + t * 64), 100 + t * 26 + (r() - 0.5) * 10, 4.5); g.fill(); } }
         for (let i = 0; i < 45; i++) { g.save(); g.translate(SIDE(W, r), 110 + r() * (H - 130)); g.rotate(r() * 6.3); g.fillStyle = 'rgba(250,190,215,.85)'; g.beginPath(); g.ellipse(0, 0, 3.2, 2, 0, 0, Math.PI * 2); g.fill(); g.restore(); } },
   ];
+  /** 회차 바닥 무늬: 바닥 전체에 아주 옅은 무늬를 깔아 그림이 달라 보이게 (1회차는 없음) */
+  const PATTERN = [
+    null,
+    (g, W, H, y0) => { g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 6; for (let x = -H; x < W; x += 26) { g.beginPath(); g.moveTo(x, y0); g.lineTo(x + (H - y0), H); g.stroke(); } },
+    (g, W, H, y0) => { g.fillStyle = 'rgba(255,240,200,.08)'; for (let y = y0 + 10, i = 0; y < H; y += 22, i++) for (let x = (i % 2) * 11; x < W; x += 22) { circle(g, x, y, 3.2); g.fill(); } },
+    (g, W, H, y0) => { g.fillStyle = 'rgba(255,255,255,.06)'; for (let y = y0, i = 0; y < H; y += 30, i++) for (let x = (i % 2) * 30; x < W; x += 60) g.fillRect(x, y, 30, 30); },
+    (g, W, H, y0) => { g.strokeStyle = 'rgba(200,255,255,.08)'; g.lineWidth = 3; for (let y = y0 + 12; y < H; y += 24) { g.beginPath(); for (let x = 0; x <= W; x += 8) g.lineTo(x, y + Math.sin(x / 18) * 4); g.stroke(); } },
+    (g, W, H, y0) => { g.strokeStyle = 'rgba(255,230,210,.07)'; g.lineWidth = 2; for (let y = y0; y < H; y += 28) for (let x = 0; x < W; x += 28) { g.beginPath(); g.moveTo(x + 14, y); g.lineTo(x + 28, y + 14); g.lineTo(x + 14, y + 28); g.lineTo(x, y + 14); g.closePath(); g.stroke(); } },
+    (g, W, H, y0) => { g.fillStyle = 'rgba(235,220,255,.07)'; for (let y = y0 + 20, i = 0; y < H; y += 48, i++) for (let x = (i % 2) * 24 + 12; x < W; x += 48) { circle(g, x, y, 9); g.fill(); } },
+    (g, W, H, y0) => { g.strokeStyle = 'rgba(255,220,170,.07)'; g.lineWidth = 3; for (let y = y0 + 8; y < H; y += 20) { g.beginPath(); for (let x = 0, i = 0; x <= W; x += 12, i++) g.lineTo(x, y + (i % 2 ? 6 : -6)); g.stroke(); } },
+    (g, W, H, y0) => { const r = rng(777); for (let i = 0; i < 70; i++) star(g, r() * W, y0 + r() * (H - y0), 2 + r() * 2.5, 'rgba(255,245,200,.12)'); },
+    (g, W, H, y0) => { const r = rng(888); for (let i = 0; i < 90; i++) { g.save(); g.translate(r() * W, y0 + r() * (H - y0)); g.rotate(r() * 6.3); g.fillStyle = 'rgba(255,200,225,.12)'; g.beginPath(); g.ellipse(0, 0, 4, 2.4, 0, 0, Math.PI * 2); g.fill(); g.restore(); } },
+  ];   // 빗살 · 물방울 점 · 체크 · 물결 · 마름모 · 큰 물방울 · 지그재그 · 작은 별 · 꽃잎 무늬
+  Art._kit.drawPattern = (g, W, H, v) => { const fn = PATTERN[(v | 0) % PATTERN.length]; if (fn) fn(g, W, H, 90); };
   /** 회차(톤 번호 v)에 맞춰: 소품 배치가 달라지게 하고, 그 회차의 장식을 더한다. art.js 의 배경 만들기가 부른다 */
   Art._kit.setBgVariant = (v) => { SALT = v | 0; };
   Art._kit.drawDecor = (g, W, H, v) => { const fn = DECOR[(v | 0) % DECOR.length]; if (fn) fn(g, W, H, rng(500 + (v | 0))); };

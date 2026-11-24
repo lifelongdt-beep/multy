@@ -588,18 +588,18 @@
     team:  { icon: '🤝', desc: '에코 응원 Lv +1' },
   };
 
-  /** 회차마다 배경 톤이 살짝 바뀐다: 10가지 톤을 차례로, 다 쓰면 처음으로 (배경 위에 얇게 덮는 색) */
+  /** 회차마다 배경이 바뀐다: 10가지를 차례로, 다 쓰면 처음으로. wash = 배경 위에 얇게 덮는 색, tint = 배경 그림 자체의 색감(바닥·벽 색이 바뀜) */
   const BG_TONES = [
-    { name: '보랏빛 저녁', wash: 'rgba(74,66,88,.28)' },
-    { name: '새벽 하늘',   wash: 'rgba(58,84,122,.28)' },
-    { name: '아침 햇살',   wash: 'rgba(122,102,62,.26)' },
-    { name: '봄 연두',     wash: 'rgba(78,106,72,.26)' },
-    { name: '바다 청록',   wash: 'rgba(46,100,104,.28)' },
-    { name: '노을 살구',   wash: 'rgba(128,84,70,.26)' },
-    { name: '라벤더',      wash: 'rgba(100,78,126,.28)' },
-    { name: '가을 호박',   wash: 'rgba(120,88,48,.26)' },
-    { name: '별밤 남색',   wash: 'rgba(40,50,98,.30)' },
-    { name: '벚꽃 분홍',   wash: 'rgba(122,80,106,.26)' },
+    { name: '보랏빛 저녁', wash: 'rgba(74,66,88,.28)', tint: null },
+    { name: '새벽 하늘',   wash: 'rgba(58,84,122,.28)', tint: '#5b8fd9' },
+    { name: '아침 햇살',   wash: 'rgba(122,102,62,.26)', tint: '#e8b048' },
+    { name: '봄 연두',     wash: 'rgba(78,106,72,.26)', tint: '#7cc06a' },
+    { name: '바다 청록',   wash: 'rgba(46,100,104,.28)', tint: '#3fb3b0' },
+    { name: '노을 살구',   wash: 'rgba(128,84,70,.26)', tint: '#f08a6a' },
+    { name: '라벤더',      wash: 'rgba(100,78,126,.28)', tint: '#a07ee0' },
+    { name: '가을 호박',   wash: 'rgba(120,88,48,.26)', tint: '#d98a3a' },
+    { name: '별밤 남색',   wash: 'rgba(40,50,98,.30)', tint: '#4a5fd0' },
+    { name: '벚꽃 분홍',   wash: 'rgba(122,80,106,.26)', tint: '#ef8fbf' },
   ];
   /** 회차(0부터) → 배경 톤 번호 (0~9, 10회차마다 처음으로) */
   const bgToneOf = (cycle) => ((Math.max(0, cycle | 0) % BG_TONES.length) + BG_TONES.length) % BG_TONES.length;
