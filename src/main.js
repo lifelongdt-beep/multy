@@ -473,6 +473,7 @@
       default: return null;
     }
   }
+  let toastBox = null;   // 지금 뜬 안내 글 상자의 위·아래 (화살표 출발점)
   function drawTipMarker(key, now) {
     const t = tipTargetPos(key); if (!t) return;
     const pul = 0.5 + 0.5 * Math.sin(now / 160), bounce = Math.abs(Math.sin(now / 220)) * 7;
@@ -487,10 +488,30 @@
       ax = t.x; up = t.y - r < 70; ay = up ? t.y + r + 4 : t.y - r - 4;
     }
     ctx.shadowBlur = 0;
-    const d = up ? 1 : -1, tip = ay + d * bounce;   // 화살표: 고리 쪽을 향해 통통
-    ctx.fillStyle = '#ffd84d'; ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(ax, tip); ctx.lineTo(ax - 9, tip + d * 12); ctx.lineTo(ax - 4, tip + d * 12); ctx.lineTo(ax - 4, tip + d * 24); ctx.lineTo(ax + 4, tip + d * 24); ctx.lineTo(ax + 4, tip + d * 12); ctx.lineTo(ax + 9, tip + d * 12); ctx.closePath();
-    ctx.stroke(); ctx.fill();
+    // 안내 글 상자에서 목표까지 굵고 휘어진 화살표 (흰 테두리 + 금빛 몸통 + 큰 화살촉, 끝이 통통 튀며 반짝)
+    const box = toastBox || { top: H * 0.36 + 17, bottom: H * 0.36 + 60 };
+    // 목표의 중심과, 글 상자에서 그쪽을 향한 출발점
+    const gx = t.rect ? t.rect[0] + t.rect[2] / 2 : t.x, gy = t.rect ? t.rect[1] + t.rect[3] / 2 : t.y;
+    const below = gy > (box.top + box.bottom) / 2, sx = Math.max(40, Math.min(W - 40, gx * 0.35 + W / 2 * 0.65)), sy = below ? box.bottom + 2 : box.top - 2;
+    // 화살촉 끝: 목표 가장자리 바로 앞 (출발점 쪽 면), 통통 튀며 다가감
+    let tx, ty;
+    if (t.rect) { tx = gx; ty = below ? t.rect[1] - 8 - bounce * 0.6 : t.rect[1] + t.rect[3] + 8 + bounce * 0.6; }
+    else { const vx = sx - gx, vy = sy - gy, vl = Math.hypot(vx, vy) || 1, rr = t.r + 8 + bounce * 0.6; tx = gx + vx / vl * rr; ty = gy + vy / vl * rr; }
+    if (Math.hypot(tx - sx, ty - sy) > 30) {
+      const side = tx < W / 2 ? -1 : 1, cx = (sx + tx) / 2 + side * Math.min(70, Math.abs(ty - sy) * 0.35), cy = (sy + ty) / 2;   // 바깥쪽으로 휘는 곡선
+      const ex = 2 * (tx - cx), ey = 2 * (ty - cy), el = Math.hypot(ex, ey) || 1, ux = ex / el, uy = ey / el;   // 끝에서의 방향
+      const hl = 22, hw = 15, bx = tx - ux * hl, by = ty - uy * hl;   // 화살촉 크기
+      const curve = () => { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(cx, cy, bx, by); };
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      curve(); ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 15; ctx.stroke();            // 그림자
+      curve(); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 12; ctx.stroke();                     // 진한 테두리
+      curve(); ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 7; ctx.stroke();                      // 금빛 몸통
+      curve(); ctx.setLineDash([10, 12]); ctx.lineDashOffset = -now / 25; ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.setLineDash([]);   // 흐르는 빛
+      const head = () => { ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(bx - uy * hw, by + ux * hw); ctx.lineTo(bx + ux * 4, by + uy * 4); ctx.lineTo(bx + uy * hw, by - ux * hw); ctx.closePath(); };
+      head(); ctx.fillStyle = '#ffd84d'; ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 3; ctx.shadowColor = 'rgba(255,200,60,.9)'; ctx.shadowBlur = 12; ctx.fill(); ctx.shadowBlur = 0; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.moveTo(tx - ux * 5, ty - uy * 5); ctx.lineTo(bx - uy * hw * 0.5 + ux * 2, by + ux * hw * 0.5 + uy * 2); ctx.lineTo(bx + ux * 4, by + uy * 4); ctx.closePath(); ctx.fill();   // 화살촉 윗면 빛
+      ctx.beginPath(); ctx.arc(sx, sy, 5.5, 0, Math.PI * 2); ctx.fillStyle = '#ffd84d'; ctx.fill(); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 2.5; ctx.stroke();   // 출발점 동그라미
+    }
     ctx.restore();
   }
 
@@ -1173,6 +1194,7 @@
         if (cur) lines.push(cur);
       }
       const y0 = H * 0.36 + 30;
+      toastBox = { top: y0 - 13, bottom: y0 - 13 + lines.length * 20 + 6 };   // 튜토리얼 화살표가 여기서 출발
       ctx.fillStyle = 'rgba(8,10,20,.55)'; ctx.fillRect(4, y0 - 13, W - 8, lines.length * 20 + 6);
       ctx.fillStyle = '#ffd34d'; lines.forEach((ln, i) => fitText(ln, W / 2, y0 + i * 20, 14));
       ctx.globalAlpha = 1;
