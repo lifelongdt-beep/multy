@@ -324,7 +324,7 @@
     const top = M.topCycle(save);
     if (top > 0) {
       const box = el('div', 'cyc');
-      const prev = el('button', 'sub', '◀'), next = el('button', 'sub', '▶');
+      const prev = el('button', 'sub', '◀ 이전'), next = el('button', 'sub', '다음 ▶');   // 화살표 + 글자로 이전·다음 회차 버튼임을 분명하게
       const cv = el('div', 'cv', `🔁 ${save.cycle + 1}회차`);
       cv.appendChild(el('small', '', save.cycle < top ? `끝낸 회차 · 모든 월드 열림 (열린 회차 1~${top + 1})` : `지금 도전 중인 회차 · 적이 더 강해요`));
       prev.disabled = save.cycle <= 0; next.disabled = save.cycle >= top;
