@@ -946,7 +946,10 @@
     const useArt = artOn();
     // 게임 밖 화면(첫 화면·상점·내 캐릭터·선행·과제·결과): 해 질 녘 길 위의 주인공과 에코, 지평선을 흐르는 12개 월드
     if ((state === 'menu' || state === 'end') && useArt && Art.drawMenuScene) {
-      Art.drawMenuScene(ctx, W, H, performance.now(), { emo: GameUI.emoji(), cycle: GameUI.outfitCycle(), win: state === 'end' ? !!(sim && sim.result === 'clear') : undefined, ext: view });
+      const fw = Math.ceil((W + view.ex + view.ex2) / 8) * 8, fh = Math.ceil((H + view.ey + view.ey2) / 8) * 8;   // 메인 배경도 화면 비율에 맞춰 화면 전체 크기로 (9:16이면 원래 그대로)
+      ctx.save(); ctx.translate(-view.ex, -view.ey);
+      Art.drawMenuScene(ctx, fw, fh, performance.now(), { emo: GameUI.emoji(), cycle: GameUI.outfitCycle(), win: state === 'end' ? !!(sim && sim.result === 'clear') : undefined });
+      ctx.restore();
       return;
     }
     if (useArt) {   // 배경은 화면 비율에 맞춰 화면 전체 크기로 새로 그림 (9:16이면 원래 그대로, 길거나 넓으면 교실이 더 이어짐)
