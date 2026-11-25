@@ -21,8 +21,8 @@ const SCENES = [
   { id: 'echo',  world: 'mountain', sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'hospital', sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'gym',      sec: 1.1, cap: C3 },
-  { id: 'deed',  world: 'academy',  sec: 1.8, cap: C4 },
-  { id: 'deed',  world: 'library',  sec: 1.6, cap: C4 },
+  { id: 'deed',  world: 'academy',  sec: 1.8, cap: C4, who: 'child' },
+  { id: 'deed',  world: 'library',  sec: 1.6, cap: C4, who: 'elder' },
   { id: 'end',   world: 'stage',    sec: 3.0, cap: [] },
 ];
 (async () => {
@@ -181,7 +181,7 @@ const SCENES = [
     if (sc.id === 'milk') { run(60 * 20, wig); s.enemies = []; place(180, 470); }
     if (sc.id === 'end') { run(60 * 20, wig); s.enemies = []; place(180, 420); orbit(180, 420, 70); }
     if (sc.id === 'deed') { let n = 0; while (!(s.deeds && s.deeds.rescue) && n++ < 20000) run(1, wig); const rs = s.deeds.rescue; clearTop(); s.enemies = s.enemies.filter((e) => e.guard);
-      if (rs) { const dx = 180 - rs.x, dy = 430 - rs.y; rs.x += dx; rs.y += dy; for (const e of rs.guards) { e.x += dx; e.y += dy; tough(e); e.speed = 0; } } place(80, 470); }
+      if (rs) { if (sc.who) rs.kind = sc.who; const dx = 180 - rs.x, dy = 430 - rs.y; rs.x += dx; rs.y += dy; for (const e of rs.guards) { e.x += dx; e.y += dy; tough(e); e.speed = 0; } } place(80, 470); }
   }, sc);
   if (MODE === 'keyframes') {
     for (let i = 0; i < SCENES.length; i++) {
