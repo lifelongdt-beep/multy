@@ -54,7 +54,11 @@
   const keys = {};
   let drag = null;
   /* 화면 맞춤: 게임 칸(W×H, 9:16)은 그대로, 캔버스는 화면 전체. view = 게임 칸의 위치(ox, oy · CSS px)와 배율(k), 남는 곳(ex, ey · 게임 좌표) */
-  const view = { k: 1, ox: 0, oy: 0, ex: 0, ey: 0, dpr: 1 };
+  const view = { k: 1, ox: 0, oy: 0, ex: 0, ey: 0, ex2: 0, ey2: 0, dpr: 1, hudUp: 0 };
+  let safeProbe = null;
+  function safeTopPx() {   // 화면 위 안전 영역(노치·상태 표시줄) 높이
+    try { if (!safeProbe) { safeProbe = document.createElement('div'); safeProbe.style.cssText = 'position:fixed;top:0;left:0;height:env(safe-area-inset-top,0px);width:0;visibility:hidden;pointer-events:none'; document.body.appendChild(safeProbe); } return safeProbe.getBoundingClientRect().height || 0; } catch (e) { return 0; }
+  }
   function toLogical(ev) {
     const r = cv.getBoundingClientRect();
     return { x: (ev.clientX - r.left - view.ox) / view.k, y: (ev.clientY - r.top - view.oy) / view.k };
@@ -129,7 +133,7 @@
   /* 마음 칸(선행 게이지): 하트 4칸. 주운 선행 물건이 하트가 되어 날아와 칸을 채우고, 4개가 차면 반짝 축하 */
   let deedHud = { filled: 0, fly: [], pop: [0, 0, 0, 0], party: 0 };
   function deedSlotXY(i) { const n = EchoSim.TUNING.deedGaugeNeed; return [W - 14 - (n - 1 - i) * 14, 28]; }
-  function deedFly(x, y) { deedHud.fly.push({ x0: x, y0: y - 8, t: 0, max: 34, slot: Math.min(EchoSim.TUNING.deedGaugeNeed - 1, deedHud.filled + deedHud.fly.length) }); }
+  function deedFly(x, y) { deedHud.fly.push({ x0: x, y0: y - 8 + view.hudUp, t: 0, max: 34, slot: Math.min(EchoSim.TUNING.deedGaugeNeed - 1, deedHud.filled + deedHud.fly.length) }); }
   function heartPath(c, x, y, s) {   // 하트 모양 (가운데 x,y · 크기 s)
     c.beginPath(); c.moveTo(x, y + s * 0.38);
     c.bezierCurveTo(x - s * 0.62, y - s * 0.05, x - s * 0.42, y - s * 0.55, x, y - s * 0.22);
@@ -146,7 +150,7 @@
       ctx.fillStyle = '#ff6fae'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; heartPath(ctx, x, y, sz); ctx.fill(); ctx.stroke();
       if (f.t >= f.max) {
         h.fly.splice(i, 1); h.filled = Math.min(n, h.filled + 1); h.pop[f.slot] = 14;
-        if (h.filled >= n) { h.party = 70; Sfx.play('deedFull'); for (let j = 0; j < n; j++) h.pop[j] = 18; for (let j = 0; j < 10; j++) bubbles.push({ heart: true, x: W - 35 + (Math.random() - 0.5) * 60, y: 40 + Math.random() * 10, t: -j * 2, max: 50 }); }
+        if (h.filled >= n) { h.party = 70; Sfx.play('deedFull'); for (let j = 0; j < n; j++) h.pop[j] = 18; for (let j = 0; j < 10; j++) bubbles.push({ heart: true, x: W - 35 + (Math.random() - 0.5) * 60, y: 40 - view.hudUp + Math.random() * 10, t: -j * 2, max: 50 }); }
         else Sfx.play('deedSlot');
       }
     }
@@ -468,6 +472,10 @@
     view.k = sr.width / W; view.ox = sr.left - r.left; view.oy = sr.top - r.top; view.dpr = dpr;
     view.ex = Math.max(0, view.ox / view.k); view.ey = Math.max(0, view.oy / view.k);
     view.ex2 = Math.max(0, (r.width - view.ox - sr.width) / view.k); view.ey2 = Math.max(0, (r.height - view.oy - sr.height) / view.k);
+    // 위쪽 정보 줄(체력·시간·아이템·버튼)을 남는 위 공간으로 올림 (상태 표시줄·노치 자리는 피함, 최대 56)
+    const safeTop = safeTopPx() / view.k;
+    view.hudUp = Math.max(0, Math.min(56, view.ey - safeTop));
+    st.style.setProperty('--hud-up', (view.hudUp * view.k) + 'px');
   }
   addEventListener('resize', resize); resize(); applyGfx();
 
@@ -537,12 +545,12 @@
     const p = sim.player, near = (list) => { let b = null, bd = 1e9; for (const o of list) { const d = (o.x - p.x) ** 2 + (o.y - p.y) ** 2; if (d < bd) { bd = d; b = o; } } return b; };
     switch (key) {
       case 'player': return { x: p.x, y: p.y, r: 24 };
-      case 'hp': return { rect: [5, 5, 106, 14] };
-      case 'xp': return { rect: [5, 18, 106, 9] };
-      case 'gauge': return { rect: [W - 63, 20, 59, 16] };   // 마음 칸 하트 4개
-      case 'echoCount': return { rect: [W - 110, 4, 58, 15] };
-      case 'timer': return { rect: [W / 2 - 30, 2, 60, 21] };
-      case 'items': return { rect: [4, 31, 170, 20] };
+      case 'hp': return { rect: [5, 5 - view.hudUp, 106, 14] };
+      case 'xp': return { rect: [5, 18 - view.hudUp, 106, 9] };
+      case 'gauge': return { rect: [W - 63, 20 - view.hudUp, 59, 16] };   // 마음 칸 하트 4개
+      case 'echoCount': return { rect: [W - 110, 4 - view.hudUp, 58, 15] };
+      case 'timer': return { rect: [W / 2 - 30, 2 - view.hudUp, 60, 21] };
+      case 'items': return { rect: [4, 31 - view.hudUp, 170, 20] };
       case 'cards': return { rect: [6, PLAY_BOTTOM + 4, W - 12, H - PLAY_BOTTOM - 10] };
       case 'echo': { const e = near(sim.echoes.filter((e) => e.alive && !e.down)); return e && { x: e.x, y: e.y, r: 20 }; }
       case 'helper': return sim.helper && { x: sim.helper.x, y: sim.helper.y, r: sim.helper.r + 4 };
@@ -927,18 +935,15 @@
     const ex = view.ex, ey = view.ey, ex2 = view.ex2, ey2 = view.ey2;
     if (ex + ey + ex2 + ey2 < 0.5) return;
     const tiles = [];
-    if (ey2 > 0) tiles.push([0, 1]);
+    if (ey > 0) tiles.push([0, -1]); if (ey2 > 0) tiles.push([0, 1]);
     if (ex > 0) tiles.push([-1, 0]); if (ex2 > 0) tiles.push([1, 0]);
-    if (ex > 0 && ey2 > 0) tiles.push([-1, 1]); if (ex2 > 0 && ey2 > 0) tiles.push([1, 1]);
+    if (ex > 0 && ey > 0) tiles.push([-1, -1]); if (ex2 > 0 && ey > 0) tiles.push([1, -1]); if (ex > 0 && ey2 > 0) tiles.push([-1, 1]); if (ex2 > 0 && ey2 > 0) tiles.push([1, 1]);
     for (const [tx, ty] of tiles) {
       ctx.save();
       ctx.translate(tx < 0 ? 0 : tx > 0 ? 2 * W : 0, ty < 0 ? 0 : ty > 0 ? 2 * H : 0);
       ctx.scale(tx ? -1 : 1, ty ? -1 : 1);
       if (img) ctx.drawImage(img, 0, 0, W, H); else { ctx.fillStyle = color || '#161a2e'; ctx.fillRect(0, 0, W, H); }
       ctx.restore();
-    }
-    if (ey > 0) {   // 위: 거울로 붙이면 칠판 같은 소품이 거꾸로 하나 더 보여서, 맨 윗줄(벽)을 위로 늘여 이어지게
-      if (img) ctx.drawImage(img, 0, 0, img.width, 2, -ex - 12, -ey - 12, W + ex + ex2 + 24, ey + 13); else { ctx.fillStyle = color || '#161a2e'; ctx.fillRect(-ex - 12, -ey - 12, W + ex + ex2 + 24, ey + 13); }
     }
     ctx.fillStyle = 'rgba(8,10,22,.32)';   // 게임 칸 밖은 살짝 어둡게
     if (ey > 0) ctx.fillRect(-ex - 12, -ey - 12, W + ex + ex2 + 24, ey + 12);
@@ -1249,9 +1254,10 @@
       }
     }
 
-    // HUD
+    // HUD (긴 화면에선 남는 위 공간으로 올림: view.hudUp)
+    ctx.save(); ctx.translate(0, -view.hudUp);
     // 위쪽 정보 줄: 검은 띠 대신 아주 옅은 그라데이션 (적이 비쳐 보이게), 글자는 그림자로 읽기 쉽게
-    { const hg = ctx.createLinearGradient(0, 0, 0, 52); hg.addColorStop(0, 'rgba(0,0,0,.32)'); hg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 52);
+    { const hg = ctx.createLinearGradient(0, 0, 0, 52); hg.addColorStop(0, 'rgba(0,0,0,.32)'); hg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = hg; ctx.fillRect(-view.ex - 12, 0, W + view.ex + view.ex2 + 24, 52);
       // 정보가 있는 자리에는 반투명 받침: 위로 올라온 적이 글자·막대와 겹쳐 보이지 않게
       const pill = (x, y, w, h) => { ctx.fillStyle = 'rgba(10,12,26,.62)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, 8) : ctx.rect(x, y, w, h); ctx.fill(); };
       pill(3, 3, 145, 27); pill(W / 2 - 30, 2, 60, sim.bossCount > 1 ? 33 : 21); pill(W - 112, 3, 109, 33); }
@@ -1281,6 +1287,7 @@
     if (sim.deeds) { const ga = ctx.textAlign, gb = ctx.textBaseline; drawDeedHud(); ctx.textAlign = ga; ctx.textBaseline = gb; ctx.fillStyle = '#fff'; }   // 마음 칸: 하트 4개
 
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.restore();
     if (tutorial && tipCur && tipCur.target && toast.t > 0) drawTipMarker(tipCur.target, performance.now());
     // 하단 추천 조작 영역 (이동 제한은 없음. 여기서 드래그하면 손가락이 캐릭터를 덜 가림). 카드가 떠 있으면 안내는 숨김
     if (tutorial && !drag && !sim.choices) {
@@ -1299,7 +1306,7 @@
       for (const a of autoFlash) if (!a.stat) a.stat = { boon_power: 'dmg', boon_focus: 'rate', boon_team: 'echo' }[a.id] || a.id;
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       if (!owned.length) {
-        if (tutorial) { ctx.font = '11px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillText('🎒 아이템: 구슬을 모아 성장하면 생겨요', 8, 43); }
+        if (tutorial) { ctx.font = '11px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillText('🎒 아이템: 구슬을 모아 성장하면 생겨요', 8, 43 - view.hudUp); }
       } else {
         let size = 13, gap = 7;
         const total = (sz, g) => { ctx.font = `${sz}px sans-serif`; return owned.reduce((a, t) => a + ctx.measureText(t).width + g, 0); };
@@ -1311,10 +1318,10 @@
           const fl = autoFlash.find((a) => a.stat === ownedIds[i]);
           if (fl) {   // 자동 선택된 아이템: 아이콘 뒤가 짧게 반짝
             ctx.globalAlpha = (Math.floor(fl.t / 6) % 2 ? 0.55 : 0.2);
-            ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(ux + size * 0.55, 43, size * 0.9, 0, 7); ctx.fill();
+            ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(ux + size * 0.55, 43 - view.hudUp, size * 0.9, 0, 7); ctx.fill();
             ctx.globalAlpha = 1; ctx.fillStyle = '#fff';
           }
-          ctx.fillText(t, ux, 43); ux += w2 + gap;
+          ctx.fillText(t, ux, 43 - view.hudUp); ux += w2 + gap;
         }
       }
       // 새로 얻은 아이템: 주인공 머리 위에서 살짝 떠오르며 반짝 (여러 개면 옆으로 나란히)
