@@ -20,13 +20,15 @@
   html,body{margin:0;height:100%;background:#0d0f1a;color:#fff;font-family:system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
   #wrap{position:relative;height:100%;display:flex;align-items:center;justify-content:center}
   #stage{position:relative;width:360px;height:640px}
-  canvas{width:100%;height:100%;display:block;background:#161a2e;border-radius:6px}
-  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(8,10,20,.82);text-align:center;padding:24px;box-sizing:border-box}
+  canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;background:#0d0f1a}   /* 화면 전체: 게임 칸(9:16) 밖 남는 곳까지 배경으로 채움 */
+  #stage{pointer-events:none}   /* 게임 칸 위의 버튼·창만 누를 수 있고, 나머지 터치는 아래 캔버스로 */
+  #stage>*{pointer-events:auto}
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(8,10,20,.82);box-shadow:0 0 0 200vmax rgba(8,10,20,.82);text-align:center;padding:24px;box-sizing:border-box}
   .overlay.hidden{display:none}
   /* 게임 밖 화면: 뒤의 메뉴 배경(해 질 녘 길 · 주인공 · 에코)이 비쳐 보이게 옅게 */
-  #start,#tutorial{background:linear-gradient(rgba(8,10,24,.25),rgba(8,10,24,.08) 45%,rgba(8,10,24,.35))}
-  #end{background:linear-gradient(rgba(8,10,24,.45),rgba(8,10,24,.3) 50%,rgba(8,10,24,.55))}
-  #panel{background:rgba(8,10,24,.62)}
+  #start,#tutorial{background:rgba(8,10,24,.2);box-shadow:0 0 0 200vmax rgba(8,10,24,.2)}   /* 그림자 테두리로 같은 옅은 덮개를 게임 칸 밖까지 (긴 폰·태블릿에서 경계선이 안 보이게) */
+  #end{background:rgba(8,10,24,.42);box-shadow:0 0 0 200vmax rgba(8,10,24,.42)}
+  #panel{background:rgba(8,10,24,.62);box-shadow:0 0 0 200vmax rgba(8,10,24,.62)}
   .icn{vertical-align:-3px;flex-shrink:0}
   .tabs{display:flex;gap:6px;width:100%}
   .dex{width:100%;background:#222845;border:2px solid #3a4272;border-radius:12px;padding:6px 8px;box-sizing:border-box}
@@ -209,8 +211,7 @@
 </style>
 </head>
 <body>
-<div id="wrap"><div id="stage">
-  <canvas id="c"></canvas>
+<div id="wrap"><canvas id="c"></canvas><div id="stage">
   <button id="mute" class="sub" data-icon="soundOn" data-icon-size="17" aria-label="소리 켜기/끄기"></button>
   <button id="pauseBtn" class="sub" style="display:none" data-icon="pause" data-icon-size="17" aria-label="일시정지"></button>
   <div id="soundPop" class="hidden"><div class="vols" data-vols></div><button id="muteAll" class="sub"></button></div>
