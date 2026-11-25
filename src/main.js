@@ -888,6 +888,30 @@
     if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; $('bInstall').style.display = 'none'; }); return; }
     if (isIOS) $('bInstall').textContent = '아래 공유 버튼 → "홈 화면에 추가"를 눌러요';
   };
+  /* ---------- 안드로이드 앱: 종료 버튼 · 폰의 뒤로 버튼 ----------
+   * 웹 페이지는 스스로 닫을 수 없어서 앱 안에서만 보인다. 실수로 꺼지지 않게 두 번 눌러야 종료 */
+  const AppPlugin = nativeApp && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  let backHintT = 0, exitArmed = 0, backArmed = 0;   // 종료 버튼·뒤로 버튼은 따로 '한 번 눌렀음'을 기억
+  function backHint(text) { const h = $('backHint'); h.textContent = text; h.hidden = false; clearTimeout(backHintT); backHintT = setTimeout(() => { h.hidden = true; }, 2000); }
+  function exitApp() { try { AppPlugin.exitApp(); } catch (e) { /* 무시 */ } }
+  if (AppPlugin) {
+    $('bExitApp').style.display = '';
+    $('bExitApp').onclick = () => {
+      Sfx.play('click');
+      if (Date.now() - exitArmed < 2500) { exitApp(); return; }
+      exitArmed = Date.now(); $('bExitApp').textContent = '한 번 더 누르면 종료돼요';
+      setTimeout(() => { if (Date.now() - exitArmed >= 2400) $('bExitApp').textContent = '종료'; }, 2500);
+    };
+    AppPlugin.addListener('backButton', () => {
+      if (!$('soundPop').classList.contains('hidden')) { $('soundPop').classList.add('hidden'); return; }   // 소리 창 닫기
+      if (state === 'play') { pauseGame(); return; }                                                         // 게임 중 → 일시정지
+      if (state === 'paused') { quitArmed = false; resumeGame(); return; }                                  // 일시정지 → 계속하기
+      if (!$('panel').classList.contains('hidden')) { $('pback').click(); return; }                         // 상점 등 창 → 닫기
+      if (state === 'end' || !$('end').classList.contains('hidden')) { $('toMenu').click(); return; }       // 결과 화면 → 메뉴
+      if (Date.now() - backArmed < 2000) { exitApp(); return; }                                              // 메인 화면: 두 번 누르면 종료
+      backArmed = Date.now(); backHint('뒤로 버튼을 한 번 더 누르면 종료돼요');
+    });
+  }
   Icons.apply(); muteIcon(); resetBtn.innerHTML = Icons.svg('trash') + '<span>에코 기록 초기화</span>'; $('again').innerHTML = Icons.svg('retry') + '<span>한 판만 더</span>';
 
   /* ---------- 렌더 ---------- */
