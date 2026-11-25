@@ -48,6 +48,16 @@
     o = o || {};
     const key = W + 'x' + H;
     if (!still || stillKey !== key) { still = paintStill(W, H); stillKey = key; }
+    const ex = o.ext ? o.ext.ex : 0, ey = o.ext ? o.ext.ey : 0, ex2 = o.ext ? o.ext.ex2 || 0 : 0, ey2 = o.ext ? o.ext.ey2 || 0 : 0;
+    if (ex + ey + ex2 + ey2 > 0.5) {   // 화면에 남는 곳: 가장자리 한 줄을 늘여서 하늘은 위로, 길은 아래로, 좌우는 옆으로 이어지게
+      const sw = still.width, sh = still.height;
+      if (ey > 0) ctx.drawImage(still, 0, 0, sw, 1, 0, -ey - 12, W, ey + 13);
+      if (ey2 > 0) ctx.drawImage(still, 0, sh - 1, sw, 1, 0, H - 1, W, ey2 + 13);
+      if (ex > 0) ctx.drawImage(still, 0, 0, 1, sh, -ex - 12, 0, ex + 13, H);
+      if (ex2 > 0) ctx.drawImage(still, sw - 1, 0, 1, sh, W - 1, 0, ex2 + 13, H);
+      for (const [cx, cy, w, h, x, y] of [[0, 0, -ex - 12, -ey - 12, ex + 13, ey + 13], [sw - 1, 0, W - 1, -ey - 12, ex2 + 13, ey + 13], [0, sh - 1, -ex - 12, H - 1, ex + 13, ey2 + 13], [sw - 1, sh - 1, W - 1, H - 1, ex2 + 13, ey2 + 13]]) if (x > 1 && y > 1) ctx.drawImage(still, cx, cy, 1, 1, w, h, x, y);
+      if (ey > 0) { const r0 = rng(9), ww = W + ex + ex2, n = Math.ceil(ey * ww / 1000); ctx.fillStyle = '#fff'; for (let i = 0; i < n; i++) { ctx.globalAlpha = 0.25 + 0.55 * Math.abs(Math.sin(now / 1000 * (0.5 + r0()) + i)); ctx.fillRect(-ex + r0() * ww, -r0() * ey, i % 9 ? 1.2 : 2, i % 9 ? 1.2 : 2); } ctx.globalAlpha = 1; }   // 위로 이어진 하늘에도 같은 밀도로 별
+    }
     ctx.drawImage(still, 0, 0, W, H);
     const t = now / 1000, hy = H * HORIZON;
     // 별 · 초승달

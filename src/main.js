@@ -53,9 +53,11 @@
   const input = { dx: 0, dy: 0 };
   const keys = {};
   let drag = null;
+  /* 화면 맞춤: 게임 칸(W×H, 9:16)은 그대로, 캔버스는 화면 전체. view = 게임 칸의 위치(ox, oy · CSS px)와 배율(k), 남는 곳(ex, ey · 게임 좌표) */
+  const view = { k: 1, ox: 0, oy: 0, ex: 0, ey: 0, dpr: 1 };
   function toLogical(ev) {
     const r = cv.getBoundingClientRect();
-    return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
+    return { x: (ev.clientX - r.left - view.ox) / view.k, y: (ev.clientY - r.top - view.oy) / view.k };
   }
   cv.addEventListener('pointerdown', (ev) => { cv.setPointerCapture(ev.pointerId); const p = toLogical(ev); drag = { ax: p.x, ay: p.y, px: p.x, py: p.y }; });
   cv.addEventListener('pointermove', (ev) => dragMove(ev));
@@ -365,7 +367,7 @@
       const gl = ctx.createRadialGradient(w.x, w.y, 4, w.x, w.y, w.r);
       gl.addColorStop(0, `rgba(255,200,225,${0.35 * (1 - k)})`); gl.addColorStop(1, 'rgba(255,200,225,0)');
       ctx.globalAlpha = 1; ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(w.x, w.y, w.r, 0, 7); ctx.fill();
-      ctx.fillStyle = `rgba(255,240,220,${0.12 * (1 - k)})`; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = `rgba(255,240,220,${0.12 * (1 - k)})`; fillAll();
       w.t += 1;
     }
     ctx.globalAlpha = 1;
@@ -461,8 +463,11 @@
   function resize() {
     const st = $('stage'), k = Math.min(innerWidth / W, innerHeight / H);
     st.style.width = Math.floor(W * k) + 'px'; st.style.height = Math.floor(H * k) + 'px';
-    const r = cv.getBoundingClientRect(); const dpr = liteOn() ? 1 : Math.min(2, window.devicePixelRatio || 1);   // 가벼운 모드: 해상도 1배
+    const r = cv.getBoundingClientRect(), sr = st.getBoundingClientRect(); const dpr = liteOn() ? 1 : Math.min(2, window.devicePixelRatio || 1);   // 가벼운 모드: 해상도 1배
     cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    view.k = sr.width / W; view.ox = sr.left - r.left; view.oy = sr.top - r.top; view.dpr = dpr;
+    view.ex = Math.max(0, view.ox / view.k); view.ey = Math.max(0, view.oy / view.k);
+    view.ex2 = Math.max(0, (r.width - view.ox - sr.width) / view.k); view.ey2 = Math.max(0, (r.height - view.oy - sr.height) / view.k);
   }
   addEventListener('resize', resize); resize(); applyGfx();
 
@@ -915,18 +920,44 @@
     ctx.restore(); ctx.globalAlpha = 1;
   }
 
+  /** 게임 칸 밖까지(남는 곳 포함) 한 번에 칠하기 — 번쩍임·안개 등 */
+  function fillAll() { ctx.fillRect(-view.ex - 12, -view.ey - 12, W + view.ex + view.ex2 + 24, H + view.ey + view.ey2 + 24); }
+  /** 남는 곳 채우기: 배경 그림을 거울처럼 이어 붙여(이음매가 맞음) 위·아래·좌·우를 채우고, 살짝 어둡게 해서 게임 칸이 또렷하게 */
+  function fillMargins(img, color) {
+    const ex = view.ex, ey = view.ey, ex2 = view.ex2, ey2 = view.ey2;
+    if (ex + ey + ex2 + ey2 < 0.5) return;
+    const tiles = [];
+    if (ey2 > 0) tiles.push([0, 1]);
+    if (ex > 0) tiles.push([-1, 0]); if (ex2 > 0) tiles.push([1, 0]);
+    if (ex > 0 && ey2 > 0) tiles.push([-1, 1]); if (ex2 > 0 && ey2 > 0) tiles.push([1, 1]);
+    for (const [tx, ty] of tiles) {
+      ctx.save();
+      ctx.translate(tx < 0 ? 0 : tx > 0 ? 2 * W : 0, ty < 0 ? 0 : ty > 0 ? 2 * H : 0);
+      ctx.scale(tx ? -1 : 1, ty ? -1 : 1);
+      if (img) ctx.drawImage(img, 0, 0, W, H); else { ctx.fillStyle = color || '#161a2e'; ctx.fillRect(0, 0, W, H); }
+      ctx.restore();
+    }
+    if (ey > 0) {   // 위: 거울로 붙이면 칠판 같은 소품이 거꾸로 하나 더 보여서, 맨 윗줄(벽)을 위로 늘여 이어지게
+      if (img) ctx.drawImage(img, 0, 0, img.width, 2, -ex - 12, -ey - 12, W + ex + ex2 + 24, ey + 13); else { ctx.fillStyle = color || '#161a2e'; ctx.fillRect(-ex - 12, -ey - 12, W + ex + ex2 + 24, ey + 13); }
+    }
+    ctx.fillStyle = 'rgba(8,10,22,.32)';   // 게임 칸 밖은 살짝 어둡게
+    if (ey > 0) ctx.fillRect(-ex - 12, -ey - 12, W + ex + ex2 + 24, ey + 12);
+    if (ey2 > 0) ctx.fillRect(-ex - 12, H, W + ex + ex2 + 24, ey2 + 12);
+    if (ex > 0) ctx.fillRect(-ex - 12, 0, ex + 12, H);
+    if (ex2 > 0) ctx.fillRect(W, 0, ex2 + 12, H);
+  }
   function render() {
-    const sc = cv.width / W;
     const sx = shake > 0 ? (Math.random() - 0.5) * shake : 0, sy = shake > 0 ? (Math.random() - 0.5) * shake : 0;
-    ctx.setTransform(sc, 0, 0, cv.height / H, sx * sc, sy * sc);
+    const sc = view.k * view.dpr;
+    ctx.setTransform(sc, 0, 0, sc, (view.ox + sx * view.k) * view.dpr, (view.oy + sy * view.k) * view.dpr);   // 게임 칸 기준 좌표
     const th = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).theme;
     const useArt = artOn();
     // 게임 밖 화면(첫 화면·상점·내 캐릭터·선행·과제·결과): 해 질 녘 길 위의 주인공과 에코, 지평선을 흐르는 12개 월드
     if ((state === 'menu' || state === 'end') && useArt && Art.drawMenuScene) {
-      Art.drawMenuScene(ctx, W, H, performance.now(), { emo: GameUI.emoji(), cycle: GameUI.outfitCycle(), win: state === 'end' ? !!(sim && sim.result === 'clear') : undefined });
+      Art.drawMenuScene(ctx, W, H, performance.now(), { emo: GameUI.emoji(), cycle: GameUI.outfitCycle(), win: state === 'end' ? !!(sim && sim.result === 'clear') : undefined, ext: view });
       return;
     }
-    if (useArt) Art.drawBackground(ctx, W, H, (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).id, sim ? sim.cycle : GameUI.cycle()); else {
+    if (useArt) { const wid = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).id, cyc = sim ? sim.cycle : GameUI.cycle(); Art.drawBackground(ctx, W, H, wid, cyc); fillMargins(Art.backgroundCanvas ? Art.backgroundCanvas(W, H, wid, cyc) : null, th.bg); } else {
     ctx.fillStyle = th.bg; ctx.fillRect(-20, -20, W + 40, H + 40);
     ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
     if (th.deco === 'ruled') {            // 학원: 공책 줄무늬
@@ -1190,14 +1221,14 @@
 
     drawBubbles();
     if (bossFx) drawBossFx(now);
-    if (whiteFlash > 0) { ctx.fillStyle = `rgba(255,250,235,${whiteFlash * 0.75})`; ctx.fillRect(0, 0, W, H); }
+    if (whiteFlash > 0) { ctx.fillStyle = `rgba(255,250,235,${whiteFlash * 0.75})`; fillAll(); }
 
     // 밤·안개 월드: 조준 거리 밖은 어둡게 (자동 공격이 닿는 범위가 보이도록)
     const sight = sim.world.rules.sight;
     if (sight) {
       const g = ctx.createRadialGradient(p.x, p.y, sight * 0.75, p.x, p.y, sight * 1.25);
       g.addColorStop(0, 'rgba(4,6,14,0)'); g.addColorStop(1, 'rgba(4,6,14,.46)');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = g; fillAll();
     }
     // 바람 월드: 지금 바람 방향 표시
     const wind = sim.world.rules.wind;
@@ -1352,7 +1383,7 @@
     if (hurtFlash > 0) {
       const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.62);
       g.addColorStop(0, 'rgba(255,40,70,0)'); g.addColorStop(1, `rgba(255,40,70,${0.5 * hurtFlash})`);
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = g; fillAll();
     }
   }
 
