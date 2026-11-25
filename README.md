@@ -10,6 +10,12 @@
 
 폰에서 앱처럼 설치: 안드로이드(크롬)는 메뉴 아래 **홈 화면에 설치** 버튼, 아이폰(사파리)은 공유 버튼 → **홈 화면에 추가**. 설치하면 전체 화면으로 열리고 인터넷 없이도 플레이할 수 있어요 (`sw.js`가 게임 파일을 저장). 앱 아이콘은 `node tools/make-icons.js`로 다시 만들 수 있어요.
 
+## 안드로이드 앱 (구글 플레이)
+
+`android/`는 게임 파일을 앱 속에 넣은 Capacitor 프로젝트예요 (인터넷 없이 실행). main에 병합하면 GitHub Actions가
+시험용 APK와 플레이 등록용 AAB를 자동으로 만들어요. 출시 순서·서명 열쇠·스토어 등록 정보는 [`docs/store/PUBLISHING-ko.md`](docs/store/PUBLISHING-ko.md),
+스토어 글은 [`docs/store/listing-ko.md`](docs/store/listing-ko.md), 개인정보 처리방침은 [`privacy.html`](privacy.html).
+
 ## 실행
 
 ```bash

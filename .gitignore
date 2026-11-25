@@ -4,3 +4,10 @@ __pycache__/
 # 개발 도구·운영체제 임시 파일
 node_modules/
 .DS_Store
+www/
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+*.keystore
+*.jks

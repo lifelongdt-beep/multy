@@ -11,15 +11,19 @@ const ROOT = path.join(__dirname, '..'), OUT = path.join(ROOT, 'icons');
   await p.addInitScript(() => { window.ART_SPRITE_SCALE = 12; });   // 크게 그려도 흐리지 않게 고해상도 스프라이트
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html')); await p.waitForTimeout(500);
-  const make = (size, mask) => p.evaluate(([size, mask]) => {
+  const make = (size, mask, layer) => p.evaluate(([size, mask, layer]) => {   // layer: 'bg'(하늘만) · 'fg'(그림만, 투명 배경) — 안드로이드 적응형 아이콘용
     const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
     const S = 512; g.scale(size / S, size / S);
     g.save(); g.beginPath(); g.roundRect(0, 0, S, S, mask ? 0 : 112); g.clip();   // 마스크용·아이폰용은 꽉 채움 (기기가 모양을 잘라 씀)
     // 배경: 노을 하늘 + 햇살 (가장자리까지)
-    const gr = g.createLinearGradient(0, 0, 0, S); gr.addColorStop(0, '#2b2466'); gr.addColorStop(0.55, '#6a3f9e'); gr.addColorStop(1, '#ff9a6b'); g.fillStyle = gr; g.fillRect(0, 0, S, S);
-    for (let i = 0; i < 14; i++) { g.save(); g.translate(256, 300); g.rotate(i * Math.PI / 7); g.fillStyle = 'rgba(255,240,200,.09)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(-38, -440); g.lineTo(38, -440); g.fill(); g.restore(); }
-    // 마스크용: 안쪽 그림을 82%로 (동그라미로 잘려도 주인공·별이 안 잘리게)
-    if (mask) { g.translate(256, 256); g.scale(0.82, 0.82); g.translate(-256, -256); }
+    if (layer !== 'fg') {
+      const gr = g.createLinearGradient(0, 0, 0, S); gr.addColorStop(0, '#2b2466'); gr.addColorStop(0.55, '#6a3f9e'); gr.addColorStop(1, '#ff9a6b'); g.fillStyle = gr; g.fillRect(0, 0, S, S);
+      for (let i = 0; i < 14; i++) { g.save(); g.translate(256, 300); g.rotate(i * Math.PI / 7); g.fillStyle = 'rgba(255,240,200,.09)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(-38, -440); g.lineTo(38, -440); g.fill(); g.restore(); }
+    }
+    if (layer === 'bg') { g.restore(); return c.toDataURL('image/png').split(',')[1]; }
+    // 마스크용: 안쪽 그림을 82%로 (동그라미로 잘려도 주인공·별이 안 잘리게). 안드로이드 앞 그림은 안전 영역(66/108)에 맞춰 62%
+    const inner = layer === 'fg' ? 0.62 : mask ? 0.82 : 1;
+    if (inner < 1) { g.translate(256, 256); g.scale(inner, inner); g.translate(-256, -256); }
     const sparkle = (x, y, s, a) => { g.save(); g.translate(x, y); g.globalAlpha = a; g.fillStyle = '#fff6c8'; g.beginPath(); for (let i = 0; i < 8; i++) { const rr = i % 2 ? s * 0.36 : s, an = -Math.PI / 2 + i * Math.PI / 4; g.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } g.closePath(); g.fill(); g.restore(); };
     const glow = (x, y, r, col) => { const gl = g.createRadialGradient(x, y, 4, x, y, r); gl.addColorStop(0, col); gl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl; g.fillRect(-100, -100, S + 200, S + 200); };
     const star5 = (x, y, r, rot) => {   // 웃는 별 에코
@@ -36,8 +40,20 @@ const ROOT = path.join(__dirname, '..'), OUT = path.join(ROOT, 'icons');
     g.save(); g.translate(352, 120); g.scale(1.4, 1.4); g.beginPath(); g.moveTo(0, 18); g.bezierCurveTo(-30, -2, -20, -26, 0, -12); g.bezierCurveTo(20, -26, 30, -2, 0, 18); g.fillStyle = '#ff6fae'; g.fill(); g.lineWidth = 3 / 1.4; g.strokeStyle = '#fff'; g.stroke(); g.restore();
     g.restore();
     return c.toDataURL('image/png').split(',')[1];
-  }, [size, mask]);
+  }, [size, mask, layer || '']);
   for (const [name, size, mask] of [['icon-512.png', 512, false], ['icon-192.png', 192, false], ['maskable-512.png', 512, true], ['apple-touch-icon.png', 180, true]]) fs.writeFileSync(path.join(OUT, name), Buffer.from(await make(size, mask), 'base64'));
+  // 안드로이드 앱(Capacitor) 아이콘: 밀도별 크기로 android/app/src/main/res/mipmap-*/ 에 넣는다
+  const RES = path.join(ROOT, 'android', 'app', 'src', 'main', 'res');
+  if (fs.existsSync(RES)) {
+    const D = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
+    for (const [d, k] of Object.entries(D)) {
+      const dir = path.join(RES, 'mipmap-' + d);
+      fs.writeFileSync(path.join(dir, 'ic_launcher.png'), Buffer.from(await make(Math.round(48 * k), false), 'base64'));
+      fs.writeFileSync(path.join(dir, 'ic_launcher_round.png'), Buffer.from(await make(Math.round(48 * k), true), 'base64'));
+      fs.writeFileSync(path.join(dir, 'ic_launcher_foreground.png'), Buffer.from(await make(Math.round(108 * k), true, 'fg'), 'base64'));
+      fs.writeFileSync(path.join(dir, 'ic_launcher_background.png'), Buffer.from(await make(Math.round(108 * k), true, 'bg'), 'base64'));
+    }
+  }
   console.log(errs.length ? errs : 'icons written');
   await b.close();
 })();
