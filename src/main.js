@@ -54,10 +54,13 @@
   const keys = {};
   let drag = null;
   /* 화면 맞춤: 게임 칸(W×H, 9:16)은 그대로, 캔버스는 화면 전체. view = 게임 칸의 위치(ox, oy · CSS px)와 배율(k), 남는 곳(ex, ey · 게임 좌표) */
-  const view = { k: 1, ox: 0, oy: 0, ex: 0, ey: 0, ex2: 0, ey2: 0, dpr: 1, hudUp: 0 };
+  const view = { k: 1, ox: 0, oy: 0, ex: 0, ey: 0, ex2: 0, ey2: 0, dpr: 1, hudUp: 0, uiDown: 0 };
   let safeProbe = null;
-  function safeTopPx() {   // 화면 위 안전 영역(노치·상태 표시줄) 높이
-    try { if (!safeProbe) { safeProbe = document.createElement('div'); safeProbe.style.cssText = 'position:fixed;top:0;left:0;height:env(safe-area-inset-top,0px);width:0;visibility:hidden;pointer-events:none'; document.body.appendChild(safeProbe); } return safeProbe.getBoundingClientRect().height || 0; } catch (e) { return 0; }
+  function safeInsetsPx() {   // 화면 위·아래 안전 영역(노치·상태 표시줄·홈 막대) 높이
+    try {
+      if (!safeProbe) { safeProbe = document.createElement('div'); safeProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none'; document.body.appendChild(safeProbe); }
+      const cs = getComputedStyle(safeProbe); return { top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
+    } catch (e) { return { top: 0, bottom: 0 }; }
   }
   function toLogical(ev) {
     const r = cv.getBoundingClientRect();
@@ -472,10 +475,15 @@
     view.k = sr.width / W; view.ox = sr.left - r.left; view.oy = sr.top - r.top; view.dpr = dpr;
     view.ex = Math.max(0, view.ox / view.k); view.ey = Math.max(0, view.oy / view.k);
     view.ex2 = Math.max(0, (r.width - view.ox - sr.width) / view.k); view.ey2 = Math.max(0, (r.height - view.oy - sr.height) / view.k);
-    // 위쪽 정보 줄(체력·시간·아이템·버튼)을 남는 위 공간으로 올림 (상태 표시줄·노치 자리는 피함, 최대 56)
-    const safeTop = safeTopPx() / view.k;
-    view.hudUp = Math.max(0, Math.min(56, view.ey - safeTop));
+    // 자동 배치: 위쪽 정보 줄(체력·시간·아이템·버튼)은 화면 맨 위에, 아래쪽 카드·조작 영역은 화면 맨 아래에 붙인다 (노치·상태 표시줄·홈 막대 자리는 피함)
+    const safe = safeInsetsPx();
+    view.hudUp = Math.max(0, view.ey - safe.top / view.k);
+    view.uiDown = Math.max(0, view.ey2 - safe.bottom / view.k);
     st.style.setProperty('--hud-up', (view.hudUp * view.k) + 'px');
+    st.style.setProperty('--ui-down', (view.uiDown * view.k) + 'px');
+    // 메뉴·상점·결과·일시정지 창은 화면 위아래 끝까지 늘려서 배치 (가로는 읽기 좋은 폭 유지)
+    st.style.setProperty('--ext-top', Math.max(0, view.oy) + 'px');
+    st.style.setProperty('--ext-bottom', Math.max(0, view.ey2 * view.k) + 'px');
   }
   addEventListener('resize', resize); resize(); applyGfx();
 
@@ -551,7 +559,7 @@
       case 'echoCount': return { rect: [W - 110, 4 - view.hudUp, 58, 15] };
       case 'timer': return { rect: [W / 2 - 30, 2 - view.hudUp, 60, 21] };
       case 'items': return { rect: [4, 31 - view.hudUp, 170, 20] };
-      case 'cards': return { rect: [6, PLAY_BOTTOM + 4, W - 12, H - PLAY_BOTTOM - 10] };
+      case 'cards': return { rect: [6, PLAY_BOTTOM + 4 + view.uiDown, W - 12, H - PLAY_BOTTOM - 10] };
       case 'echo': { const e = near(sim.echoes.filter((e) => e.alive && !e.down)); return e && { x: e.x, y: e.y, r: 20 }; }
       case 'helper': return sim.helper && { x: sim.helper.x, y: sim.helper.y, r: sim.helper.r + 4 };
       case 'rescue': { const r = sim.deeds && sim.deeds.rescue; return r && { x: r.x, y: r.y + 4, r: 30 }; }
@@ -1293,8 +1301,8 @@
     if (tutorial && !drag && !sim.choices) {
       ctx.globalAlpha = 0.35 + 0.2 * Math.sin(performance.now() / 350);
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
-      ctx.fillText('👆 여기서 드래그하면 캐릭터가 안 가려져요', W / 2, PLAY_BOTTOM + 76);
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, PLAY_BOTTOM + 76, 38, 0, 7); ctx.globalAlpha *= 0.5; ctx.stroke();
+      ctx.fillText('👆 여기서 드래그하면 캐릭터가 안 가려져요', W / 2, PLAY_BOTTOM + 76 + view.uiDown);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, PLAY_BOTTOM + 76 + view.uiDown, 38, 0, 7); ctx.globalAlpha *= 0.5; ctx.stroke();
       ctx.globalAlpha = 1;
     }
     ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = liteOn() ? 0 : 3; ctx.shadowOffsetY = 1;

@@ -24,6 +24,8 @@
   #stage{pointer-events:none}   /* 게임 칸 위의 버튼·창만 누를 수 있고, 나머지 터치는 아래 캔버스로 */
   #stage>*{pointer-events:auto}
   .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(8,10,20,.82);box-shadow:0 0 0 200vmax rgba(8,10,20,.82);text-align:center;padding:24px;box-sizing:border-box}
+  /* 자동 배치: 창은 화면 위아래 끝까지 (긴 폰에서 메뉴가 고르게 펼쳐짐). 노치·홈 막대 자리는 안쪽 여백으로 피함 */
+  .overlay{top:calc(-1 * var(--ext-top, 0px));bottom:calc(-1 * var(--ext-bottom, 0px));padding-top:calc(24px + env(safe-area-inset-top, 0px));padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px))}
   .overlay.hidden{display:none}
   /* 게임 밖 화면: 뒤의 메뉴 배경(해 질 녘 길 · 주인공 · 에코)이 비쳐 보이게 옅게 */
   #start,#tutorial{background:rgba(8,10,24,.2);box-shadow:0 0 0 200vmax rgba(8,10,24,.2)}   /* 그림자 테두리로 같은 옅은 덮개를 게임 칸 밖까지 (긴 폰·태블릿에서 경계선이 안 보이게) */
@@ -140,7 +142,7 @@
   .capi.grow{animation:capiGrow .7s ease-out}
   @keyframes capiGrow{0%{transform:scale(1)}35%{transform:scale(1.6) rotate(-8deg)}70%{transform:scale(.9)}100%{transform:scale(1)}}
   .pill b{font-size:18px;color:#fff;text-shadow:0 1.5px 0 rgba(0,0,0,.4)}
-  #start{gap:7px;justify-content:flex-start;padding-top:22px}   /* 메뉴를 위로 모아, 아래 길 위 주인공 얼굴이 버튼에 가리지 않게 */
+  #start{gap:clamp(7px, calc(7px + var(--ext-top, 0px) * 0.12), 15px);justify-content:flex-start;padding-top:calc(22px + env(safe-area-inset-top, 0px) + var(--ext-top, 0px) * 0.25)}   /* 메뉴를 위로 모아, 아래 길 위 주인공 얼굴이 버튼에 가리지 않게 */
   /* 게임 글꼴: 시작 버튼 · 메뉴 타일 · 패널 제목 */
 
   /* 메뉴 버튼 글씨: 너무 두껍지 않게 기본 글꼴의 굵은 글씨 */
@@ -190,7 +192,7 @@
   .msg{font-size:13px;color:#ffd34d;min-height:18px}
   #mute{position:absolute;right:6px;top:calc(5.4% - var(--hud-up, 0px));z-index:5;background:#0004;font-size:13px;padding:3px 7px;min-width:0;border-radius:8px}
   /* 레벨업·조언 카드: 게임을 멈추지 않는 작은 반투명 카드 (아래 조작 영역 = 적이 거의 없는 곳). 빈 곳은 터치가 그대로 게임으로 간다 */
-  #cards{position:absolute;left:10px;right:10px;bottom:1.2%;z-index:6;pointer-events:none;display:flex;flex-direction:column;gap:3px}
+  #cards{position:absolute;left:10px;right:10px;bottom:calc(1.2% - var(--ui-down, 0px));z-index:6;pointer-events:none;display:flex;flex-direction:column;gap:3px}
   #cards.hidden{display:none}
   #cards .ctitle.hidden{display:none}
   #cards .ctitle{font-size:11px;text-align:center;color:#ffe58a;text-shadow:0 1px 2px #000;opacity:.9}
