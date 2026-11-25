@@ -301,7 +301,7 @@
   function ctx() { return root.Sfx && root.Sfx.context ? root.Sfx.context() : null; }
   function out(c) {
     if (!bus) {
-      bus = c.createGain(); bus.gain.value = root.Sfx.isMusicMuted() ? 0 : VOLUME;
+      bus = c.createGain(); bus.gain.value = VOLUME * (root.Sfx.musicLevel ? root.Sfx.musicLevel() : (root.Sfx.isMusicMuted() ? 0 : 1));
       bus.connect(root.Sfx.output());
       const n = c.sampleRate; noiseBuf = c.createBuffer(1, n, c.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
@@ -592,7 +592,9 @@
       paused = false; nextT = c.currentTime + 0.05; sync();
     },
     stop() { playing = false; paused = false; pending = null; cur = null; want = null; if (timer) { clearInterval(timer); timer = null; } },
-    setMuted(m) { if (bus) bus.gain.value = m ? 0 : VOLUME; },
+    setMuted(m) { if (bus) bus.gain.value = m ? 0 : VOLUME * (root.Sfx.musicLevel ? root.Sfx.musicLevel() || 1 : 1); },
+    /** 설정의 음악 크기·꺼짐을 다시 반영 */
+    refreshVolume() { if (bus) bus.gain.setTargetAtTime(VOLUME * root.Sfx.musicLevel(), bus.context.currentTime, 0.03); },
     get state() { return { playing, paused, world: want && want.world, boss: !!(want && want.boss), bossName: want ? want.bossName || null : null, song: cur && cur.comp.name, pending: !!pending, source: this.source }; },
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = { compose, SONGS, bossSong, bossThemeSong, SCALES };
