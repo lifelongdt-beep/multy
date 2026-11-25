@@ -152,7 +152,7 @@
     g.fillStyle = '#f2f2ec'; g.fillRect(bx + 150, by + bh + 4.5, 10, 3); g.fillStyle = '#7fb4e8'; g.fillRect(bx + 166, by + bh + 4.5, 9, 3);
     g.fillStyle = '#26262c'; rrect(g, bx + bw - 44, by + bh + 2.5, 16, 6, 1.5); g.fill();                                                 // 칠판지우개
     // 3) 양옆 책상 + 의자 (화면 끝에 살짝 걸침)
-    const DW = 60, DH = 50, rows = [124, 230, 336, 442, 548];
+    const DW = 60, DH = 50, rows = moreRows([124, 230, 336, 442, 548], 106, H, 40);
     const desk = (x, y, item) => {
       withShadow(g, 5, 3, () => { g.fillStyle = '#d5995a'; rrect(g, x, y, DW, DH, 2); g.fill(); }, 0.35);
       g.strokeStyle = OLc; g.lineWidth = 1.5; rrect(g, x, y, DW, DH, 2); g.stroke();
@@ -210,6 +210,8 @@
   }
   function calm(g, W, H, a) { g.fillStyle = `rgba(14,12,30,${a})`; g.fillRect(0, 0, W, H); }   // 캐릭터·적이 튀어 보이도록 살짝 어둡게
   function shadowed(g, fn) { withShadow(g, 5, 3, fn, 0.35); }
+  /** 화면 비율에 맞춘 줄 배치: 9:16(높이 640)에선 원래 줄 그대로, 화면이 더 길면 같은 간격으로 아래까지 이어서 채움 */
+  function moreRows(list, step, H, pad) { const a = list.slice(); while (a[a.length - 1] + step < H - pad) a.push(a[a.length - 1] + step); return a; }
   const ROWS5 = [124, 230, 336, 442, 548];
 
   /* ---------- 학원: 밤 자습실 (보라 카펫 · 칸막이 책상 · 스탠드 불빛) ---------- */
@@ -227,7 +229,7 @@
       const lx = x + (side ? 48 : 14); pool(g, lx, y + 12, 34, 'rgba(255,214,140,A)', 0.28); circle(g, lx, y + 10, 5); g.fillStyle = '#ffe28a'; g.fill(); g.strokeStyle = OLC; g.lineWidth = 1; g.stroke();   // 스탠드
       const cx = x + 31, cy = y + 70; g.strokeStyle = '#4a4a52'; g.lineWidth = 2; rrect(g, cx - 20, cy - 8, 40, 24, 5); g.stroke(); obox(g, cx - 17, cy - 6, 34, 15, 4, '#5a4a7a', 1.2);   // 의자
     };
-    ROWS5.forEach((y) => { carrel(-4, y, 0); carrel(W - 58, y, 1); });
+    moreRows(ROWS5, 106, H, 40).forEach((y) => { carrel(-4, y, 0); carrel(W - 58, y, 1); });
     calm(g, W, H, 0.24);
   };
 
@@ -247,7 +249,7 @@
       circle(g, x + (side ? 10 : 54), y + 36, 5); g.fillStyle = '#e8e2d6'; g.fill(); g.strokeStyle = OLC; g.lineWidth = 1; g.stroke(); circle(g, x + (side ? 10 : 54), y + 36, 2.6); g.fillStyle = '#6b4a30'; g.fill();   // 머그컵
       const cx = x + 32, cy = y + 70; circle(g, cx, cy, 14); g.fillStyle = '#2f3644'; g.fill(); g.strokeStyle = OLC; g.lineWidth = 1.4; g.stroke(); circle(g, cx, cy - 1, 9); g.fillStyle = '#3e4758'; g.fill();   // 회전 의자
     };
-    ROWS5.forEach((y) => { desk(-4, y, 0); desk(W - 60, y, 1); });
+    moreRows(ROWS5, 106, H, 40).forEach((y) => { desk(-4, y, 0); desk(W - 60, y, 1); });
     calm(g, W, H, 0.24);
   };
 
@@ -261,7 +263,7 @@
     g.fillStyle = '#dcdcd6'; g.fillRect(0, 70, W, 10); g.strokeStyle = OLC; g.lineWidth = 1.2; g.strokeRect(0, 70, W, 10);   // 승강장 끝
     g.fillStyle = '#f2c230'; g.fillRect(0, 80, W, 14); g.fillStyle = 'rgba(0,0,0,.18)'; for (let x = 3; x < W; x += 9) for (let k = 0; k < 2; k++) { circle(g, x, 84 + k * 6, 1.3); g.fill(); }   // 점자 블록
     const r = rng(41);
-    for (const y of [150, 300, 450]) for (const side of [0, 1]) {
+    for (const y of moreRows([150, 300, 450], 150, H, 60)) for (const side of [0, 1]) {
       const x = side ? W - 40 : 10;
       shadowed(g, () => obox(g, x, y, 30, 30, 3, '#8a96a8'));                                          // 기둥
       obox(g, side ? W - 46 : 2, y + 54, 44, 18, 3, '#4f7fb8'); g.fillStyle = '#3a5f8c'; for (let k = 0; k < 3; k++) g.fillRect((side ? W - 42 : 6) + k * 13, y + 57, 10, 12);   // 벤치
@@ -321,8 +323,8 @@
       const lx = x + (side ? 48 : 12), ly = y + 50; pool(g, lx, ly, 30, 'rgba(160,255,170,A)', 0.18); obox(g, lx - 8, ly - 5, 16, 10, 5, '#3f8a54', 1.1); circle(g, lx, ly + 7, 3); g.fillStyle = '#d8c070'; g.fill();   // 초록 스탠드
       for (const cy of [y + 10, y + 46]) { const cx = side ? x - 2 : x + 62; obox(g, cx - (side ? 14 : 0), cy, 14, 18, 3, '#7a5236', 1.1); }   // 의자
     };
-    for (const y of [140, 280, 420]) { table(-2, y, 0); table(W - 60, y, 1); }
-    for (const y of [240, 380, 540]) for (const side of [0, 1]) { const x = side ? W - 22 : 0; shadowed(g, () => obox(g, x, y, 22, 34, 2, '#5a3d2a', 1.2)); g.fillStyle = '#3a2618'; g.fillRect(x + 3, y + 3, 16, 28); shelfBooks(g, x + 3, y + 4, 16, 26, y + side); }   // 낮은 서가
+    for (const y of moreRows([140, 280, 420], 140, H, 90)) { table(-2, y, 0); table(W - 60, y, 1); }
+    for (const y of moreRows([240, 380, 540], 150, H, 60)) for (const side of [0, 1]) { const x = side ? W - 22 : 0; shadowed(g, () => obox(g, x, y, 22, 34, 2, '#5a3d2a', 1.2)); g.fillStyle = '#3a2618'; g.fillRect(x + 3, y + 3, 16, 28); shelfBooks(g, x + 3, y + 4, 16, 26, y + side); }   // 낮은 서가
     calm(g, W, H, 0.26);
   };
 
@@ -407,7 +409,7 @@
     for (let x = 30; x < W; x += 60) { circle(g, x, 10, 7); g.fillStyle = '#ffe9a8'; g.fill(); g.strokeStyle = OLC; g.lineWidth = 1; g.stroke(); }   // 조명
     const sh = g.createLinearGradient(0, TOP, 0, TOP + 18); sh.addColorStop(0, 'rgba(0,0,0,.4)'); sh.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = sh; g.fillRect(0, TOP, W, 18);
     const speaker = (x, y) => { shadowed(g, () => obox(g, x, y, 34, 48, 3, '#2f2f36')); for (const cy of [y + 14, y + 34]) { circle(g, x + 17, cy, 9); g.fillStyle = '#1a1a20'; g.fill(); g.strokeStyle = '#5a5a66'; g.lineWidth = 1.5; g.stroke(); } };
-    for (const y of [130, 330, 530]) { speaker(2, y); speaker(W - 36, y); }
+    for (const y of moreRows([130, 330, 530], 200, H, 60)) { speaker(2, y); speaker(W - 36, y); }
     for (const [x, y] of [[50, 240], [W - 50, 440]]) { g.strokeStyle = '#8a8a96'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y + 26); g.lineTo(x, y); g.stroke(); circle(g, x, y - 4, 5); g.fillStyle = '#3a3a44'; g.fill(); g.strokeStyle = OLC; g.lineWidth = 1; g.stroke(); circle(g, x, y + 28, 8); g.fillStyle = 'rgba(0,0,0,.3)'; g.fill(); }   // 마이크 스탠드
     g.fillStyle = '#d8a63a'; for (let x = 8; x < W; x += 24) { circle(g, x, H - 8, 3); g.fill(); }   // 앞쪽 조명 줄
     calm(g, W, H, 0.2);

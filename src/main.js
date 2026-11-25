@@ -938,27 +938,6 @@
 
   /** 게임 칸 밖까지(남는 곳 포함) 한 번에 칠하기 — 번쩍임·안개 등 */
   function fillAll() { ctx.fillRect(-view.ex - 12, -view.ey - 12, W + view.ex + view.ex2 + 24, H + view.ey + view.ey2 + 24); }
-  /** 남는 곳 채우기: 배경 그림을 거울처럼 이어 붙여(이음매가 맞음) 위·아래·좌·우를 채우고, 살짝 어둡게 해서 게임 칸이 또렷하게 */
-  function fillMargins(img, color) {
-    const ex = view.ex, ey = view.ey, ex2 = view.ex2, ey2 = view.ey2;
-    if (ex + ey + ex2 + ey2 < 0.5) return;
-    const tiles = [];
-    if (ey > 0) tiles.push([0, -1]); if (ey2 > 0) tiles.push([0, 1]);
-    if (ex > 0) tiles.push([-1, 0]); if (ex2 > 0) tiles.push([1, 0]);
-    if (ex > 0 && ey > 0) tiles.push([-1, -1]); if (ex2 > 0 && ey > 0) tiles.push([1, -1]); if (ex > 0 && ey2 > 0) tiles.push([-1, 1]); if (ex2 > 0 && ey2 > 0) tiles.push([1, 1]);
-    for (const [tx, ty] of tiles) {
-      ctx.save();
-      ctx.translate(tx < 0 ? 0 : tx > 0 ? 2 * W : 0, ty < 0 ? 0 : ty > 0 ? 2 * H : 0);
-      ctx.scale(tx ? -1 : 1, ty ? -1 : 1);
-      if (img) ctx.drawImage(img, 0, 0, W, H); else { ctx.fillStyle = color || '#161a2e'; ctx.fillRect(0, 0, W, H); }
-      ctx.restore();
-    }
-    ctx.fillStyle = 'rgba(8,10,22,.32)';   // 게임 칸 밖은 살짝 어둡게
-    if (ey > 0) ctx.fillRect(-ex - 12, -ey - 12, W + ex + ex2 + 24, ey + 12);
-    if (ey2 > 0) ctx.fillRect(-ex - 12, H, W + ex + ex2 + 24, ey2 + 12);
-    if (ex > 0) ctx.fillRect(-ex - 12, 0, ex + 12, H);
-    if (ex2 > 0) ctx.fillRect(W, 0, ex2 + 12, H);
-  }
   function render() {
     const sx = shake > 0 ? (Math.random() - 0.5) * shake : 0, sy = shake > 0 ? (Math.random() - 0.5) * shake : 0;
     const sc = view.k * view.dpr;
@@ -970,8 +949,12 @@
       Art.drawMenuScene(ctx, W, H, performance.now(), { emo: GameUI.emoji(), cycle: GameUI.outfitCycle(), win: state === 'end' ? !!(sim && sim.result === 'clear') : undefined, ext: view });
       return;
     }
-    if (useArt) { const wid = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).id, cyc = sim ? sim.cycle : GameUI.cycle(); Art.drawBackground(ctx, W, H, wid, cyc); fillMargins(Art.backgroundCanvas ? Art.backgroundCanvas(W, H, wid, cyc) : null, th.bg); } else {
-    ctx.fillStyle = th.bg; ctx.fillRect(-20, -20, W + 40, H + 40);
+    if (useArt) {   // 배경은 화면 비율에 맞춰 화면 전체 크기로 새로 그림 (9:16이면 원래 그대로, 길거나 넓으면 교실이 더 이어짐)
+      const wid = (sim ? sim.world : EchoSim.WORLDS[GameUI.worldId()]).id, cyc = sim ? sim.cycle : GameUI.cycle();
+      const fw = Math.ceil((W + view.ex + view.ex2) / 8) * 8, fh = Math.ceil((H + view.ey + view.ey2) / 8) * 8;   // 8 단위로 맞춰 주소창이 오르내려도 다시 그리는 일을 줄임
+      ctx.save(); ctx.translate(-view.ex, -view.ey); Art.drawBackground(ctx, fw, fh, wid, cyc); ctx.restore();
+    } else {
+    ctx.fillStyle = th.bg; fillAll();   // 그림 없이 그릴 때도 화면 전체
     ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
     if (th.deco === 'ruled') {            // 학원: 공책 줄무늬
       for (let y = 20; y <= H; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }

@@ -1048,8 +1048,6 @@
     enemyColor(type, name) { return type === 'boss' ? ((BOSS[name] || {}).color || '#ffffff') : ((ENEMY[type] || {}).color || '#ffffff'); },
 
     drawBackground(ctx, W, H, worldId, cycle) { blit(ctx, background(W, H, worldId, cycle), W / 2, H / 2); },
-    /** 배경 그림 캔버스 (게임 칸 밖을 거울처럼 채울 때) */
-    backgroundCanvas(W, H, worldId, cycle) { return background(W, H, worldId, cycle); },
 
     drawGem(ctx, g, now) {
       const bob = Math.sin(now / 220 + g.x * 0.1) * 1.2;
