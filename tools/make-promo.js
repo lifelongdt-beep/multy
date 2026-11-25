@@ -8,14 +8,15 @@ const fs = require('fs'), path = require('path'), { execFileSync } = require('ch
 const ROOT = path.join(__dirname, '..'), OUT = path.join(ROOT, 'docs', 'promo');
 const MODE = process.argv[2] || 'keyframes', FPS = 30;
 // 장면: [월드, 길이(초), 자막, 준비 함수 이름]
-const C1 = ['시험 불안이 왔다!'], C2 = ['혼자선 힘들지?'], C3 = ['한 판 끝나면', '과거의 내가 도와줘!'], C4 = ['착한 일 하면', '더 세져!'];
+const C1 = ['시험 불안이 왔다!'], C2 = ['혼자선 힘들지?'], C3 = ['한 판 끝나면', '과거의 내가 도와줘!'], C4 = ['착한 일 하면', '더 세져!'], C5 = ['우유 먹고', '힘내!'];
 // 빠른 장면 전환: 1~2초짜리 장면을 여러 월드로 (같은 자막이면 자막은 이어서 유지)
 const SCENES = [
-  { id: 'boss',  world: 'school',   sec: 1.2, cap: C1 },
+  { id: 'boss',  world: 'school',   sec: 1.0, cap: C1 },
   { id: 'boss',  world: 'subway',   sec: 1.0, cap: C1 },
   { id: 'boss',  world: 'office',   sec: 1.0, cap: C1 },
   { id: 'alone', world: 'beach',    sec: 1.0, cap: C2 },
-  { id: 'echo',  world: 'stage',    sec: 1.3, cap: C3 },
+  { id: 'milk',  world: 'home',     sec: 1.2, cap: C5 },
+  { id: 'echo',  world: 'stage',    sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'mountain', sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'hospital', sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'gym',      sec: 1.1, cap: C3 },
@@ -65,6 +66,11 @@ const SCENES = [
     // 장면별 움직임 (프레임마다)
     window.__tick = (id, f) => {
       const s = __echo.sim; if (!s) return;
+      if (id === 'milk') {   // 체력이 조금 줄었을 때 우유를 집어 마심
+        if (f === 0) s.player.hp = s.player.maxhp * 0.45;
+        if (f === 8) s.gems.push({ x: s.player.x + 26, y: s.player.y - 6, v: 12, kind: 'milk' });
+        return;
+      }
       s.player.hp = Math.max(s.player.hp, s.player.maxhp * 0.8);
       if (id === 'deed') {
         const rs = s.deeds.rescue; if (!rs) return;
@@ -80,6 +86,7 @@ const SCENES = [
       if (id === 'alone') return { x: pl.x, y: pl.y - 30, z: 1.9 + k * 0.1 };
       if (id === 'echo') return { x: 180, y: 445, z: 1.45 + k * 0.03 };
       if (id === 'deed') { const rs = s.deeds.rescue || { x: pl.x, y: pl.y }; return { x: (pl.x + rs.x) / 2 + 6, y: (pl.y + rs.y) / 2 - 30, z: 2.1 + k * 0.05 }; }
+      if (id === 'milk') return { x: pl.x + 8, y: pl.y - 40, z: 2.5 + k * 0.1 };
       return { x: pl.x, y: pl.y - 10, z: 1.8 + k * 0.04 };
     };
     window.__cam = null;
@@ -104,6 +111,7 @@ const SCENES = [
     if (sc.id === 'alone') { run(60 * 30, wig); s.enemies = []; place(180, 420); const kinds = Object.keys(s.world.enemies).filter((k) => s.world.enemies[k].ai !== 'shoot' && !s.world.enemies[k].boss);
       for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; s._make(kinds[k % kinds.length], 180 + Math.cos(a) * 78, 420 + Math.sin(a) * 78); const e = s.enemies[s.enemies.length - 1]; tough(e); e.speed *= 0.12; } }
     if (sc.id === 'echo') { let n = 0; while (!s.bossAlive && n++ < 20000) run(1, wig); const bs = s.enemies.find((e) => e.type === 'boss'); clearTop(); if (bs) { bs.x = 180; bs.y = 440; bs.hp = bs.maxhp * 0.35; } place(180, 570); orbit(180, 440, 100); }
+    if (sc.id === 'milk') { run(60 * 20, wig); s.enemies = []; place(180, 470); }
     if (sc.id === 'end') { run(60 * 20, wig); s.enemies = []; place(180, 420); orbit(180, 420, 70); }
     if (sc.id === 'deed') { let n = 0; while (!(s.deeds && s.deeds.rescue) && n++ < 20000) run(1, wig); const rs = s.deeds.rescue; clearTop(); s.enemies = s.enemies.filter((e) => e.guard);
       if (rs) { const dx = 180 - rs.x, dy = 430 - rs.y; rs.x += dx; rs.y += dy; for (const e of rs.guards) { e.x += dx; e.y += dy; tough(e); e.speed = 0; } } place(80, 470); }
@@ -145,21 +153,22 @@ const SCENES = [
       };
     });
     await ap.goto('file://' + path.join(ROOT, 'index.html'));
-    const webm = await ap.evaluate(async () => {
+    const sw = SCENES.slice(0, -1).reduce((a, x) => a + x.sec, 0);   // 끝 화면부터 메인 테마
+    const webm = await ap.evaluate(async (sw) => {
       Sfx.unlock(); Music.stop();
       const c = Sfx.context(); await c.resume();
       Music.play('school'); Music.setBoss(true, EchoWorlds.WORLDS.school.boss);
       const rec = new MediaRecorder(c.__tap.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 192000 }), chunks = [];
       rec.ondataavailable = (e) => chunks.push(e.data);
       rec.start();
-      await new Promise((r) => setTimeout(r, 12200));
+      await new Promise((r) => setTimeout(r, sw * 1000));
       Music.stop(); Music.play('menu');
-      await new Promise((r) => setTimeout(r, 3400));
+      await new Promise((r) => setTimeout(r, (15.6 - sw) * 1000));
       await new Promise((r) => { rec.onstop = r; rec.stop(); });
       const buf = await new Blob(chunks).arrayBuffer(); let bin = ''; const u = new Uint8Array(buf);
       for (let i = 0; i < u.length; i += 32768) bin += String.fromCharCode.apply(null, u.subarray(i, i + 32768));
       return btoa(bin);
-    });
+    }, sw);
     const music = path.join(OUT, 'music.webm'); fs.writeFileSync(music, Buffer.from(webm, 'base64'));
     const final = path.join(OUT, 'echo-rush-reels.mp4');
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', silent, '-i', music, '-filter_complex', '[1:a]atrim=0:15,afade=t=in:d=0.15,afade=t=out:st=13.8:d=1.2,loudnorm=I=-14:TP=-1.5[a]', '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', final]);
