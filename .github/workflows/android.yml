@@ -28,6 +28,8 @@ jobs:
           java-version: 21
           cache: gradle   # 내려받은 라이브러리를 저장해 두고 다시 씀 (라이브러리 서버의 '요청이 너무 많음' 거절을 피함)
       - name: 게임 파일 모으고 앱에 넣기
+        env:
+          APP_VERSION_NAME: 1.0.${{ github.run_number }}
         run: |
           npm ci
           npm test
