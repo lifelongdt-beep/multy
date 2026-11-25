@@ -22,6 +22,7 @@ const SCENES = [
   { id: 'echo',  world: 'mountain', sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'hospital', sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'gym',      sec: 1.1, cap: C3 },
+  { id: 'litter', world: 'airport', sec: 1.8, cap: C4 },
   { id: 'deed',  world: 'academy',  sec: 1.8, cap: C4, who: 'child' },
   { id: 'deed',  world: 'library',  sec: 1.6, cap: C4, who: 'elder' },
   { id: 'end',   world: 'stage',    sec: 3.0, cap: [] },
@@ -148,6 +149,14 @@ const SCENES = [
         if (window.__helped && f - window.__helped === 12 && s.choices) s.choose('boon_heal');   // 따뜻한 격려 = 회복
         return;
       }
+      if (id === 'litter') {   // 쓰레기를 하나씩 주우며 걸어감
+        const left = s.deeds.spots.filter((q) => q.kind === 'litter');
+        if (window.__litN !== undefined && left.length < window.__litN) s._ev({ k: 'deed', what: 'allyBye', x: s.player.x + 10, y: s.player.y - 14 });   // 주운 순간 하트 퐁
+        window.__litN = left.length;
+        const sp = left.sort((a, b) => a.x - b.x)[0];
+        const tx = sp ? sp.x : 270, ty = sp ? sp.y : 470; s.player.x += Math.sign(tx - s.player.x) * Math.min(Math.abs(tx - s.player.x), 3.2); s.player.y += (ty - s.player.y) * 0.15;
+        return;
+      }
       if (id === 'deed') {
         const rs = s.deeds.rescue; if (!rs) return;
         if (f < 24) { s.player.x += (rs.x - 48 - s.player.x) * 0.12; s.player.y += (rs.y + 22 - s.player.y) * 0.12; }   // 친구에게 달려감
@@ -163,6 +172,7 @@ const SCENES = [
       if (id === 'echo') return { x: 180, y: 445, z: 1.45 + k * 0.03 };
       if (id === 'deed') { const rs = s.deeds.rescue || { x: pl.x, y: pl.y }; return { x: (pl.x + rs.x) / 2 + 6, y: (pl.y + rs.y) / 2 - 30, z: 2.1 + k * 0.05 }; }
       if (id === 'teach') { const h = s.helper || pl; return { x: (pl.x + h.x) / 2, y: (pl.y + h.y) / 2 - 35, z: 2.0 + k * 0.05 }; }
+      if (id === 'litter') return { x: Math.min(pl.x + 30, 200), y: pl.y - 40, z: 2.1 };
       if (id === 'milk') return { x: pl.x + 8, y: pl.y - 40, z: 2.5 + k * 0.1 };
       return { x: pl.x, y: pl.y - 10, z: 1.8 + k * 0.04 };
     };
@@ -191,6 +201,8 @@ const SCENES = [
     if (sc.id === 'milk') { run(60 * 20, wig); s.enemies = []; place(180, 470); }
     if (sc.id === 'teach') { let n = 0; while (!s.helper && n++ < 20000) run(1, wig); s.enemies = s.enemies.filter((e) => Math.hypot(e.x - 180, e.y - 450) > 170);
       const h = s.helper; if (h) { h.x = 190; h.y = 430; h.prog = 0; h.need = 40; h.t = 0; } place(95, 520); }
+    if (sc.id === 'litter') { run(60 * 15, wig); s.enemies = s.enemies.filter((e) => Math.hypot(e.x - 180, e.y - 470) > 200); place(95, 480);
+      s.deeds.spots = [[140, 462], [190, 490], [240, 466]].map(([x, y]) => ({ x, y, kind: 'litter', t: 99999 })); }   // 떨어진 쓰레기 3개
     if (sc.id === 'end') { run(60 * 20, wig); s.enemies = []; place(180, 420); orbit(180, 420, 70); }
     if (sc.id === 'deed') { let n = 0; while (!(s.deeds && s.deeds.rescue) && n++ < 20000) run(1, wig); const rs = s.deeds.rescue; clearTop(); s.enemies = s.enemies.filter((e) => e.guard);
       if (rs) { if (sc.who) rs.kind = sc.who; const dx = 180 - rs.x, dy = 430 - rs.y; rs.x += dx; rs.y += dy; for (const e of rs.guards) { e.x += dx; e.y += dy; tough(e); e.speed = 0; } } place(80, 470); }
@@ -215,7 +227,7 @@ const SCENES = [
       if (i > 0) { cues.push(['tr' + (i % 4), T0]); cues.push(['thud', T0 + 7 / FPS]); }   // 장면 전환 소리 + 쿵
       if (i === 0 || SCENES[i - 1].cap !== sc.cap) { capT = 0; sc.cap.forEach((_, j) => cues.push(['impact', T0 + 0.05 + j * 0.22 + 0.13])); }   // 글자 박히는 소리
       if (sc.id === 'end') { [0, 0.3, 0.6, 0.9].forEach((d) => cues.push(['impact', T0 + d + 0.13])); cues.push(['sparkle', T0 + 1.1]); }
-      await p.evaluate((id) => { window.__scene = id; window.__camCut = true; window.__helped = false; __echo.sim.drainEvents(); }, sc.id);   // 준비 중 쌓인 사건(소리)은 버림
+      await p.evaluate((id) => { window.__scene = id; window.__camCut = true; window.__helped = false; window.__litN = undefined; __echo.sim.drainEvents(); }, sc.id);   // 준비 중 쌓인 사건(소리)은 버림
       const n = Math.round(FPS * sc.sec);
       for (let f = 0; f < n; f++) {
         await p.evaluate(([id, f, T]) => { window.__T = T; __tick(id, f); __step(1000 / 30); }, [sc.id, f, frame / FPS]); frame++;
