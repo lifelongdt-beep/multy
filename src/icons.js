@@ -23,6 +23,7 @@
     lock:     '<rect x="5.5" y="10.5" width="13" height="9.5" rx="2" class="s"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" class="s"/>',
     cap:      '<path d="M12 5 2.5 9.5 12 14l9.5-4.5z"/><path d="M6.5 11.5v4c1.5 1.6 3.4 2.4 5.5 2.4s4-.8 5.5-2.4v-4M21.5 9.5v5" class="s"/>',
     up:       '<path d="M12 19V6M6.5 11 12 5.5 17.5 11" class="s"/>',
+    install:  '<rect x="6.5" y="2.5" width="11" height="19" rx="2.2" class="s"/><path d="M12 7v7.5M9 11.5l3 3 3-3M10.5 18.5h3" class="s"/>',
     flag:     '<path d="M6 20.5V4.5M6 5h11l-2.2 3.5L17 12H6" class="s"/>',
   };
   function svg(name, size) {

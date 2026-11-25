@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Echo Rush</title>
+<!-- 앱처럼 설치 (홈 화면 아이콘 · 전체 화면 · 오프라인) -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2b2466">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="에코 러시">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <!-- 게임 제목 글씨체: 통통 튀는 두꺼운 게임 글꼴 (Luckiest Guy · Black Han Sans, OFL). 못 불러오면 시스템 굵은 글꼴 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Luckiest+Guy&display=swap" rel="stylesheet">
@@ -231,6 +240,7 @@
     <div class="tiles2"><button id="bShop" class="tile g-gold gloss" data-icon="shop" data-icon-color data-icon-size="34">상점</button><button id="bLook" class="tile g-blue gloss" data-icon="shirt" data-icon-color data-icon-size="34">내 캐릭터</button></div>
     <div id="more" style="display:flex;flex-direction:column;gap:8px;align-items:center">
       <div class="tiles4"><button id="bDeed" class="tile sm g-pink gloss" data-icon="heart" data-icon-color data-icon-size="26">선행</button><button id="bQuest" class="tile sm g-purple gloss" data-icon="trophy" data-icon-color data-icon-size="26">과제·미션</button><button id="bBackup" class="tile sm g-slate gloss" data-icon="save" data-icon-color data-icon-size="26">백업</button><button id="bTutorial" class="tile sm g-teal gloss" data-icon="book" data-icon-color data-icon-size="26">튜토리얼</button></div>
+      <button id="bInstall" class="sub" data-icon="install" data-icon-size="16" style="display:none;min-width:0;padding:7px 14px;font-size:13px">홈 화면에 설치</button>
       <div id="dangerHold" hidden><button id="reset" class="sub danger">에코 기록 초기화</button></div>
     </div>
   </div>
