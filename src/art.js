@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   const OL = '#1c1930';           // 공통 외곽선 색
-  const S = 3;                    // 스프라이트 해상도 배율
+  const S = root.ART_SPRITE_SCALE || 3;   // 스프라이트 해상도 배율 (앱 아이콘 만들 때만 더 크게: tools/make-icons.js)
   const cache = new Map();
   const K_EN = 1.3;               // 적 그림 크기 배율 (충돌 판정은 그대로)
   const K_KID = 1.4;

@@ -1,0 +1,17 @@
+{
+  "name": "Echo Rush 에코 러시",
+  "short_name": "에코 러시",
+  "description": "한 판이 끝나면 그 판의 내가 귀여운 동료(에코)가 되어 함께 싸우는 서바이벌 게임",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0f1a",
+  "theme_color": "#2b2466",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
