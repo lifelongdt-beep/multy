@@ -7,6 +7,7 @@ const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..'), OUT = path.join(ROOT, 'docs', 'promo');
 const MODE = process.argv[2] || 'keyframes', FPS = 30;
+const TOTAL = () => SCENES.reduce((a, x) => a + x.sec, 0);   // 영상 전체 길이(초)
 // 장면: [월드, 길이(초), 자막, 준비 함수 이름]
 const C1 = ['시험 불안이 왔다!'], C2 = ['혼자선 힘들지?'], C3 = ['한 판 끝나면', '과거의 내가 도와줘!'], C4 = ['착한 일 하면', '더 세져!'], C5 = ['우유 먹고', '힘내!'];
 // 빠른 장면 전환: 1~2초짜리 장면을 여러 월드로 (같은 자막이면 자막은 이어서 유지)
@@ -22,7 +23,7 @@ const SCENES = [
   { id: 'echo',  world: 'gym',      sec: 1.1, cap: C3 },
   { id: 'deed',  world: 'academy',  sec: 1.8, cap: C4 },
   { id: 'deed',  world: 'library',  sec: 1.6, cap: C4 },
-  { id: 'end',   world: 'stage',    sec: 2.8, cap: [] },
+  { id: 'end',   world: 'stage',    sec: 3.0, cap: [] },
 ];
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -225,7 +226,7 @@ const SCENES = [
     });
     await ap.goto('file://' + path.join(ROOT, 'index.html'));
     const sw = SCENES.slice(0, -1).reduce((a, x) => a + x.sec, 0);   // 끝 화면부터 메인 테마
-    const webm = await ap.evaluate(async ([sw, cues]) => {
+    const webm = await ap.evaluate(async ([sw, cues, total]) => {
       Sfx.unlock(); Music.stop();
       const c = Sfx.context(); await c.resume();
       Music.play('school'); Music.setBoss(true, EchoWorlds.WORLDS.school.boss);
@@ -253,15 +254,15 @@ const SCENES = [
       }
       await new Promise((r) => setTimeout(r, sw * 1000));
       Music.stop(); Music.play('menu');
-      await new Promise((r) => setTimeout(r, (15.6 - sw) * 1000));
+      await new Promise((r) => setTimeout(r, (total + 0.6 - sw) * 1000));
       await new Promise((r) => { rec.onstop = r; rec.stop(); });
       const buf = await new Blob(chunks).arrayBuffer(); let bin = ''; const u = new Uint8Array(buf);
       for (let i = 0; i < u.length; i += 32768) bin += String.fromCharCode.apply(null, u.subarray(i, i + 32768));
       return btoa(bin);
-    }, [sw, cues]);
+    }, [sw, cues, TOTAL()]);
     const music = path.join(OUT, 'music.webm'); fs.writeFileSync(music, Buffer.from(webm, 'base64'));
     const final = path.join(OUT, 'echo-rush-reels.mp4');
-    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', silent, '-i', music, '-filter_complex', '[1:a]atrim=0:15,afade=t=in:d=0.15,afade=t=out:st=13.8:d=1.2,loudnorm=I=-14:TP=-1.5[a]', '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', final]);
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', silent, '-i', music, '-filter_complex', `[1:a]atrim=0:${TOTAL()},afade=t=in:d=0.15,afade=t=out:st=${TOTAL() - 1.2}:d=1.2,loudnorm=I=-14:TP=-1.5[a]`, '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', final]);
     await ap.close(); fs.unlinkSync(silent); fs.unlinkSync(music);   // 중간 파일 정리
   }
   console.log(errs.length ? errs : 'done: ' + MODE);
