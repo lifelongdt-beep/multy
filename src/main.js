@@ -785,14 +785,37 @@
     if (!resetArmed) { resetArmed = true; label(`에코 ${echoes.length}명 지우기? 한 번 더`); setTimeout(() => { resetArmed = false; label('에코 기록 초기화'); }, 3000); return; }
     resetArmed = false; echoes = []; runCount = 0; save(); label('초기화됨'); GameUI.refresh();
   };
+  /* 소리 크기: 음악·효과음 슬라이더. 일시정지 화면과 위 소리 버튼의 작은 창에 같은 조절이 있고 서로 맞춰짐 */
+  const VOLS = [
+    { id: 'music', name: '🎵 음악', get: () => Sfx.musicVol(), on: () => Sfx.musicOn(), set: (v) => Sfx.setMusicVol(v), toggle: () => Sfx.setMusic(!Sfx.musicOn()) },
+    { id: 'sfx',   name: '🔔 효과음', get: () => Sfx.sfxVol(), on: () => Sfx.sfxOn(), set: (v) => Sfx.setSfxVol(v), toggle: () => Sfx.setSfx(!Sfx.sfxOn()) },
+  ];
+  const volRows = [];
+  document.querySelectorAll('[data-vols]').forEach((box) => {
+    for (const vd of VOLS) {
+      const row = document.createElement('div'); row.className = 'vol';
+      const nm = document.createElement('span'); nm.className = 'vn'; nm.textContent = vd.name; nm.title = '눌러서 켜기/끄기';
+      const rg = document.createElement('input'); rg.type = 'range'; rg.min = 0; rg.max = 100; rg.step = 5; rg.setAttribute('aria-label', vd.name.slice(2) + ' 크기');
+      const pc = document.createElement('span'); pc.className = 'vp';
+      rg.addEventListener('input', () => { vd.set(rg.value / 100); muteIcon(); });
+      rg.addEventListener('change', () => { if (vd.id === 'sfx') Sfx.play('click'); });   // 효과음은 손을 떼면 들려 줌
+      nm.addEventListener('click', () => { vd.toggle(); if (vd.id === 'sfx') Sfx.play('click'); muteIcon(); });   // 이름을 누르면 그것만 켜기/끄기
+      row.append(nm, rg, pc); box.appendChild(row); volRows.push({ vd, row, rg, pc });
+    }
+  });
   const muteIcon = () => {
     $('mute').innerHTML = Icons.svg(Sfx.isMuted() ? 'soundOff' : 'soundOn', 17);
-    $('bMusic').innerHTML = `<span>🎵 배경음악: ${Sfx.musicOn() ? '켜짐' : '꺼짐'}</span>`; $('bMusic').style.opacity = Sfx.musicOn() ? 1 : 0.55;
-    $('bSfx').innerHTML = `<span>🔔 효과음: ${Sfx.sfxOn() ? '켜짐' : '꺼짐'}</span>`; $('bSfx').style.opacity = Sfx.sfxOn() ? 1 : 0.55;
+    for (const r of volRows) { const on = r.vd.on(), v = on ? Math.round(r.vd.get() * 100) : 0; if (document.activeElement !== r.rg) r.rg.value = v; r.pc.textContent = on ? v + '%' : '꺼짐'; r.row.classList.toggle('off', !on); }
+    $('muteAll').textContent = Sfx.isMuted() ? '🔊 소리 켜기' : '🔇 모두 끄기';
   };
-  $('mute').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); muteIcon(); };   // 위 버튼: 전체 켜기/끄기
-  $('bMusic').onclick = () => { Sfx.setMusic(!Sfx.musicOn()); muteIcon(); };
-  $('bSfx').onclick = () => { Sfx.setSfx(!Sfx.sfxOn()); Sfx.play('click'); muteIcon(); };
+  // 위 소리 버튼: 음악·효과음 크기 창을 열고 닫음 (창 밖을 누르면 닫힘)
+  const soundPop = $('soundPop');
+  $('mute').onclick = () => { Sfx.unlock(); muteIcon(); soundPop.classList.toggle('hidden'); };
+  $('muteAll').onclick = () => { Sfx.setMuted(!Sfx.isMuted()); muteIcon(); };
+  addEventListener('pointerdown', (ev) => {   // 창 밖을 누르면 닫힘 (먼저 잡아서 다른 버튼이 막아도 닫히게)
+    if (soundPop.classList.contains('hidden') || soundPop.contains(ev.target) || $('mute').contains(ev.target)) return;
+    soundPop.classList.add('hidden');
+  }, true);
   Icons.apply(); muteIcon(); resetBtn.innerHTML = Icons.svg('trash') + '<span>에코 기록 초기화</span>'; $('again').innerHTML = Icons.svg('retry') + '<span>한 판만 더</span>';
 
   /* ---------- 렌더 ---------- */

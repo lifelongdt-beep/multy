@@ -4,9 +4,12 @@
   let ctx = null;
   let master = null;
   // 배경음악과 효과음을 따로 켜고 끈다 (기기에 저장)
-  let sfxOff = false, musicOff = false;
-  try { const v = JSON.parse(localStorage.getItem('echo-sound') || '{}'); sfxOff = !!v.sfxOff; musicOff = !!v.musicOff; } catch (e) { /* 무시 */ }
-  const saveSound = () => { try { localStorage.setItem('echo-sound', JSON.stringify({ sfxOff, musicOff })); } catch (e) { /* 무시 */ } };
+  // + 크기도 따로 (0~1). 꺼짐(Off)은 음소거 스위치, 크기(Vol)는 슬라이더
+  let sfxOff = false, musicOff = false, sfxVol = 1, musicVol = 1;
+  const vol01 = (x, d) => (typeof x === 'number' && isFinite(x) ? Math.max(0, Math.min(1, x)) : d);
+  try { const v = JSON.parse(localStorage.getItem('echo-sound') || '{}'); sfxOff = !!v.sfxOff; musicOff = !!v.musicOff; sfxVol = vol01(v.sfxVol, 1); musicVol = vol01(v.musicVol, 1); } catch (e) { /* 무시 */ }
+  const saveSound = () => { try { localStorage.setItem('echo-sound', JSON.stringify({ sfxOff, musicOff, sfxVol, musicVol })); } catch (e) { /* 무시 */ } };
+  let comp = null;   // 최종 출력(압축기): 효과음 버스(master)와 배경음악이 모두 여기로
   const last = {};
 
   function ac() {
@@ -20,9 +23,10 @@
       if (!AC) return null;
       try {
         try { ctx = new AC({ latencyHint: 'interactive' }); } catch (e) { ctx = new AC(); }
-        master = ctx.createDynamicsCompressor();
+        comp = ctx.createDynamicsCompressor();
         const g = ctx.createGain(); g.gain.value = 1.4;
-        master.connect(g); g.connect(ctx.destination);
+        comp.connect(g); g.connect(ctx.destination);
+        master = ctx.createGain(); master.gain.value = sfxVol; master.connect(comp);   // 효과음 크기
       } catch (e) { return null; }
     }
     if (ctx.state === 'suspended') ctx.resume();
@@ -240,15 +244,22 @@
     pass(dir, heavy, water) { if (sfxOff) return; const now = (root.performance || Date).now(); if (last.pass && now - last.pass < 250) return; last.pass = now; if (water) { fnoise(1.3, 0.2, 'lowpass', 1400, 300, 0, 0.35); fnoise(0.9, 0.06, 'highpass', 4000, 2500, 0.1, 0.2); return; } passSound(dir >= 0 ? 1 : -1, !!heavy); },
     unlock() { ac(); },
     /** 전체 켜기/끄기 (위쪽 소리 버튼) */
-    setMuted(m) { sfxOff = musicOff = !!m; saveSound(); if (root.Music) root.Music.setMuted(musicOff); },
+    setMuted(m) { sfxOff = musicOff = !!m; if (!m) { if (sfxVol <= 0) sfxVol = 0.8; if (musicVol <= 0) musicVol = 0.8; if (master) master.gain.value = sfxVol; } saveSound(); if (root.Music) root.Music.refreshVolume(); },   // 다시 켤 때 크기가 0이면 80%로
     setSfx(on) { sfxOff = !on; saveSound(); },
-    setMusic(on) { musicOff = !on; saveSound(); if (root.Music) root.Music.setMuted(musicOff); },
-    sfxOn() { return !sfxOff; },
-    musicOn() { return !musicOff; },
-    isMusicMuted() { return musicOff; },
+    setMusic(on) { musicOff = !on; saveSound(); if (root.Music) root.Music.refreshVolume(); },
+    /** 크기 슬라이더 (0~1). 0보다 크게 올리면 꺼짐도 풀림 */
+    setSfxVol(v) { sfxVol = vol01(v, sfxVol); sfxOff = sfxVol <= 0; if (master) master.gain.value = sfxVol; saveSound(); },
+    setMusicVol(v) { musicVol = vol01(v, musicVol); musicOff = musicVol <= 0; saveSound(); if (root.Music) root.Music.refreshVolume(); },
+    sfxVol() { return sfxVol; },
+    musicVol() { return musicVol; },
+    /** 배경음악이 실제로 내야 할 크기 (꺼짐이면 0) */
+    musicLevel() { return musicOff ? 0 : musicVol; },
+    sfxOn() { return !sfxOff && sfxVol > 0; },
+    musicOn() { return !musicOff && musicVol > 0; },
+    isMusicMuted() { return musicOff || musicVol <= 0; },
     /** 배경음악(music.js)용: 같은 AudioContext와 출력 */
     context() { return ctxAlways(); },
-    output() { ctxAlways(); return master; },
-    isMuted() { return sfxOff && musicOff; },
+    output() { ctxAlways(); return comp; },
+    isMuted() { return !this.sfxOn() && !this.musicOn(); },
   };
 })(typeof window !== 'undefined' ? window : globalThis);
