@@ -1027,7 +1027,9 @@
 
   /* ---------- 파편 (처치 연출) ---------- */
   let parts = [];
+  let lite = false;   // 가벼운 모드: 파편 절반 · 적 빨간 테두리 4방향만 (저사양 폰)
   function burst(x, y, color, n, big) {
+    if (lite) n = Math.ceil(n / 2);
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, sp = (big ? 2.2 : 1.4) + Math.random() * (big ? 3 : 2);
       parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.6, t: 22 + Math.random() * 10, r: (big ? 3.2 : 2.2) + Math.random() * 1.6, c: Math.random() < 0.25 ? '#ffffff' : color, rot: Math.random() * 6 });
@@ -1081,7 +1083,7 @@
       const flip = !spec.noFlip && e.x > px;   // 주인공 쪽을 바라봄 (글자가 있는 그림은 뒤집지 않음)
       // 빨간 테두리: 모양을 따라 빨간 윤곽을 둘러 회색·반투명한 에코와 한눈에 구분 (밝은 배경·어두운 배경 모두)
       const rim = tinted(`enR:${boss ? e.def.name : e.type}:${r}`, base, '#ff2f55'), d = boss ? 2.2 : 1.6;
-      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; blit(ctx, rim, e.x + Math.cos(a) * d, e.y - hop + Math.sin(a) * d, sx * k, sy * k, flip); }
+      for (let i = 0; i < 8; i += lite ? 2 : 1) { const a = i * Math.PI / 4; blit(ctx, rim, e.x + Math.cos(a) * d, e.y - hop + Math.sin(a) * d, sx * k, sy * k, flip); }
       blit(ctx, base, e.x, e.y - hop, sx * k, sy * k, flip);
       if (e.flash > 0) { ctx.globalAlpha = 0.7; blit(ctx, tinted(`enW:${boss ? e.def.name : e.type}:${r}`, base, '#ffffff'), e.x, e.y - hop, sx * k, sy * k, flip); ctx.globalAlpha = 1; }
       if (boss && base.face) {   // 왕의 실시간 표정
@@ -1308,6 +1310,7 @@
       blit(ctx, c, g.x, g.y - 1 + bob, 0.95, 0.95);
     },
     burst,
+    setLite(v) { lite = !!v; },
     drawParticles(ctx) {
       for (const q of parts) {
         q.x += q.vx; q.y += q.vy; q.vx *= 0.92; q.vy = q.vy * 0.92 + 0.08; q.t -= 1; q.rot += 0.2;

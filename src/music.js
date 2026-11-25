@@ -254,13 +254,13 @@
       const b0 = bar * 16, chord = song.prog[bar % song.prog.length], low = noteOf(song, chord, -1);
       const tk = bar % 4 === 3 ? 'x.x.x.xxx.x.xxxx' : 'x..x..x.x.......';
       for (let i = 0; i < 16; i++) if (tk[i] === 'x') ev.push({ step: b0 + i, kind: 'taiko', vol: i === 0 ? 1 : bar % 4 === 3 ? 0.55 + i / 40 : 0.75 });
-      for (const t of [chord, chord + 2, chord + 4]) ev.push({ step: b0, kind: 'pad', midi: noteOf(song, t, 0), len: 16, wave: 'sawtooth', vol: 0.05, inst: 'choir' });
-      if (bar % 2 === 1) ev.push({ step: b0, kind: 'pad', midi: noteOf(song, chord, 0) + 1, len: 16, wave: 'sawtooth', vol: 0.035, inst: 'choir' });   // 반음 부딪힘: 소름
+      for (const t of [chord, chord + 2, chord + 4]) ev.push({ step: b0, kind: 'pad', midi: noteOf(song, t, 0), len: 16, wave: 'sawtooth', vol: 0.05, inst: 'choir', x: 1 });   // x: 가벼운 모드에선 생략하는 층
+      if (bar % 2 === 1) ev.push({ step: b0, kind: 'pad', midi: noteOf(song, chord, 0) + 1, len: 16, wave: 'sawtooth', vol: 0.035, inst: 'choir', x: 1 });   // 반음 부딪힘: 소름
       // 운명 동기: 근음-근음-반음 위-근음 … 마디 끝은 증4도(악마의 음정)
       const doom = [[0, 0], [3, 0], [6, 1], [8, 0], [11, 0], [14, bar % 2 ? 6 : 1]];
       for (const [i, o] of doom) ev.push({ step: b0 + i, kind: 'lead', midi: low + o, len: i === 8 ? 3 : 2, wave: 'sawtooth', vol: 0.06, inst: 'brass' });
       if (bar % 2 === 0) ev.push({ step: b0, kind: 'lead', midi: low, len: 6, wave: 'sawtooth', vol: 0.08, inst: 'hit' });   // 관현악 강타
-      if (bar === bars - 1) ev.push({ step: b0, kind: 'riser', len: 16, vol: 1 });   // 다시 처음으로: 차오르는 긴장
+      if (bar === bars - 1) ev.push({ step: b0, kind: 'riser', len: 16, vol: 1, x: 1 });   // 다시 처음으로: 차오르는 긴장
     }
     // 왕의 효과음: 째깍(시계) · 심장 박동 · 폭풍 · 징 · 찌르는 소리
     for (const fx of song.sfx || []) for (let bar = 0; bar < bars; bar++) {
@@ -309,7 +309,7 @@
     return bus;
   }
   /** 왕 곡은 큰 홀에서 울리듯 (잔향): 소리 → (원음 + 잔향) → 음악 버스 */
-  let hall = null;
+  let hall = null, lite = false;   // lite: 저사양 폰용 가벼운 모드
   function hallOut(c) {
     if (!hall) {
       const o = out(c), n = Math.floor(c.sampleRate * 2.8), ir = c.createBuffer(2, n, c.sampleRate);
@@ -541,9 +541,10 @@
     while (nextT < c.currentTime + LOOKAHEAD) {
       // 곡 바꾸기는 박(4칸) 경계에서 → 박자가 끊기지 않게
       if (pending && step % 4 === 0) { cur = pending; pending = null; step = 0; }
-      const sdNow = 60 / cur.comp.bpm / 4, o = cur.boss ? hallOut(c) : dry;
+      const sdNow = 60 / cur.comp.bpm / 4, o = cur.boss && !lite ? hallOut(c) : dry;   // 가벼운 모드: 홀 울림 없이
       const t = nextT + (step % 2 ? cur.comp.swing * sdNow : 0);
       for (const e of cur.byStep[step % cur.comp.steps]) {
+        if (lite && e.x) continue;   // 가벼운 모드: 덧붙인 층(합창·차오르는 소리)은 생략
         if (DRUMS.has(e.kind)) drum(c, o, e, t);
         else voice(c, o, e, t, e.len * sdNow);
       }
@@ -594,6 +595,7 @@
     stop() { playing = false; paused = false; pending = null; cur = null; want = null; if (timer) { clearInterval(timer); timer = null; } },
     setMuted(m) { if (bus) bus.gain.value = m ? 0 : VOLUME * (root.Sfx.musicLevel ? root.Sfx.musicLevel() || 1 : 1); },
     /** 설정의 음악 크기·꺼짐을 다시 반영 */
+    setLite(v) { lite = !!v; },
     refreshVolume() { if (bus) bus.gain.setTargetAtTime(VOLUME * root.Sfx.musicLevel(), bus.context.currentTime, 0.03); },
     get state() { return { playing, paused, world: want && want.world, boss: !!(want && want.boss), bossName: want ? want.bossName || null : null, song: cur && cur.comp.name, pending: !!pending, source: this.source }; },
   };
