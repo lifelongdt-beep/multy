@@ -56,7 +56,7 @@
     dropWarn: 66,            //   빨간 원 경고 시간(틱)
     bossHpMul: 1.3,          // 큰 도전(보스) 체력 추가 배율
     boonHealFrac: 0.5,       // 도우미의 "체력 회복" 카드: 최대 체력의 50%
-    coffeeHeal: 12,
+    milkHeal: 12,
     bossRegenMul: 0.4,       // 보스전 중 체력 재생 배율
     bossBreatherHeal: 0.25,  // 보스 한 번 극복할 때마다 체력 회복 비율 (마지막 보스 제외)
     bossGapSec: 4,           // 보스 극복 후 다음 보스가 나오기까지 최소 간격(초)
@@ -946,8 +946,8 @@
         }
       }
       // 월드 규칙: 가끔 우유(체력 회복, 월드에 따라 초콜릿·비타민 모양)
-      const cc = this.world.rules.coffeeChance;
-      if (cc && e.type !== 'boss' && this.rng() < cc) this.gems.push({ x: e.x, y: e.y, v: TUNING.coffeeHeal, kind: 'coffee' });
+      const cc = this.world.rules.milkChance;
+      if (cc && e.type !== 'boss' && this.rng() < cc) this.gems.push({ x: e.x, y: e.y, v: TUNING.milkHeal, kind: 'milk' });
       this.enemies[i] = this.enemies[this.enemies.length - 1]; this.enemies.pop();
       const od = e.def.onDeath;
       if (od) {
@@ -1144,7 +1144,7 @@
         const dist = Math.hypot(ax, ay);
         if (dist < d.magnet) { g.x += (ax / (dist || 1)) * 4; g.y += (ay / (dist || 1)) * 4; }
         if (dist < p.r + 5) {
-          if (g.kind === 'coffee') { p.hp = Math.min(p.maxhp, p.hp + g.v); this._ev({ k: 'drink', x: p.x, y: p.y }); }   // 회복 아이템(우유 등)을 마심
+          if (g.kind === 'milk') { p.hp = Math.min(p.maxhp, p.hp + g.v); this._ev({ k: 'drink', x: p.x, y: p.y }); }   // 회복 아이템(우유 등)을 마심
           else { p.xp += g.v * this.bonus.xpMul * (this.world.rules.xpMul || 1); this.gemCount += 1; this._ev({ k: 'gem' }); }
           this.gems[i] = this.gems[this.gems.length - 1]; this.gems.pop();
         }

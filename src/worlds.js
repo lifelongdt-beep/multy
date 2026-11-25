@@ -114,7 +114,7 @@
       ruleText: '힘나는 우유: 방해 요소를 잡으면 가끔 🥛 떨어짐(체력 +12) · 일이 몰려 방해가 많이 나옴 · 방해 요소가 더 단단함',
       unlock: { world: 'academy' },
       theme: { bg: '#172229', grid: 'rgba(140,200,220,.07)', deco: 'tiles' },
-      rules: { lane: '⚡', hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, atkMul: 0.7, drops: { first: 18, every: 15, n: 1, emoji: '⚡', text: '⚡ 스트레스 번개구름이 떨어져요! 빨간 원을 피하세요' } },
+      rules: { lane: '⚡', hpMul: 1.1, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, milkChance: 0.04, atkMul: 0.7, drops: { first: 18, every: 15, n: 1, emoji: '⚡', text: '⚡ 스트레스 번개구름이 떨어져요! 빨간 원을 피하세요' } },
       enemies: {
         doc:     { name: '스트레스',      emoji: '😫', hp: 4,  speed: 0.8,  r: 9,  dmg: 6,  xp: 1, ai: 'chase' },
         mail:    { name: '압박감',        emoji: '💢', hp: 2,  speed: 1.25, r: 8,  dmg: 5,  xp: 1, ai: 'chase' },
@@ -152,7 +152,7 @@
       ruleText: '열차 습격: 경고 줄이 뜬 뒤 열차가 가로질러 지나감 (치이면 최대 체력의 60%가 깎임! 방해 요소는 즉사)',
       unlock: { world: 'office' },
       theme: { bg: '#10201f', grid: 'rgba(255,255,255,.03)', deco: 'rails' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, coffeeChance: 0.04, trains: { first: 24, every: 36}, atkMul: 0.75 },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.0, spawnMul: 1.0, milkChance: 0.04, trains: { first: 24, every: 36}, atkMul: 0.75 },
       enemies: {
         sleepy:  { name: '졸음',          emoji: '😪', hp: 5,  speed: 0.9,  r: 9,  dmg: 6,  xp: 1, ai: 'zig' },
         bag:     { name: '무거운 가방',   emoji: '🎒', hp: 9,  speed: 0.6,  r: 11, dmg: 8,  xp: 2, ai: 'chase' },
@@ -267,7 +267,7 @@
       ruleText: '조용한 집중: 경험치 +20% · 방해 요소를 잡으면 가끔 🍫(체력 +12) · 시야가 조금 좁음',
       unlock: { world: 'gym' },
       theme: { bg: '#1c1a12', grid: 'rgba(255,220,150,.06)', deco: 'ruled' },
-      rules: { lane: '😨', hpMul: 1.15, xpMul: 1.2, speedMul: 1.0, spawnMul: 1.0, sight: 220, coffeeChance: 0.03, dropEmoji: '🍫', atkMul: 0.76, drops: { first: 14, every: 13, n: 2, emoji: '💭', text: '💭 잡념 구름이 쏟아져요! 빨간 원을 피하세요' } },
+      rules: { lane: '😨', hpMul: 1.15, xpMul: 1.2, speedMul: 1.0, spawnMul: 1.0, sight: 220, milkChance: 0.03, dropEmoji: '🍫', atkMul: 0.76, drops: { first: 14, every: 13, n: 2, emoji: '💭', text: '💭 잡념 구름이 쏟아져요! 빨간 원을 피하세요' } },
       enemies: {
         nod:    { name: '꾸벅꾸벅',      emoji: '💤', hp: 5,  speed: 0.9,  r: 9,  dmg: 6,  xp: 1, ai: 'zig' },
         tempt:  { name: '스마트폰 유혹', emoji: '📲', hp: 6,  speed: 0.7,  r: 8,  dmg: 8,  xp: 2, ai: 'dash', dashCd: 100 },
@@ -382,7 +382,7 @@
       ruleText: '회복의 힘: 방해 요소를 잡으면 가끔 💊(체력 +12) · 방해 요소가 5% 더 빠름',
       unlock: { world: 'airport' },
       theme: { bg: '#162628', grid: 'rgba(160,255,230,.06)', deco: 'tiles' },
-      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.05, spawnMul: 1.05, coffeeChance: 0.05, dropEmoji: '💊', atkMul: 0.88, trains: { first: 22, every: 30, emoji: '🦠', text: '🦠 병균 떼가 몰려와요! 빨간 줄을 피하세요' } },
+      rules: { hpMul: 1.15, xpMul: 1.0, speedMul: 1.05, spawnMul: 1.05, milkChance: 0.05, dropEmoji: '💊', atkMul: 0.88, trains: { first: 22, every: 30, emoji: '🦠', text: '🦠 병균 떼가 몰려와요! 빨간 줄을 피하세요' } },
       enemies: {
         germ:   { name: '감기 기운',     emoji: '🦠', hp: 5,  speed: 0.95, r: 8,  dmg: 6,  xp: 1, ai: 'zig' },
         cough:  { name: '콜록콜록',      emoji: '🤧', hp: 7,  speed: 0.7,  r: 9,  dmg: 6,  xp: 2, ai: 'chase' },

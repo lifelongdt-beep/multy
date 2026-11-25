@@ -470,7 +470,7 @@
     ['start', 'levelup', 'end', 'tutorial', 'pause'].forEach((id) => $(id).classList.add('hidden'));
     $('again').innerHTML = Icons.svg('retry') + '<span>한 판만 더</span>';
     Music.play(sim.world.id);   // 월드별 배경음악 (보스가 나오면 frame에서 보스 곡으로 전환)
-    if (tutorial) banner = { text: '📘 튜토리얼 · 과거의 나 10명과 함께!', t: 150 };
+    if (tutorial) banner = { text: '📘 튜토리얼 · 과거의 나 10명과 함께!', t: 120 };   // 첫 안내(3초)와 겹치지 않게 2초만
   }
 
   /** 튜토리얼 안내: 시간 안내 + '실제로 일어날 때' 안내를 줄 세워 하나씩 보여 준다.
@@ -898,7 +898,7 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
     for (const g of sim.gems) {
-      if (g.kind === 'coffee') {
+      if (g.kind === 'milk') {
         if (useArt) Art.drawDrop(ctx, g, sim.world.rules.dropEmoji || '🥛', now);
         else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; emoji(sim.world.rules.dropEmoji || '🥛', g.x, g.y, 15); }
         continue;
@@ -1266,7 +1266,11 @@
         }
         if (cur) lines.push(cur);
       }
-      const y0 = H * 0.36 + 30;
+      let y0 = H * 0.36 + 30;
+      if (tutorial && tipCur && tipCur.target) {   // 가리키는 대상이 글 상자 뒤에 가려지면 상자를 위나 아래로 비킴
+        const tg = tipTargetPos(tipCur.target), gy = tg && (tg.rect ? tg.rect[1] + tg.rect[3] / 2 : tg.y), hh = lines.length * 20 + 6;
+        if (gy !== undefined && gy > y0 - 13 - 50 && gy < y0 - 13 + hh + 50) y0 = gy < H * 0.5 ? Math.min(PLAY_BOTTOM - hh - 10, gy + 70) : Math.max(80, gy - 70 - hh);
+      }
       toastBox = { top: y0 - 13, bottom: y0 - 13 + lines.length * 20 + 6 };   // 튜토리얼 화살표가 여기서 출발
       ctx.fillStyle = 'rgba(8,10,20,.55)'; ctx.fillRect(4, y0 - 13, W - 8, lines.length * 20 + 6);
       ctx.fillStyle = '#ffd34d'; lines.forEach((ln, i) => fitText(ln, W / 2, y0 + i * 20, 14));

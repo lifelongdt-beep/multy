@@ -164,19 +164,19 @@ test('지하철 규칙: 열차가 주기적으로 등장하고 보스전 직전�
 test('회사 규칙: 적을 잡으면 커피가 나오고 먹으면 체력이 회복된다', () => {
   const s = new Sim({ seed: 9, events: false, world: 'office' });
   s.player.hp = 50;
-  s.gems.push({ x: s.player.x, y: s.player.y, v: 15, kind: 'coffee' });
+  s.gems.push({ x: s.player.x, y: s.player.y, v: 15, kind: 'milk' });
   s.step({ dx: 0, dy: 0 });
   assert.strictEqual(Math.round(s.player.hp), 65);
   assert.strictEqual(s.gemCount, 0, '커피는 경험치 구슬이 아님');
   assert.strictEqual(s.player.xp, 0);
-  let coffees = 0;
-  for (let i = 0; i < 400; i++) { s.world.rules.coffeeChance = 1; s._make('doc', 20, 20); s.enemies[s.enemies.length - 1].hp = 0; s.step({ dx: 0, dy: 0 }); }
-  coffees = s.gems.filter((g) => g.kind === 'coffee').length + 1;
-  assert.ok(coffees > 1);
-  s.world.rules.coffeeChance = 0.05;
+  let milks = 0;
+  for (let i = 0; i < 400; i++) { s.world.rules.milkChance = 1; s._make('doc', 20, 20); s.enemies[s.enemies.length - 1].hp = 0; s.step({ dx: 0, dy: 0 }); }
+  milks = s.gems.filter((g) => g.kind === 'milk').length + 1;
+  assert.ok(milks > 1);
+  s.world.rules.milkChance = 0.05;
   const sc = new Sim({ seed: 9, events: false, world: 'school' });
   sc._make('hw', 20, 20); sc.enemies[0].hp = 0; sc.step({ dx: 0, dy: 0 });
-  assert.ok(!sc.gems.some((g) => g.kind === 'coffee'), '학교에는 커피 없음');
+  assert.ok(!sc.gems.some((g) => g.kind === 'milk'), '학교에는 우유 없음');
 });
 
 test('학원 규칙: 경험치 +30%', () => {
@@ -539,7 +539,7 @@ test('보스전 중에는 받는 피해가 최대 체력에 비례해 커지고,
 test('체력 계열이 과하지 않다: 기본 체력 110, 재생·회복량 상한', () => {
   const s = new Sim({ seed: 1, events: false });
   assert.strictEqual(s.player.maxhp, 110);
-  assert.ok(TUNING.healAmount <= 35 && TUNING.regenPer <= 1.0 && TUNING.bossBreatherHeal <= 0.25 && TUNING.boonHealFrac <= 0.5 && TUNING.coffeeHeal <= 12);
+  assert.ok(TUNING.healAmount <= 35 && TUNING.regenPer <= 1.0 && TUNING.bossBreatherHeal <= 0.25 && TUNING.boonHealFrac <= 0.5 && TUNING.milkHeal <= 12);
   // 급식 시간 5레벨 + 상점 최대 재생 + 보건 도우미 재생을 모두 합쳐도 초당 회복은 제한적
   const d = E.derive({ ...new Sim({ seed: 1, events: false }).player.stats, regen: 5 }, { ...E.NO_BONUS, regen: 5 * 0.25 + 0.7 });
   assert.ok(d.regen * 60 < 8, `초당 재생 ${(d.regen * 60).toFixed(1)}`);
