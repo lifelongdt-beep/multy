@@ -9,7 +9,7 @@ const ROOT = path.join(__dirname, '..'), OUT = path.join(ROOT, 'docs', 'promo');
 const MODE = process.argv[2] || 'keyframes', FPS = 30;
 const TOTAL = () => SCENES.reduce((a, x) => a + x.sec, 0);   // 영상 전체 길이(초)
 // 장면: [월드, 길이(초), 자막, 준비 함수 이름]
-const C1 = ['시험 불안이 왔다!'], C2 = ['혼자선 힘들지?'], C3 = ['한 판 끝나면', '과거의 내가 도와줘!'], C4 = ['착한 일 하면', '더 세져!'], C5 = ['우유 먹고', '힘내!'];
+const C1 = ['시험 불안이 왔다!'], C2 = ['혼자선 힘들지?'], C3 = ['한 판 끝나면', '과거의 내가 도와줘!'], C4 = ['착한 일 하면', '더 세져!'], C5 = ['우유 먹고', '힘내!'], C6 = ['담임 선생님도', '도와줘!'];
 // 빠른 장면 전환: 1~2초짜리 장면을 여러 월드로 (같은 자막이면 자막은 이어서 유지)
 const SCENES = [
   { id: 'boss',  world: 'school',   sec: 1.0, cap: C1 },
@@ -17,6 +17,7 @@ const SCENES = [
   { id: 'boss',  world: 'office',   sec: 1.0, cap: C1 },
   { id: 'alone', world: 'beach',    sec: 1.0, cap: C2 },
   { id: 'milk',  world: 'home',     sec: 1.2, cap: C5 },
+  { id: 'teach', world: 'school',   sec: 1.9, cap: C6 },
   { id: 'echo',  world: 'stage',    sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'mountain', sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'hospital', sec: 1.1, cap: C3 },
@@ -139,6 +140,14 @@ const SCENES = [
         return;
       }
       s.player.hp = Math.max(s.player.hp, s.player.maxhp * 0.8);
+      if (id === 'teach') {   // 선생님 곁(빛나는 원)으로 걸어가 도움을 받음
+        const h = s.helper; if (!h) return;
+        if (f === 0) s.player.hp = s.player.maxhp * 0.5;
+        if (h.state === 'wait') { s.player.x += (h.x - 30 - s.player.x) * 0.1; s.player.y += (h.y + 26 - s.player.y) * 0.1; }
+        if (s.choices && s.choiceKind === 'helper' && !window.__helped) { window.__helped = f; }
+        if (window.__helped && f - window.__helped === 12 && s.choices) s.choose('boon_heal');   // 따뜻한 격려 = 회복
+        return;
+      }
       if (id === 'deed') {
         const rs = s.deeds.rescue; if (!rs) return;
         if (f < 24) { s.player.x += (rs.x - 48 - s.player.x) * 0.12; s.player.y += (rs.y + 22 - s.player.y) * 0.12; }   // 친구에게 달려감
@@ -153,6 +162,7 @@ const SCENES = [
       if (id === 'alone') return { x: pl.x, y: pl.y - 30, z: 1.9 + k * 0.1 };
       if (id === 'echo') return { x: 180, y: 445, z: 1.45 + k * 0.03 };
       if (id === 'deed') { const rs = s.deeds.rescue || { x: pl.x, y: pl.y }; return { x: (pl.x + rs.x) / 2 + 6, y: (pl.y + rs.y) / 2 - 30, z: 2.1 + k * 0.05 }; }
+      if (id === 'teach') { const h = s.helper || pl; return { x: (pl.x + h.x) / 2, y: (pl.y + h.y) / 2 - 35, z: 2.0 + k * 0.05 }; }
       if (id === 'milk') return { x: pl.x + 8, y: pl.y - 40, z: 2.5 + k * 0.1 };
       return { x: pl.x, y: pl.y - 10, z: 1.8 + k * 0.04 };
     };
@@ -179,6 +189,8 @@ const SCENES = [
       for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; s._make(kinds[k % kinds.length], 180 + Math.cos(a) * 78, 420 + Math.sin(a) * 78); const e = s.enemies[s.enemies.length - 1]; tough(e); e.speed *= 0.12; } }
     if (sc.id === 'echo') { let n = 0; while (!s.bossAlive && n++ < 20000) run(1, wig); const bs = s.enemies.find((e) => e.type === 'boss'); clearTop(); if (bs) { bs.x = 180; bs.y = 440; bs.hp = bs.maxhp * 0.35; } place(180, 570); orbit(180, 440, 100); }
     if (sc.id === 'milk') { run(60 * 20, wig); s.enemies = []; place(180, 470); }
+    if (sc.id === 'teach') { let n = 0; while (!s.helper && n++ < 20000) run(1, wig); s.enemies = s.enemies.filter((e) => Math.hypot(e.x - 180, e.y - 450) > 170);
+      const h = s.helper; if (h) { h.x = 190; h.y = 430; h.prog = 0; h.need = 40; h.t = 0; } place(95, 520); }
     if (sc.id === 'end') { run(60 * 20, wig); s.enemies = []; place(180, 420); orbit(180, 420, 70); }
     if (sc.id === 'deed') { let n = 0; while (!(s.deeds && s.deeds.rescue) && n++ < 20000) run(1, wig); const rs = s.deeds.rescue; clearTop(); s.enemies = s.enemies.filter((e) => e.guard);
       if (rs) { if (sc.who) rs.kind = sc.who; const dx = 180 - rs.x, dy = 430 - rs.y; rs.x += dx; rs.y += dy; for (const e of rs.guards) { e.x += dx; e.y += dy; tough(e); e.speed = 0; } } place(80, 470); }
