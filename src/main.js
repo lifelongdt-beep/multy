@@ -99,6 +99,26 @@
   }
   let floats = [];
   let autoFlash = [];
+  /* 화질: 자동(기본) · 좋게 · 가볍게. 자동이면 게임 중 프레임이 계속 느릴 때(평균 42fps 아래 3초) 스스로 가벼운 모드로 바꾸고 기억한다.
+   * 가벼운 모드: 화면 해상도 1배(가장 효과 큼) · 파편 절반 · 적 테두리 4방향 · 글자 그림자 흐림 없음 · 왕 곡 홀 울림·덧붙인 층 생략 */
+  const GFX_KEY = 'echo-gfx';
+  let gfx = { mode: 'auto', autoLite: false };
+  try { const g = JSON.parse(localStorage.getItem(GFX_KEY) || '{}'); if (['auto', 'high', 'low'].includes(g.mode)) gfx.mode = g.mode; gfx.autoLite = !!g.autoLite; } catch (e) { /* 무시 */ }
+  if (!('autoLite' in gfx) || (navigator.deviceMemory && navigator.deviceMemory <= 2 && !localStorage.getItem(GFX_KEY))) gfx.autoLite = true;   // 메모리 2GB 이하 기기는 처음부터 가볍게
+  function liteOn() { return gfx.mode === 'low' || (gfx.mode === 'auto' && gfx.autoLite); }
+  function saveGfx() { try { localStorage.setItem(GFX_KEY, JSON.stringify(gfx)); } catch (e) { /* 무시 */ } }
+  function applyGfx() { if (window.Art && Art.setLite) Art.setLite(liteOn()); if (window.Music && Music.setLite) Music.setLite(liteOn()); if (typeof resize === 'function' && cv) resize(); window.__gfx = { lite: liteOn(), mode: gfx.mode, autoLite: gfx.autoLite }; }
+  const perfWatch = { t0: 0, sum: 0, n: 0 };   // 자동 감지: 3초 묶음 평균 프레임 시간
+  function watchPerf(dt, now) {
+    if (gfx.mode !== 'auto' || gfx.autoLite || state !== 'play' || dt > 200) { perfWatch.t0 = 0; return; }   // 200ms 넘는 끊김(탭 전환 등)은 제외
+    if (!perfWatch.t0) { perfWatch.t0 = now + 1500; perfWatch.sum = 0; perfWatch.n = 0; return; }   // 시작 직후 1.5초는 건너뜀
+    if (now < perfWatch.t0) return;
+    perfWatch.sum += dt; perfWatch.n += 1;
+    if (now - perfWatch.t0 >= 3000) {
+      if (perfWatch.sum / perfWatch.n > 24) { gfx.autoLite = true; saveGfx(); applyGfx(); if (typeof muteIcon === 'function') muteIcon(); }
+      perfWatch.t0 = now; perfWatch.sum = 0; perfWatch.n = 0;
+    }
+  }
   let bubbles = [];     // 고마움 말풍선·하트 {text, x, y, t, max, small}
   let warmFx = [];      // 선행 순간 퍼지는 따뜻한 빛 {x, y, r, t}
   const THANKS = ['고마워!', '덕분이야 💛', '정말 고마워요', '너 최고야!', '살았다~', '고마워, 친구야', '복 받을 거야', '힘이 났어!'];
@@ -441,10 +461,10 @@
   function resize() {
     const st = $('stage'), k = Math.min(innerWidth / W, innerHeight / H);
     st.style.width = Math.floor(W * k) + 'px'; st.style.height = Math.floor(H * k) + 'px';
-    const r = cv.getBoundingClientRect(); const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = cv.getBoundingClientRect(); const dpr = liteOn() ? 1 : Math.min(2, window.devicePixelRatio || 1);   // 가벼운 모드: 해상도 1배
     cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
   }
-  addEventListener('resize', resize); resize();
+  addEventListener('resize', resize); resize(); applyGfx();
 
   /** @param opts {tutorial?:boolean}  튜토리얼은 미리 만든 에코 10명과 학교 월드에서 한다. 내 에코 기록·학점에는 반영하지 않는다. */
   function startRun(opts) {
@@ -790,7 +810,7 @@
     { id: 'music', name: '🎵 음악', get: () => Sfx.musicVol(), on: () => Sfx.musicOn(), set: (v) => Sfx.setMusicVol(v), toggle: () => Sfx.setMusic(!Sfx.musicOn()) },
     { id: 'sfx',   name: '🔔 효과음', get: () => Sfx.sfxVol(), on: () => Sfx.sfxOn(), set: (v) => Sfx.setSfxVol(v), toggle: () => Sfx.setSfx(!Sfx.sfxOn()) },
   ];
-  const volRows = [];
+  const volRows = [], gfxRows = [];
   document.querySelectorAll('[data-vols]').forEach((box) => {
     for (const vd of VOLS) {
       const row = document.createElement('div'); row.className = 'vol';
@@ -802,11 +822,22 @@
       nm.addEventListener('click', () => { vd.toggle(); if (vd.id === 'sfx') Sfx.play('click'); muteIcon(); });   // 이름을 누르면 그것만 켜기/끄기
       row.append(nm, rg, pc); box.appendChild(row); volRows.push({ vd, row, rg, pc });
     }
+    // 화질: 자동 · 좋게 · 가볍게 (자동은 느린 기기에서 스스로 가볍게)
+    const gr = document.createElement('div'); gr.className = 'vol gfx';
+    const gn = document.createElement('span'); gn.className = 'vn'; gn.innerHTML = '화질<small></small>';
+    const seg = document.createElement('div'); seg.className = 'seg';
+    for (const [mode, label] of [['auto', '자동'], ['high', '좋게'], ['low', '가볍게']]) {
+      const bt = document.createElement('button'); bt.className = 'sub'; bt.textContent = label; bt.dataset.mode = mode;
+      bt.onclick = () => { gfx.mode = mode; saveGfx(); applyGfx(); Sfx.play('click'); muteIcon(); };
+      seg.appendChild(bt);
+    }
+    gr.append(gn, seg); box.appendChild(gr); gfxRows.push({ seg, note: gn.querySelector('small') });
   });
   const muteIcon = () => {
     $('mute').innerHTML = Icons.svg(Sfx.isMuted() ? 'soundOff' : 'soundOn', 17);
     for (const r of volRows) { const on = r.vd.on(), v = on ? Math.round(r.vd.get() * 100) : 0; if (document.activeElement !== r.rg) r.rg.value = v; r.pc.textContent = on ? v + '%' : '꺼짐'; r.row.classList.toggle('off', !on); }
     $('muteAll').textContent = Sfx.isMuted() ? '🔊 소리 켜기' : '🔇 모두 끄기';
+    for (const g of gfxRows) { for (const bt of g.seg.children) bt.classList.toggle('on', bt.dataset.mode === gfx.mode); g.note.textContent = liteOn() ? '지금 가볍게' : '지금 좋게'; }
   };
   // 위 소리 버튼: 음악·효과음 크기 창을 열고 닫음 (창 밖을 누르면 닫힘)
   const soundPop = $('soundPop');
@@ -1193,7 +1224,7 @@
       // 정보가 있는 자리에는 반투명 받침: 위로 올라온 적이 글자·막대와 겹쳐 보이지 않게
       const pill = (x, y, w, h) => { ctx.fillStyle = 'rgba(10,12,26,.62)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, 8) : ctx.rect(x, y, w, h); ctx.fill(); };
       pill(3, 3, 145, 27); pill(W / 2 - 30, 2, 60, sim.bossCount > 1 ? 33 : 21); pill(W - 112, 3, 109, 33); }
-    ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
+    ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = liteOn() ? 0 : 3; ctx.shadowOffsetY = 1;
     ctx.textAlign = 'left';
     const hpF = Math.max(0, p.hp / p.maxhp);
     if (hpShown === null || hpShown > hpF) hpShown = hpF; else hpShown += (hpF - hpShown) * 0.15;   // 회복은 부드럽게 차오름 (깎일 땐 바로)
@@ -1228,7 +1259,7 @@
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, PLAY_BOTTOM + 76, 38, 0, 7); ctx.globalAlpha *= 0.5; ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
+    ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = liteOn() ? 0 : 3; ctx.shadowOffsetY = 1;
     // 보유 아이템: 화면 위 HUD 두 번째 줄 (많아지면 글자를 줄여 한 줄에 맞춤)
     {
       const ownedUps = UPGRADES.filter((u) => p.stats[u.id] && !u.instant);
@@ -1367,6 +1398,7 @@
     headFlash = headFlash.filter((h) => h.t > 0);
     autoFlash = autoFlash.filter((a) => a.t > 0);
     // 글자 표시 시간은 실제 시간 기준 (화면 주사율 120Hz 기기에서도 빨리 사라지지 않게)
+    watchPerf(now - (frame.lastNow || now), now);   // 화질 자동: 계속 느리면 가벼운 모드로
     const fstep = Math.min(6, Math.max(0, (now - (frame.lastNow || now)) / (1000 / 60))); frame.lastNow = now;
     if (banner.t > 0) banner.t -= fstep;
     if (toast.t > 0) toast.t -= fstep;
