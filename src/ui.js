@@ -4,6 +4,7 @@
   const M = Meta;
   const $ = (id) => document.getElementById(id);
   let save = M.load(window.localStorage);
+  if (M.demoLocked && M.demoLocked(save.worlds.selected)) save.worlds.selected = 'school';   // 웹 체험판: 앱 전용 월드가 골라져 있으면 학교로
 
   function today() {
     const d = new Date();
@@ -28,6 +29,7 @@
   }
   function commit() { M.persist(window.localStorage, save); refresh(); }
   function refresh() {
+      if ($('demoTag')) $('demoTag').hidden = !(M.DEMO && M.DEMO.on);   // 웹 체험판 표시
       $('coins').textContent = M.fmtNum(save.coins); $('pcoins').textContent = M.fmtNum(save.coins);
       coinIcon();
       const w = M.WORLDS[save.worlds.selected] || M.WORLDS.school;
@@ -305,12 +307,15 @@
       const rec = M.recommendedGear(id, save.cycle), gt = M.gearTotals(save);
       // 글은 최소한: 왕 수 · 필요 에코 · 장비 상태 한 줄 (자세한 규칙은 게임 안에서)
       const gearOk = gt.atk >= rec.atk && gt.def >= rec.def;
-      const desc = open
+      const demo = M.demoLocked(id);   // 웹 체험판: 학교·학원 밖은 앱에서
+      const desc = demo ? '📱 체험판은 학교·학원까지 · 전체 월드는 앱에서'
+        : open
         ? `🏁 왕 ${w.boss.times.length} · ✨ ${w.boss.needEchoes}명` + (rec.atk + rec.def ? ` · 🧰${gearOk ? '✅' : '⚠'}` : '') + (clears ? ` · ⭐${clears}` : '')
         : `🔒 ${prev.emoji} ${prev.name} 극복 시 열림`;
-      const row = item(open ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
+      const row = item(open || demo ? w.emoji : '🔒', w.name, desc, { done: open && !sel, sel });
+      if (demo) row.style.opacity = '0.6';
       row.querySelector('small').style.whiteSpace = 'pre-line';
-      const b = el('button', '', sel ? '선택됨' : open ? '선택' : '잠김');
+      const b = el('button', '', sel ? '선택됨' : open ? '선택' : demo ? '앱 전용' : '잠김');
       b.disabled = sel || !open;
       b.onclick = () => {
         // 다른 월드로 옮기면 지금까지 쌓은 에코가 사라진다 → 한 번 더 눌러 확인

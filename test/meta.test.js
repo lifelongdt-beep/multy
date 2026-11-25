@@ -539,3 +539,15 @@ test('상점 따뜻한 마음: 선행 물건을 끌어오는 거리가 레벨마
   assert.ok(!sim.deeds.spots.some((x) => x.kind === 'cup'), '가까운 것은 끌려와 주워짐');
   assert.ok(sim.deeds.spots.some((x) => x.kind === 'pot' && x.x === p.x + 150), '먼 것은 그대로');
 });
+
+test('웹 체험판: 학교·학원만 열리고 나머지는 앱 전용 (앱·기본은 전체)', () => {
+  const s = M.defaultSave(); const all = M.WORLD_ORDER; for (const k of all) { s.worlds.cycleClears[k] = 1; s.worlds.clears[k] = 1; }
+  assert.strictEqual(M.DEMO.on, false, '기본(테스트·앱)은 전체');
+  assert.ok(M.worldUnlocked(s, 'office'));
+  M.setDemo(true);
+  try {
+    assert.ok(M.worldUnlocked(s, 'school') && M.worldUnlocked(s, 'academy'));
+    for (const k of all.slice(2)) { assert.ok(!M.worldUnlocked(s, k), k); assert.ok(M.demoLocked(k)); }
+    assert.ok(!M.selectWorld(s, 'office'));
+  } finally { M.setDemo(false); }
+});
