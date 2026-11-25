@@ -7,9 +7,9 @@
 name: Android build
 on:
   push:
-    branches: [main, 'ccr-*']   # 작업 브랜치에서도 미리 빌드해 확인
-  pull_request:
     branches: [main]
+  pull_request:
+    branches: [main]   # 병합 요청을 만들면 미리 빌드해 확인
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,15 +17,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
+          cache: gradle   # 내려받은 라이브러리를 저장해 두고 다시 씀 (라이브러리 서버의 '요청이 너무 많음' 거절을 피함)
       - name: 게임 파일 모으고 앱에 넣기
         run: |
           npm ci
