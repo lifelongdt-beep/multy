@@ -8,6 +8,8 @@ const DIRS = ['src', 'icons'];
 fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT, { recursive: true });
 for (const f of FILES) fs.copyFileSync(path.join(ROOT, f), path.join(OUT, f));
 for (const d of DIRS) fs.cpSync(path.join(ROOT, d), path.join(OUT, d), { recursive: true });
+// 버전: 자동 빌드가 알려 준 번호를 앱 속 version.js에 넣음 (예: 1.0.9)
+if (process.env.APP_VERSION_NAME) fs.writeFileSync(path.join(OUT, 'src', 'version.js'), `(function (root) { root.ECHO_VERSION = ${JSON.stringify(process.env.APP_VERSION_NAME)}; })(typeof window !== 'undefined' ? window : globalThis);\n`);
 // index.html이 부르는 스크립트가 모두 들어갔는지 확인 (빠지면 앱이 하얀 화면)
 const html = fs.readFileSync(path.join(OUT, 'index.html'), 'utf8');
 const missing = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]).filter((s) => !fs.existsSync(path.join(OUT, s)));

@@ -7,7 +7,7 @@ const CACHE = 'echo-rush-v1';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
-  'src/glyphs.js', 'src/worlds.js', 'src/sim.js', 'src/tutorial.js', 'src/meta.js', 'src/audio.js', 'src/music.js',
+  'src/version.js', 'src/glyphs.js', 'src/worlds.js', 'src/sim.js', 'src/tutorial.js', 'src/meta.js', 'src/audio.js', 'src/music.js',
   'src/art.js', 'src/art-worlds.js', 'src/art-bg.js', 'src/art-bullets.js', 'src/art-echoes.js', 'src/art-menu.js',
   'src/icons.js', 'src/ui.js', 'src/main.js',
 ];

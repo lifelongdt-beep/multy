@@ -29,6 +29,7 @@
   }
   function commit() { M.persist(window.localStorage, save); refresh(); }
   function refresh() {
+      if ($('verTag')) $('verTag').textContent = 'v' + (window.ECHO_VERSION || '?');   // 메뉴 구석 버전 표시
       if ($('demoTag')) $('demoTag').hidden = !(M.DEMO && M.DEMO.on);   // 웹 체험판 표시
       $('coins').textContent = M.fmtNum(save.coins); $('pcoins').textContent = M.fmtNum(save.coins);
       coinIcon();
@@ -540,6 +541,52 @@
   $('bDeed').onclick = () => { Sfx.unlock(); Sfx.play('click'); seen.title = M.titleOf(M.deedScore(save)).title.name; saveSeen(); openPanel('💛 선행', renderDeeds); };
   $('bQuest').onclick = () => { Sfx.unlock(); Sfx.play('click'); seen.ach = M.ACHIEVEMENTS.filter((a) => save.ach[a.id]).length; saveSeen(); openPanel('🏆 과제 · 미션', renderQuests); };
   $('bBackup').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💾 백업', renderBackup); };
+  /* ---------- 의견 보내기 (테스터 의견): 서버 없이 폰의 공유 창(카톡·문자·메일)으로 보낸다 ----------
+   * 적은 글 + 버전·기기·화면·월드 같은 정보를 자동으로 붙여, 문제를 다시 확인하기 쉽게 */
+  const FB_KEY = 'echo-feedback-draft';
+  function fbDevice() {
+    const ua = navigator.userAgent || '', a = ua.match(/Android ([\d.]+);\s*([^;)]+)/);
+    if (a) return `Android ${a[1]} · ${a[2].replace(/ Build.*/, '').trim()}`;
+    if (/iPhone|iPad/.test(ua)) return (ua.match(/OS ([\d_]+)/) || [])[1] ? `iOS ${(ua.match(/OS ([\d_]+)/)[1]).replace(/_/g, '.')}` : 'iOS';
+    return (navigator.platform || '알 수 없음');
+  }
+  function fbInfo() {
+    let gfx = '자동'; try { gfx = ({ auto: '자동', high: '좋게', low: '가볍게' })[(JSON.parse(localStorage.getItem('echo-gfx') || '{}').mode) || 'auto']; } catch (e) { /* 무시 */ }
+    const w = M.WORLDS[save.worlds.selected] || M.WORLDS.school;
+    const app = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() ? '앱' : (M.DEMO && M.DEMO.on ? '웹 체험판' : '웹');
+    return [`버전: ${window.ECHO_VERSION || '?'} (${app})`, `기기: ${fbDevice()}`, `화면: ${innerWidth}×${innerHeight} · 화질 ${gfx}`, `월드: ${w.name} · ${(save.cycle || 0) + 1}회차 · 플레이 ${(save.stats && save.stats.runs) || 0}판`, `날짜: ${new Date().toLocaleString('ko-KR')}`].join('\n');
+  }
+  async function fbCopy(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {
+      try { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); const ok = document.execCommand('copy'); t.remove(); return ok; } catch (e2) { return false; }
+    }
+  }
+  function renderFeedback() {
+    const body = $('pbody'); body.innerHTML = '';
+    body.appendChild(el('div', 'msg', '불편했던 점, 버그, 이랬으면 좋겠다 하는 점을 편하게 적어 주세요. 버전·기기 정보는 자동으로 붙어요.'));
+    const ta = document.createElement('textarea'); ta.id = 'fbText'; ta.placeholder = '예) 바닷가 월드에서 파도가 지나갈 때 화면이 잠깐 멈춰요';
+    try { ta.value = localStorage.getItem(FB_KEY) || ''; } catch (e) { /* 무시 */ }
+    ta.addEventListener('input', () => { try { localStorage.setItem(FB_KEY, ta.value); } catch (e) { /* 무시 */ } });   // 쓰다가 나가도 남아 있게
+    ta.addEventListener('pointerdown', (e) => e.stopPropagation()); ta.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+    body.appendChild(ta);
+    body.appendChild(el('div', 'fbinfo', fbInfo()));
+    const status = el('div', 'msg', '');
+    const full = () => `[에코 러시 의견]\n${ta.value.trim() || '(내용 없음)'}\n\n${fbInfo()}`;
+    const send = el('button', '', '📤 보내기 (카톡·문자·메일)');
+    send.onclick = async () => {
+      Sfx.play('click'); const text = full();
+      const Share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
+      try {
+        if (Share && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) { await Share.share({ title: '에코 러시 의견', text, dialogTitle: '의견 보내기' }); status.textContent = '💛 보내 주셔서 고마워요!'; }
+        else if (navigator.share) { await navigator.share({ title: '에코 러시 의견', text }); status.textContent = '💛 보내 주셔서 고마워요!'; }
+        else status.textContent = (await fbCopy(text)) ? '📋 복사했어요. 카톡이나 메일에 붙여 넣어 보내 주세요' : '복사가 안 돼요. 글을 길게 눌러 직접 복사해 주세요';
+      } catch (e) { status.textContent = '보내기를 취소했어요'; }
+    };
+    const copy = el('button', 'sub', '📋 복사하기');
+    copy.onclick = async () => { Sfx.play('click'); status.textContent = (await fbCopy(full())) ? '📋 복사했어요. 카톡이나 메일에 붙여 넣어 보내 주세요' : '복사가 안 돼요. 글을 길게 눌러 직접 복사해 주세요'; };
+    const row = el('div', 'row'); row.append(send, copy); body.appendChild(row); body.appendChild(status);
+  }
+  $('bFeedback').onclick = () => { Sfx.unlock(); Sfx.play('click'); openPanel('💬 의견 보내기', renderFeedback); };
   $('pback').onclick = () => { Sfx.play('click'); closePanel(); };
   $('pbackTop').onclick = () => { Sfx.play('click'); closePanel(); };   // 위쪽 돌아가기 (긴 목록을 끝까지 내리지 않아도 되게)
   coinIcon();   // 학점 표시: 이모지 대신 그린 학사모
