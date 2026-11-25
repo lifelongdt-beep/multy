@@ -871,11 +871,12 @@
   /* ---------- 앱처럼 설치 (PWA) ----------
    * 오프라인 저장(서비스 워커)은 웹 주소(http/https)에서만. 설치 버튼은 브라우저가 설치를 지원할 때만 보인다.
    * 아이폰(사파리)은 설치 창이 없어서, 누르면 '공유 → 홈 화면에 추가' 방법을 알려 준다. */
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) { try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* 미리보기 등에선 무시 */ } }
+  const nativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());   // 안드로이드 앱 안: 게임 파일이 이미 앱 속에 있어 오프라인 저장·설치 버튼이 필요 없음
+  if (!nativeApp && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) { try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* 미리보기 등에선 무시 */ } }
   const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let installEvt = null;
-  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (!standalone) $('bInstall').style.display = ''; });
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (!standalone && !nativeApp) $('bInstall').style.display = ''; });
   addEventListener('appinstalled', () => { installEvt = null; $('bInstall').style.display = 'none'; });
   if (isIOS && !standalone && /^https?:$/.test(location.protocol)) $('bInstall').style.display = '';
   $('bInstall').onclick = () => {
