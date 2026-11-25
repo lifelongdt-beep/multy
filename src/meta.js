@@ -449,9 +449,21 @@
 
   /* ---------- 월드 ---------- */
   /** 학교는 항상 열려 있고, 나머지는 "이번 회차에" 바로 앞 월드의 보스를 한 번 이상 극복하면 열린다 */
+  /* 웹 체험판: 공개 웹 주소(github.io)에서는 학교·학원 두 월드만 (전체 12개 월드는 앱에서). 안드로이드 앱·미리보기·내 PC에선 전체.
+   * 주소 뒤에 ?demo=1 을 붙이면 어디서든 체험판으로 볼 수 있다 (확인용) */
+  const DEMO = { on: false, worlds: ['school', 'academy'] };
+  try {
+    if (typeof window !== 'undefined' && window.location) {
+      const native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+      DEMO.on = !native && (/(^|\.)github\.io$/.test(location.hostname) || /[?&]demo=1\b/.test(location.search));
+    }
+  } catch (e) { /* 무시 */ }
+  /** 체험판이라 잠긴 월드인가 (앱에서만 플레이) */
+  function demoLocked(id) { return DEMO.on && DEMO.worlds.indexOf(id) < 0; }
   function worldUnlocked(save, id) {
     const w = WORLDS[id];
     if (!w) return false;
+    if (demoLocked(id)) return false;
     if (!w.unlock) return true;
     if ((save.cycle || 0) < (save.maxCycle || 0)) return true;   // 이미 끝낸 회차를 다시 할 때는 모든 월드가 열려 있다
     return ((save.worlds.cycleClears || {})[w.unlock.world] || 0) >= 1;
@@ -751,6 +763,7 @@
   }
 
   const api = {
+    DEMO, demoLocked, setDemo(on) { DEMO.on = !!on; },
     SAVE_KEY, CHARACTERS, SHOP, ACHIEVEMENTS, MISSION_TEMPLATES, WORLDS, WORLD_ORDER, worldUnlocked, selectWorld, echoesForWorld,
     COIN_TIERS, coinTier, GEAR, GEAR_ITEMS, gearLevel, gearMax, gearCost, gearTotals, gearAvailable, gearText, buyGear, rewardMul, fmtNum,
     recommendedGear: Worlds.recommendedGear, stageMul: Worlds.stageMul,
