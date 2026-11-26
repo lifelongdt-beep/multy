@@ -9,7 +9,7 @@ const ROOT = path.join(__dirname, '..'), OUT = path.join(ROOT, 'docs', 'promo');
 const MODE = process.argv[2] || 'keyframes', FPS = 30;
 const TOTAL = () => SCENES.reduce((a, x) => a + x.sec, 0);   // 영상 전체 길이(초)
 // 장면: [월드, 길이(초), 자막, 준비 함수 이름]
-const C1 = ['시험 불안이 왔다!'], C2 = ['혼자선 힘들지?'], C3 = ['한 판 끝나면', '과거의 내가 도와줘!'], C4 = ['착한 일 하면', '더 세져!'], C5 = ['우유 먹고', '힘내!'];
+const C1 = ['시험 불안이 왔다!'], C2 = ['혼자선 힘들지?'], C3 = ['한 판 끝나면', '과거의 내가 도와줘!'], C4 = ['착한 일 하면', '더 세져!'], C5 = ['우유 먹고', '힘내!'], C6 = ['담임 선생님도', '도와줘!'];
 // 빠른 장면 전환: 1~2초짜리 장면을 여러 월드로 (같은 자막이면 자막은 이어서 유지)
 const SCENES = [
   { id: 'boss',  world: 'school',   sec: 1.0, cap: C1 },
@@ -17,12 +17,14 @@ const SCENES = [
   { id: 'boss',  world: 'office',   sec: 1.0, cap: C1 },
   { id: 'alone', world: 'beach',    sec: 1.0, cap: C2 },
   { id: 'milk',  world: 'home',     sec: 1.2, cap: C5 },
+  { id: 'teach', world: 'school',   sec: 1.9, cap: C6 },
   { id: 'echo',  world: 'stage',    sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'mountain', sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'hospital', sec: 1.1, cap: C3 },
   { id: 'echo',  world: 'gym',      sec: 1.1, cap: C3 },
-  { id: 'deed',  world: 'academy',  sec: 1.8, cap: C4 },
-  { id: 'deed',  world: 'library',  sec: 1.6, cap: C4 },
+  { id: 'litter', world: 'airport', sec: 1.8, cap: C4 },
+  { id: 'deed',  world: 'academy',  sec: 1.8, cap: C4, who: 'child' },
+  { id: 'deed',  world: 'library',  sec: 1.6, cap: C4, who: 'elder' },
   { id: 'end',   world: 'stage',    sec: 3.0, cap: [] },
 ];
 (async () => {
@@ -139,6 +141,22 @@ const SCENES = [
         return;
       }
       s.player.hp = Math.max(s.player.hp, s.player.maxhp * 0.8);
+      if (id === 'teach') {   // 선생님 곁(빛나는 원)으로 걸어가 도움을 받음
+        const h = s.helper; if (!h) return;
+        if (f === 0) s.player.hp = s.player.maxhp * 0.5;
+        if (h.state === 'wait') { s.player.x += (h.x - 30 - s.player.x) * 0.1; s.player.y += (h.y + 26 - s.player.y) * 0.1; }
+        if (s.choices && s.choiceKind === 'helper' && !window.__helped) { window.__helped = f; }
+        if (window.__helped && f - window.__helped === 12 && s.choices) s.choose('boon_heal');   // 따뜻한 격려 = 회복
+        return;
+      }
+      if (id === 'litter') {   // 쓰레기를 하나씩 주우며 걸어감
+        const left = s.deeds.spots.filter((q) => q.kind === 'litter');
+        if (window.__litN !== undefined && left.length < window.__litN) s._ev({ k: 'deed', what: 'allyBye', x: s.player.x + 10, y: s.player.y - 14 });   // 주운 순간 하트 퐁
+        window.__litN = left.length;
+        const sp = left.sort((a, b) => a.x - b.x)[0];
+        const tx = sp ? sp.x : 270, ty = sp ? sp.y : 470; s.player.x += Math.sign(tx - s.player.x) * Math.min(Math.abs(tx - s.player.x), 3.2); s.player.y += (ty - s.player.y) * 0.15;
+        return;
+      }
       if (id === 'deed') {
         const rs = s.deeds.rescue; if (!rs) return;
         if (f < 24) { s.player.x += (rs.x - 48 - s.player.x) * 0.12; s.player.y += (rs.y + 22 - s.player.y) * 0.12; }   // 친구에게 달려감
@@ -153,6 +171,8 @@ const SCENES = [
       if (id === 'alone') return { x: pl.x, y: pl.y - 30, z: 1.9 + k * 0.1 };
       if (id === 'echo') return { x: 180, y: 445, z: 1.45 + k * 0.03 };
       if (id === 'deed') { const rs = s.deeds.rescue || { x: pl.x, y: pl.y }; return { x: (pl.x + rs.x) / 2 + 6, y: (pl.y + rs.y) / 2 - 30, z: 2.1 + k * 0.05 }; }
+      if (id === 'teach') { const h = s.helper || pl; return { x: (pl.x + h.x) / 2, y: (pl.y + h.y) / 2 - 35, z: 2.0 + k * 0.05 }; }
+      if (id === 'litter') return { x: Math.min(pl.x + 30, 200), y: pl.y - 40, z: 2.1 };
       if (id === 'milk') return { x: pl.x + 8, y: pl.y - 40, z: 2.5 + k * 0.1 };
       return { x: pl.x, y: pl.y - 10, z: 1.8 + k * 0.04 };
     };
@@ -179,9 +199,13 @@ const SCENES = [
       for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; s._make(kinds[k % kinds.length], 180 + Math.cos(a) * 78, 420 + Math.sin(a) * 78); const e = s.enemies[s.enemies.length - 1]; tough(e); e.speed *= 0.12; } }
     if (sc.id === 'echo') { let n = 0; while (!s.bossAlive && n++ < 20000) run(1, wig); const bs = s.enemies.find((e) => e.type === 'boss'); clearTop(); if (bs) { bs.x = 180; bs.y = 440; bs.hp = bs.maxhp * 0.35; } place(180, 570); orbit(180, 440, 100); }
     if (sc.id === 'milk') { run(60 * 20, wig); s.enemies = []; place(180, 470); }
+    if (sc.id === 'teach') { let n = 0; while (!s.helper && n++ < 20000) run(1, wig); s.enemies = s.enemies.filter((e) => Math.hypot(e.x - 180, e.y - 450) > 170);
+      const h = s.helper; if (h) { h.x = 190; h.y = 430; h.prog = 0; h.need = 40; h.t = 0; } place(95, 520); }
+    if (sc.id === 'litter') { run(60 * 15, wig); s.enemies = s.enemies.filter((e) => Math.hypot(e.x - 180, e.y - 470) > 200); place(95, 480);
+      s.deeds.spots = [[140, 462], [190, 490], [240, 466]].map(([x, y]) => ({ x, y, kind: 'litter', t: 99999 })); }   // 떨어진 쓰레기 3개
     if (sc.id === 'end') { run(60 * 20, wig); s.enemies = []; place(180, 420); orbit(180, 420, 70); }
     if (sc.id === 'deed') { let n = 0; while (!(s.deeds && s.deeds.rescue) && n++ < 20000) run(1, wig); const rs = s.deeds.rescue; clearTop(); s.enemies = s.enemies.filter((e) => e.guard);
-      if (rs) { const dx = 180 - rs.x, dy = 430 - rs.y; rs.x += dx; rs.y += dy; for (const e of rs.guards) { e.x += dx; e.y += dy; tough(e); e.speed = 0; } } place(80, 470); }
+      if (rs) { if (sc.who) rs.kind = sc.who; const dx = 180 - rs.x, dy = 430 - rs.y; rs.x += dx; rs.y += dy; for (const e of rs.guards) { e.x += dx; e.y += dy; tough(e); e.speed = 0; } } place(80, 470); }
   }, sc);
   if (MODE === 'keyframes') {
     for (let i = 0; i < SCENES.length; i++) {
@@ -203,7 +227,7 @@ const SCENES = [
       if (i > 0) { cues.push(['tr' + (i % 4), T0]); cues.push(['thud', T0 + 7 / FPS]); }   // 장면 전환 소리 + 쿵
       if (i === 0 || SCENES[i - 1].cap !== sc.cap) { capT = 0; sc.cap.forEach((_, j) => cues.push(['impact', T0 + 0.05 + j * 0.22 + 0.13])); }   // 글자 박히는 소리
       if (sc.id === 'end') { [0, 0.3, 0.6, 0.9].forEach((d) => cues.push(['impact', T0 + d + 0.13])); cues.push(['sparkle', T0 + 1.1]); }
-      await p.evaluate((id) => { window.__scene = id; window.__camCut = true; window.__helped = false; __echo.sim.drainEvents(); }, sc.id);   // 준비 중 쌓인 사건(소리)은 버림
+      await p.evaluate((id) => { window.__scene = id; window.__camCut = true; window.__helped = false; window.__litN = undefined; __echo.sim.drainEvents(); }, sc.id);   // 준비 중 쌓인 사건(소리)은 버림
       const n = Math.round(FPS * sc.sec);
       for (let f = 0; f < n; f++) {
         await p.evaluate(([id, f, T]) => { window.__T = T; __tick(id, f); __step(1000 / 30); }, [sc.id, f, frame / FPS]); frame++;
