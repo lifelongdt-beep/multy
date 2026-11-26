@@ -11,3 +11,6 @@ android/.gradle/
 android/local.properties
 *.keystore
 *.jks
+# 홍보 영상 등 큰 결과물은 저장소에 올리지 않음 (tools/make-promo.js로 다시 만들 수 있음 · 공유는 드라이브/릴리스로)
+*.mp4
+*.mov
