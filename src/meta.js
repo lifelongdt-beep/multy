@@ -455,7 +455,7 @@
   try {
     if (typeof window !== 'undefined' && window.location) {
       const native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-      DEMO.on = !native && (/(^|\.)github\.io$/.test(location.hostname) || /[?&]demo=1\b/.test(location.search));
+      DEMO.on = !native && (window.ECHO_DEMO === true || /(^|\.)github\.io$/.test(location.hostname) || /[?&]demo=1\b/.test(location.search));
     }
   } catch (e) { /* 무시 */ }
   /** 체험판이라 잠긴 월드인가 (앱에서만 플레이) */

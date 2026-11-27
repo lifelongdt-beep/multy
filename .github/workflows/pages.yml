@@ -1,0 +1,39 @@
+# Echo Rush — 웹 체험판 공개 (GitHub Pages)
+# main에 병합되면 체험판(학교·학원 두 월드만 플레이 데이터가 들어 있음)을 만들어 공개 주소에 올린다.
+# 처음 한 번: 저장소 Settings → Pages → Build and deployment → Source를 'GitHub Actions'로 바꿔야 이 방식으로 올라간다.
+#            (그 전까지는 예전처럼 main 브랜치 파일이 통째로 공개됨)
+name: Web demo (Pages)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: 체험판 만들기
+        env:
+          APP_VERSION_NAME: 웹 체험판 ${{ github.run_number }}   # 배포마다 버전이 바뀌어 오프라인 저장본도 새로 만들어짐
+        run: |
+          npm test
+          node tools/build-web.js --demo
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: www
+      - id: deploy
+        uses: actions/deploy-pages@v4

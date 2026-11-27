@@ -3,7 +3,8 @@
  * - 인터넷이 있으면 늘 새 파일을 먼저 받아(새 버전이 바로 반영) 저장본도 바꿔 둔다.
  * - 게임 제목 글꼴(Google Fonts)은 한 번 받으면 저장본을 쓴다.
  * 새 스크립트 파일을 추가하면 아래 FILES에도 넣는다 (test/pwa.test.js가 확인). */
-const CACHE = 'echo-rush-v1';
+importScripts('src/version.js');   // 게임 버전 (자동 빌드가 배포마다 새 번호를 넣음)
+const CACHE = 'echo-rush-' + String(self.ECHO_VERSION || 'v1').trim().replace(/\s+/g, '-');   // 버전이 바뀌면 저장본도 새로 (옛 저장본은 activate에서 지움)
 const FILES = [
   './', 'index.html', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',

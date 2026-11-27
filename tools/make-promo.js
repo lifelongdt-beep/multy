@@ -1,7 +1,7 @@
 /* Echo Rush — 인스타 릴스 홍보 영상 만들기 (1080×1920, 15초)
  * 실제 게임을 시계를 멈춘 채 한 장씩 돌려 찍고(끊김 없음), 자막을 얹는다.
  *   node tools/make-promo.js keyframes  → docs/promo/keyframe-1~5.png (장면 확인용)
- *   node tools/make-promo.js video      → docs/promo/echo-rush-reels.mp4
+ *   node tools/make-promo.js video      → docs/promo/echo-rush-reels.mp4 (저장소에는 올리지 않음: .gitignore · 공유는 드라이브나 GitHub 릴리스로)
  * (Playwright·ffmpeg 필요) */
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
